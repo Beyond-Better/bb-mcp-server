@@ -1,0 +1,113 @@
+/**
+ * AppServer Types - Type definitions for AppServer and dependency injection
+ */
+
+import type { ConfigManager } from '../config/ConfigManager.ts';
+import type { Logger } from '../utils/Logger.ts';
+import type { AuditLogger } from '../utils/AuditLogger.ts';
+import type { KVManager } from '../storage/KVManager.ts';
+import type { SessionStore } from '../storage/SessionStore.ts';
+import type { TransportEventStore } from '../storage/TransportEventStore.ts';
+import type { CredentialStore } from '../storage/CredentialStore.ts';
+import type { ErrorHandler } from '../utils/ErrorHandler.ts';
+import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
+import type { OAuthProvider } from '../auth/OAuthProvider.ts';
+import type { TransportManager } from '../transport/TransportManager.ts';
+import type { BeyondMcpServer } from '../server/BeyondMcpServer.ts';
+import type { HttpServerConfig } from '../server/ServerTypes.ts';
+import type { WorkflowBase } from '../workflows/WorkflowBase.ts';
+import type { ToolRegistration } from '../types/BeyondMcpTypes.ts';
+import type { TransportConfig } from '../transport/TransportTypes.ts';
+
+
+/**
+ * Configuration interface for AppServer
+ */
+export interface AppServerConfig {
+  /** Server name */
+  name: string;
+  /** Server version */
+  version: string;
+  /** Server title */
+  title?: string;
+  /** Server description */
+  description: string;
+  /** Transport configuration */
+  transport?: TransportConfig;
+}
+
+/**
+ * Complete dependencies interface for AppServer
+ */
+export interface AppServerDependencies {
+  // Core library dependencies
+  configManager: ConfigManager;
+  //config: ConfigManager;
+  logger: Logger;
+  auditLogger: AuditLogger;
+  kvManager?: KVManager;
+  sessionStore: SessionStore;
+  eventStore: TransportEventStore;
+  credentialStore: CredentialStore;
+  errorHandler: ErrorHandler;
+  workflowRegistry: WorkflowRegistry;
+  oauthProvider?: OAuthProvider;
+  transportManager: TransportManager;
+  
+  // Beyond MCP Server (must be created with all dependencies)
+  beyondMcpServer: BeyondMcpServer;
+  
+  // HTTP Server configuration (optional)
+  httpServerConfig?: HttpServerConfig;
+  
+  // Consumer-specific dependencies (pre-built instances - Option A pattern)
+  thirdpartyApiClient?: any;
+  oAuthConsumer?: any;
+  
+  // Server configuration for generic fallback
+  serverConfig?: {
+    name: string;
+    version: string;
+    title?: string;
+    description: string;
+  };
+  
+  // Custom workflows and tools
+  customWorkflows?: WorkflowBase[];
+  customTools?: ToolRegistration[];
+}
+type AppOnlyKeys = 'sessionStore' | 'eventStore' | 'credentialStore' | 'beyondMcpServer';
+
+export type  AppServerDependenciesPartial = Omit<AppServerDependencies, AppOnlyKeys>;
+
+
+/**
+ * Partial dependencies for consumer override
+ */
+export interface AppServerOverrides extends Partial<AppServerDependencies> {
+  // Common override patterns
+  config?: ConfigManager;
+  serverConfig?: AppServerConfig;
+}
+
+/**
+ * Standard dependency factory function signature
+ */
+export type DependencyFactory<T> = (config: ConfigManager, logger?: Logger) => T | Promise<T>;
+
+/**
+ * Consumer API client interface (for type safety)
+ */
+export interface ConsumerApiClient {
+  healthCheck(): Promise<{ healthy: boolean; status?: string }>;
+  disconnect(): Promise<void>;
+}
+
+/**
+ * Consumer OAuth consumer interface (for type safety)
+ */
+export interface ConsumerOAuthConsumer {
+  initialize(): Promise<void>;
+  cleanup(): Promise<void>;
+  getAccessToken(userId: string): Promise<string>;
+}

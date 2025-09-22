@@ -1,0 +1,17 @@
+.bb/*
+*/.bb/backups*
+*/.DS_Store
+.BBEditLSPWorkspaceConfig.json
+.trash/
+.uploads/
+
+node_modules/
+coverage/
+tags
+tags.ignore
+
+docs/.obsidian
+example/.env
+example/data
+playground/
+legacy/
