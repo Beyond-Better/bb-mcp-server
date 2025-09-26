@@ -342,6 +342,25 @@ export class ConfigManager {
   }
 
   /**
+   * Load plugins configuration from environment
+   */
+  loadPluginsConfig(): {
+    paths: string[];
+    autoload: boolean;
+    watchForChanges: boolean;
+    allowedPlugins?: string[];
+    blockedPlugins?: string[];
+  } {
+    return {
+      paths: this.getEnvArray('PLUGINS_DISCOVERY_PATHS', ['./plugins', './workflows']),
+      autoload: this.getEnvBoolean('PLUGINS_AUTOLOAD', true),
+      watchForChanges: this.getEnvBoolean('PLUGINS_WATCH_CHANGES', false),
+      allowedPlugins: this.getEnvOptional('PLUGINS_ALLOWED_LIST', '')?.split(',').map(p => p.trim()).filter(p => p.length > 0) || undefined,
+      blockedPlugins: this.getEnvArray('PLUGINS_BLOCKED_LIST', []),
+    };
+  }
+
+  /**
    * Load OAuth consumer configuration from environment (optional)
    */
   private loadOAuthConsumerConfig() {

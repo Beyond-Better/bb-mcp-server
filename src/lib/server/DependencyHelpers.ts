@@ -15,6 +15,7 @@ import { TransportEventStore } from '../storage/TransportEventStore.ts';
 import { CredentialStore } from '../storage/CredentialStore.ts';
 import { ErrorHandler } from '../utils/ErrorHandler.ts';
 import { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
+import { PluginManager } from '../workflows/discovery/PluginManager.ts';
 import { OAuthProvider } from '../auth/OAuthProvider.ts';
 import { TransportManager } from '../transport/TransportManager.ts';
 import { BeyondMcpServer } from './BeyondMcpServer.ts';
@@ -101,6 +102,46 @@ export function getWorkflowRegistry(logger: Logger): WorkflowRegistry {
       customCategories: ['query', 'operation'],
     }
   });
+}
+
+/**
+ * Create workflow registry with plugin discovery (async version)
+ */
+export async function getWorkflowRegistryWithPlugins(
+  configManager: ConfigManager, 
+  logger: Logger
+): Promise<WorkflowRegistry> {
+  const registry = getWorkflowRegistry(logger);
+  
+  // Create plugin manager with discovery options
+  const pluginConfig = configManager.loadPluginsConfig();
+  const pluginManager = new PluginManager(registry, pluginConfig, logger);
+  
+  // Discover and load plugins if autoload is enabled
+  if (pluginConfig.autoload) {
+    try {
+      logger.info('Discovering plugins...', { 
+        paths: pluginConfig.paths,
+        autoload: pluginConfig.autoload 
+      });
+      
+      const discoveredPlugins = await pluginManager.discoverPlugins();
+      
+      logger.info('Plugin discovery completed', {
+        discovered: discoveredPlugins.length,
+        totalWorkflows: discoveredPlugins.reduce((sum, p) => sum + p.workflows.length, 0)
+      });
+    } catch (error) {
+      logger.warn('Plugin discovery failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        paths: pluginConfig.paths
+      });
+    }
+  } else {
+    logger.debug('Plugin autoload disabled, skipping discovery');
+  }
+  
+  return registry;
 }
 
 /**
@@ -336,11 +377,15 @@ export async function getAllDependenciesAsync(overrides: AppServerOverrides = {}
   // Create KV manager (async)
   const kvManager = overrides.kvManager || await getKvManager(configManager, logger);
   
-  // Now call the sync version with kvManager ready
+  // Create workflow registry with plugin discovery (async)
+  const workflowRegistry = overrides.workflowRegistry || await getWorkflowRegistryWithPlugins(configManager, logger);
+  
+  // Now call the sync version with kvManager and workflowRegistry ready
   return getAllDependencies({
     configManager,
     logger,
     kvManager,
+    workflowRegistry,
     ...overrides,
   });
 }

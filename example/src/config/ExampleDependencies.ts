@@ -27,6 +27,9 @@ import {
   type WorkflowRegistryConfig,
 } from '@bb/mcp-server'
 
+// 🎯 Import plugin-enabled workflow registry helper
+import { getWorkflowRegistryWithPlugins } from '../../../src/lib/server/DependencyHelpers.ts'
+
 // 🎯 Consumer-specific imports - business logic components
 import { ExampleOAuthConsumer, type ExampleOAuthConfig } from '../auth/ExampleOAuthConsumer.ts'
 import { ExampleApiClient, type ExampleApiClientConfig } from '../api/ExampleApiClient.ts'
@@ -75,15 +78,8 @@ export async function createExampleDependencies(configManager: ConfigManager): P
   // Initialize KV connection before using it
   await kvManager.initialize()
   
-  // 🎯 Initialize library workflow registry with configuration support
-  const workflowRegistry = WorkflowRegistry.getInstance({ 
-    logger,
-    config: {
-      // validCategories not specified = use defaults from DEFAULT_WORKFLOW_CATEGORIES
-      allowDynamicCategories: true, // Allow dynamic category registration
-      customCategories: ['query', 'operation'], // Add custom categories for this server
-    }
-  })
+  // 🎯 Initialize library workflow registry with plugin discovery
+  const workflowRegistry = await getWorkflowRegistryWithPlugins(configManager, logger)
   
   // 🎯 Initialize library credential store
   const credentialStore = new CredentialStore(kvManager, {}, logger)
