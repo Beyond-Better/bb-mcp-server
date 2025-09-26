@@ -62,6 +62,8 @@ deno task tool:test
 - **Observable**: Comprehensive logging and audit trails
 - **Testable**: Extensive test coverage with mocking support
 - **Generic**: Extracted from production MCP server, generalized for reuse
+- **Plugin System**: Automatic discovery and loading of workflows and tools
+- **Extensible**: Easy to add custom workflows, tools, and plugins
 
 ## Configuration
 
@@ -111,7 +113,60 @@ DENO_KV_PATH=./data/app.db     # Default: ./data/mcp-server.db
 STORAGE_PERSISTENCE=true       # Default: true
 ```
 
+### **Plugin System**
+```bash
+# Plugin discovery paths
+PLUGINS_DISCOVERY_PATHS=./src/workflows,./plugins
+# Auto-load discovered plugins
+PLUGINS_AUTOLOAD=true
+# Watch for plugin changes (development)
+PLUGINS_WATCH_CHANGES=false
+# Plugin filtering
+PLUGINS_ALLOWED_LIST=plugin1,plugin2  # Optional whitelist
+PLUGINS_BLOCKED_LIST=old-plugin        # Optional blacklist
+```
+
 See `example/.env.example` for a complete configuration template.
+
+## Plugin System
+
+The bb-mcp-server library includes a comprehensive plugin system for organizing and distributing workflows and tools:
+
+### Architecture Overview
+
+- **Tools**: Simple, single-purpose functions for direct API operations
+- **Workflows**: Multi-step, stateful processes for complex business logic
+- **Plugins**: Bundled collections of tools and workflows for distribution
+
+### Plugin Discovery
+
+The library automatically discovers and loads plugins from configured paths:
+
+```typescript
+// Automatic plugin discovery
+const workflowRegistry = await getWorkflowRegistryWithPlugins(configManager, logger)
+
+// Manual plugin registration
+const plugin = createMyPlugin({ apiClient, logger })
+registry.registerPlugin(plugin)
+```
+
+### Key Benefits
+
+- **🔍 Auto-Discovery**: Automatically finds and loads plugins from directories
+- **📦 Distribution**: Package and share functionality across projects
+- **🎯 Organization**: Clean separation between infrastructure and business logic
+- **🔄 Hot Reload**: Development-friendly plugin reloading (when enabled)
+- **⚙️ Configuration**: Environment-driven plugin management
+
+### Quick Start
+
+1. **Configure Discovery**: Set `PLUGINS_DISCOVERY_PATHS` in your environment
+2. **Create Plugin**: Implement workflows extending `WorkflowBase`
+3. **Plugin Manifest**: Add `plugin.json` for structured plugins
+4. **Auto-Load**: Enable `PLUGINS_AUTOLOAD=true` for automatic loading
+
+**📖 For detailed guidance, see [Plugins, Tools, and Workflows Guide](docs/plugins-tools-workflows.md)**
 
 ## Contributing
 

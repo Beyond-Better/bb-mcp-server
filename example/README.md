@@ -24,14 +24,18 @@ example/
 │   ├── tools/
 │   │   └── ExampleTools.ts       # ~200 lines (custom MCP tools)
 │   ├── workflows/
-│   │   ├── ExampleQueryWorkflow.ts
-│   │   └── ExampleOperationWorkflow.ts
+│   │   ├── ExampleQueryWorkflow.ts      # Business query workflow
+│   │   ├── ExampleOperationWorkflow.ts  # Business operation workflow
+│   │   └── plugin.ts                    # Plugin export for discovery
+│   ├── plugins/
+│   │   ├── plugin.json                  # Plugin manifest
+│   │   └── ExamplePlugin.ts             # Structured plugin implementation
 │   ├── auth/
 │   │   └── ExampleOAuthConsumer.ts # ~100 lines (extends library OAuth)
 │   ├── api/
 │   │   └── ExampleApiClient.ts   # Third-party API client
 │   └── config/
-│       └── ExampleDependencies.ts # Dependency setup
+│       └── ExampleDependencies.ts # Dependency setup with plugin discovery
 └── instructions.md               # MCP server instructions
 ```
 
@@ -68,6 +72,14 @@ Demonstrates MCP tool creation:
 - Leverages Zod validation from library
 - Integrates with workflow execution
 
+### 6. Plugin System Integration
+Showcases comprehensive plugin architecture:
+- **Plugin Discovery**: Automatically finds workflows in `src/workflows/plugin.ts`
+- **Plugin Structure**: Demonstrates structured plugins in `src/plugins/`
+- **Plugin Manifest**: Uses `plugin.json` for plugin metadata
+- **Auto-Loading**: Configurable plugin discovery via environment variables
+- **Multiple Patterns**: Shows both workflow-based and structured plugin approaches
+
 ## How This Demonstrates Library Benefits
 
 This example demonstrates key library benefits:
@@ -77,6 +89,50 @@ This example demonstrates key library benefits:
 3. **Extensibility:** Easy to add custom workflows, tools, and integrations
 4. **Maintainability:** Small, focused files with clear responsibilities
 5. **Reusability:** Same library can be used for different MCP server implementations
+
+## Plugin System Demonstration
+
+This example showcases the bb-mcp-server plugin system in action:
+
+### Plugin Discovery Paths
+
+The example demonstrates multiple plugin discovery patterns:
+
+```bash
+# .env configuration
+PLUGINS_DISCOVERY_PATHS=./example/src/workflows,./example/src/plugins,./plugins
+PLUGINS_AUTOLOAD=true
+```
+
+### Plugin Implementations
+
+1. **Workflow-based Plugin** (`src/workflows/plugin.ts`):
+   - Exports existing workflows as a discoverable plugin
+   - Zero refactoring required for existing workflow code
+   - Maintains backward compatibility
+
+2. **Structured Plugin** (`src/plugins/`):
+   - Complete plugin with manifest (`plugin.json`)
+   - Demonstrates full plugin architecture
+   - Shows dependency injection patterns
+
+### Plugin Architecture Benefits
+
+- **🔍 Auto-Discovery**: Workflows automatically discovered and registered
+- **📦 Packaging**: Related functionality bundled together
+- **🔧 Configuration**: Environment-driven plugin management
+- **🎯 Organization**: Clean separation of business logic
+- **♻️ Reusability**: Plugins can be shared across projects
+
+### Discovery Process
+
+1. **Environment Loading**: `ConfigManager` loads plugin configuration
+2. **Path Scanning**: `PluginManager` scans configured directories
+3. **Plugin Detection**: Finds `plugin.ts` files and `plugin.json` manifests
+4. **Automatic Registration**: Workflows and tools registered with MCP server
+5. **Dependency Injection**: Plugins receive required dependencies
+
+**📖 For detailed plugin development guide, see [../docs/plugins-tools-workflows.md](../docs/plugins-tools-workflows.md)**
 
 ## Configuration
 
@@ -117,17 +173,15 @@ const config = new ConfigManager({
 
 4. **Default values** (lowest precedence)
    - Library provides sensible defaults
-   - `MCP_TRANSPORT=stdio`, `MCP_HTTP_PORT=3001`, etc.
+   - `MCP_TRANSPORT=stdio`, `HTTP_PORT=3001`, etc.
 
 ### Environment Variables
-
-All configuration uses the `MCP_` prefix by default:
 
 ```bash
 # Transport configuration
 MCP_TRANSPORT=stdio|http
-MCP_HTTP_PORT=3000
-MCP_HTTP_HOST=localhost
+HTTP_PORT=3000
+HTTP_HOST=localhost
 
 # ExampleCorp API credentials (required for functionality)
 EXAMPLECORP_CLIENT_ID=your-client-id
@@ -135,11 +189,18 @@ EXAMPLECORP_CLIENT_SECRET=your-client-secret
 EXAMPLECORP_API_BASE_URL=https://api.examplecorp.com
 
 # Storage configuration
-MCP_DENO_KV_PATH=./example/data/examplecorp-mcp-server.db
+DENO_KV_PATH=./example/data/examplecorp-mcp-server.db
+
+# Plugin system configuration
+PLUGINS_DISCOVERY_PATHS=./example/src/workflows,./example/src/plugins,./plugins
+PLUGINS_AUTOLOAD=true
+PLUGINS_WATCH_CHANGES=false
+# PLUGINS_ALLOWED_LIST=example_query,example_operation
+# PLUGINS_BLOCKED_LIST=
 
 # Logging configuration
-MCP_LOG_LEVEL=debug|info|warn|error
-MCP_LOG_FORMAT=text|json
+LOG_LEVEL=debug|info|warn|error
+LOG_FORMAT=text|json
 ```
 
 ## Running the Example
@@ -161,7 +222,7 @@ deno task start
 MCP_TRANSPORT=http deno task start
 
 # Override via environment variables
-MCP_LOG_LEVEL=debug EXAMPLECORP_CLIENT_ID=test-id deno task start
+LOG_LEVEL=debug EXAMPLECORP_CLIENT_ID=test-id deno task start
 ```
 
 ## Library Context
