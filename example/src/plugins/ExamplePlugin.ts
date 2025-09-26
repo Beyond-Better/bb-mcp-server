@@ -93,30 +93,35 @@ export function createExamplePlugin(dependencies: ExamplePluginDependencies): Wo
 /**
  * Default export for plugin discovery
  * 
- * This will be discovered by the PluginManager when scanning plugin directories.
- * The plugin manager expects a default export that implements WorkflowPlugin.
+ * This plugin demonstrates the BROKEN PATTERN - don't use this approach.
+ * The initialize method creates workflows but has no way to register them.
  * 
- * Note: This is a basic plugin structure for discovery. The actual workflow
- * instances need to be created with proper dependencies using the factory function.
+ * Better approaches:
+ * 1. Use the factory function manually: createExamplePlugin({ apiClient, logger })
+ * 2. Use the workflow wrapper plugin: example/src/workflows/plugin.ts
+ * 3. Use direct registration: workflowRegistry.register(new Workflow())
  */
 const plugin: WorkflowPlugin = {
   name: 'example-corp-plugin',
   version: '1.0.0',
-  description: 'ExampleCorp business workflows and tools plugin for bb-mcp-server',
+  description: 'ExampleCorp business workflows and tools plugin for bb-mcp-server (BROKEN - for reference only)',
   author: 'ExampleCorp Integration Team',
   license: 'MIT',
-  workflows: [], // Will be populated during initialization with dependencies
+  workflows: [], // Empty - and initialize() has no way to populate the registry!
   dependencies: ['@bb/mcp-server'],
   tags: ['examplecorp', 'business', 'query', 'operation', 'api'],
   
   async initialize(registry: any): Promise<void> {
-    // This would be called by the plugin manager after registration
-    // The workflows need to be created with dependencies before this point
-    console.log('ExampleCorp plugin base initialization called')
+    // PROBLEM: This method doesn't have access to apiClient and logger dependencies!
+    // And even if it did, there's no clean way to register the workflows with the registry
+    console.log('ExampleCorp plugin discovered - but this initialize method is broken!')
+    console.log('Use createExamplePlugin() factory function instead for working functionality')
+    
+    // This creates a plugin but we can't access its workflows to register them:
+    // const plugin = createExamplePlugin({ apiClient, logger }) // ← apiClient, logger not available!
   },
   
   async cleanup(): Promise<void> {
-    // Plugin cleanup logic
     console.log('ExampleCorp plugin cleanup called')
   },
 }

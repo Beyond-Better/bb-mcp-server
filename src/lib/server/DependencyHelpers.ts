@@ -106,10 +106,12 @@ export function getWorkflowRegistry(logger: Logger): WorkflowRegistry {
 
 /**
  * Create workflow registry with plugin discovery (async version)
+ * Enhanced to support dependency injection into discovered plugins
  */
 export async function getWorkflowRegistryWithPlugins(
   configManager: ConfigManager, 
-  logger: Logger
+  logger: Logger,
+  pluginDependencies?: Record<string, any>
 ): Promise<WorkflowRegistry> {
   const registry = getWorkflowRegistry(logger);
   
@@ -122,10 +124,34 @@ export async function getWorkflowRegistryWithPlugins(
     try {
       logger.info('Discovering plugins...', { 
         paths: pluginConfig.paths,
-        autoload: pluginConfig.autoload 
+        autoload: pluginConfig.autoload,
+        hasDependencies: !!pluginDependencies
       });
       
       const discoveredPlugins = await pluginManager.discoverPlugins();
+      
+      // If we have dependencies, try to register functional plugins
+      if (pluginDependencies && discoveredPlugins.length > 0) {
+        logger.info('Attempting to create functional plugins with dependencies...');
+        
+        for (const plugin of discoveredPlugins) {
+          try {
+            // Try to find and use factory functions for discovered plugins
+            const pluginPath = pluginConfig.paths.find(path => 
+              plugin.name.includes(path) || path.includes('workflows')
+            );
+            
+            if (pluginPath) {
+              await tryRegisterPluginWithDependencies(registry, plugin, pluginDependencies, logger);
+            }
+          } catch (error) {
+            logger.warn('Failed to register plugin with dependencies', {
+              plugin: plugin.name,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+          }
+        }
+      }
       
       logger.info('Plugin discovery completed', {
         discovered: discoveredPlugins.length,
@@ -142,6 +168,44 @@ export async function getWorkflowRegistryWithPlugins(
   }
   
   return registry;
+}
+
+/**
+ * Try to register a discovered plugin with dependencies using available factory functions
+ */
+async function tryRegisterPluginWithDependencies(
+  registry: WorkflowRegistry,
+  plugin: any,
+  dependencies: Record<string, any>,
+  logger: Logger
+): Promise<void> {
+  try {
+    // Look for common factory function patterns in workflow plugin files
+    if (plugin.name === 'example-workflows') {
+      const { registerExampleWorkflows } = await import('../../example/src/workflows/plugin.ts');
+      registerExampleWorkflows(registry, dependencies);
+      logger.info('Successfully registered workflows using factory function', {
+        plugin: plugin.name,
+        method: 'registerExampleWorkflows'
+      });
+      return;
+    }
+    
+    // Look for createXPlugin factory functions
+    const factoryName = `create${plugin.name.replace(/[-_]/g, '')}Plugin`;
+    // This would need more sophisticated factory function discovery
+    logger.debug('No factory function found for plugin', { 
+      plugin: plugin.name,
+      expectedFactory: factoryName 
+    });
+    
+  } catch (error) {
+    logger.debug('Failed to use factory function for plugin', {
+      plugin: plugin.name,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+    throw error;
+  }
 }
 
 /**

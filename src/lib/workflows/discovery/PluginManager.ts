@@ -4,6 +4,7 @@
  * Basic plugin discovery and management system for future extensibility
  */
 
+import { resolve } from '@std/path'
 import type { Logger } from '../../utils/Logger.ts'
 import type {
   WorkflowPlugin,
@@ -40,17 +41,54 @@ export class PluginManager {
    * Load a plugin from a file path
    */
   async loadPlugin(pluginPath: string): Promise<WorkflowPlugin> {
-    this.logger?.debug('Loading plugin', { path: pluginPath })
+    // Ensure we have an absolute path for reliable import
+    const absolutePath = pluginPath.startsWith('/') || pluginPath.startsWith('file://') 
+      ? pluginPath 
+      : resolve(Deno.cwd(), pluginPath)
+    
+    // Convert to file:// URL for Deno import
+    const importUrl = absolutePath.startsWith('file://') 
+      ? absolutePath 
+      : `file://${absolutePath}`
+    
+    this.logger?.info('Loading plugin', { 
+      originalPath: pluginPath,
+      absolutePath,
+      importUrl 
+    })
     
     try {
-      // Dynamic import of the plugin module
-      const pluginModule = await import(pluginPath)
+      // Dynamic import of the plugin module using absolute file:// URL
+      const pluginModule = await import(importUrl)
       
-      // Plugin should export either default or a named export
-      const plugin = pluginModule.default || pluginModule.plugin
+      // Try multiple export patterns to find the plugin
+      let plugin = null
+      
+      // 1. Try default export
+      if (pluginModule.default && typeof pluginModule.default === 'object') {
+        plugin = pluginModule.default
+      }
+      // 2. Try named 'plugin' export  
+      else if (pluginModule.plugin && typeof pluginModule.plugin === 'object') {
+        plugin = pluginModule.plugin
+      }
+      // 3. Try factory function exports (createXxxPlugin)
+      else {
+        const factoryNames = Object.keys(pluginModule).filter(key => 
+          key.toLowerCase().includes('plugin') && typeof pluginModule[key] === 'function'
+        )
+        if (factoryNames.length > 0) {
+          this.logger?.debug(`Found plugin factory function: ${factoryNames[0]}`, {
+            path: pluginPath,
+            availableExports: Object.keys(pluginModule)
+          })
+          // Skip factory functions for now - they need dependencies
+          throw new Error(`Plugin at ${pluginPath} exports factory functions but no plugin object. Use factory functions manually for dependency injection.`)
+        }
+      }
       
       if (!plugin) {
-        throw new Error(`Plugin at ${pluginPath} does not export a plugin object`)
+        throw new Error(`Plugin at ${pluginPath} does not export a valid plugin object. Available exports: ${Object.keys(pluginModule).join(', ')}`)
       }
       
       // Validate plugin structure
@@ -64,6 +102,7 @@ export class PluginManager {
         version: plugin.version,
         workflows: plugin.workflows.length,
         path: pluginPath,
+        absolutePath,
       })
       
       return plugin
@@ -75,6 +114,9 @@ export class PluginManager {
       
       this.logger?.error('Plugin load failed', new Error(errorMessage), {
         path: pluginPath,
+        absolutePath,
+        importUrl,
+        error: error instanceof Error ? error.stack : undefined,
       })
       
       throw new Error(errorMessage)
@@ -100,20 +142,25 @@ export class PluginManager {
    * Discover and load plugins from configured paths
    */
   async discoverPlugins(): Promise<WorkflowPlugin[]> {
+    // Resolve all discovery paths to absolute paths from current working directory
+    const absolutePaths = this.discoveryOptions.paths.map(path => resolve(Deno.cwd(), path))
+    
     this.logger?.info('Discovering plugins', {
       paths: this.discoveryOptions.paths,
+      absolutePaths,
+      cwd: Deno.cwd(),
       autoload: this.discoveryOptions.autoload,
     })
     
     const discoveredPlugins: WorkflowPlugin[] = []
     
-    for (const path of this.discoveryOptions.paths) {
+    for (const absolutePath of absolutePaths) {
       try {
-        const plugins = await this.discoverPluginsInPath(path)
+        const plugins = await this.discoverPluginsInPath(absolutePath)
         discoveredPlugins.push(...plugins)
       } catch (error) {
         this.logger?.warn('Failed to discover plugins in path', {
-          path,
+          path: absolutePath,
           error: error instanceof Error ? error.message : 'Unknown error',
         })
       }
@@ -135,6 +182,10 @@ export class PluginManager {
     try {
       // Check if path exists
       const stat = await Deno.stat(basePath)
+    this.logger?.info('Checking path for plugins', {
+      basePath,
+      stat,
+    })
       if (!stat.isDirectory) {
         this.logger?.warn('Plugin path is not a directory', { path: basePath })
         return plugins
@@ -143,10 +194,18 @@ export class PluginManager {
       // Read directory entries
       for await (const entry of Deno.readDir(basePath)) {
         if (entry.isFile && this.isPluginFile(entry.name)) {
-          const pluginPath = `${basePath}/${entry.name}`
+          const pluginPath = resolve(basePath, entry.name)
+    this.logger?.info('Checking plugin', {
+      basePath,
+      entry,
+      pluginPath,
+    })
           
           try {
             if (this.shouldLoadPlugin(entry.name)) {
+    this.logger?.info('Should load plugin', {
+      pluginName: entry.name,
+    })
               const plugin = await this.loadPlugin(pluginPath)
               plugins.push(plugin)
             } else {
@@ -162,8 +221,9 @@ export class PluginManager {
             })
           }
         } else if (entry.isDirectory) {
-          // Recursively search subdirectories
-          const subPlugins = await this.discoverPluginsInPath(`${basePath}/${entry.name}`)
+          // Recursively search subdirectories with absolute path
+          const subDirPath = resolve(basePath, entry.name)
+          const subPlugins = await this.discoverPluginsInPath(subDirPath)
           plugins.push(...subPlugins)
         }
       }
@@ -174,20 +234,38 @@ export class PluginManager {
         throw error
       }
     }
+    this.logger?.info('Found plugins', {
+      plugins,
+    })
     
     return plugins
   }
   
   /**
    * Check if a file is a potential plugin file
+   * More specific detection to avoid loading individual workflow classes as plugins
    */
   private isPluginFile(filename: string): boolean {
-    // Look for TypeScript/JavaScript files that might be plugins
+    const lowercaseFilename = filename.toLowerCase()
+    
+    // Skip test files
+    if (lowercaseFilename.includes('.test.') || lowercaseFilename.includes('.spec.')) {
+      return false
+    }
+    
+    // Only TypeScript/JavaScript files
+    if (!(lowercaseFilename.endsWith('.ts') || lowercaseFilename.endsWith('.js'))) {
+      return false
+    }
+    
+    // Specific plugin file patterns:
+    // 1. Files explicitly named 'plugin.ts' or 'plugin.js'
+    // 2. Files ending with 'Plugin.ts' (e.g., ExamplePlugin.ts)
+    // 3. Files ending with '.plugin.ts' (e.g., example.plugin.ts)
     return (
-      (filename.endsWith('.ts') || filename.endsWith('.js')) &&
-      (filename.includes('plugin') || filename.includes('workflow')) &&
-      !filename.includes('.test.') &&
-      !filename.includes('.spec.')
+      filename === 'plugin.ts' || filename === 'plugin.js' ||
+      lowercaseFilename.endsWith('plugin.ts') || lowercaseFilename.endsWith('plugin.js') ||
+      lowercaseFilename.endsWith('.plugin.ts') || lowercaseFilename.endsWith('.plugin.js')
     )
   }
   
@@ -196,6 +274,12 @@ export class PluginManager {
    */
   private shouldLoadPlugin(filename: string): boolean {
     const pluginName = this.extractPluginName(filename)
+
+    this.logger?.info('Should load plugin', {
+      pluginName,
+      allowedPlugins: this.discoveryOptions.allowedPlugins,
+      blockedPlugins: this.discoveryOptions.blockedPlugins,
+    })
     
     // Check blocked plugins
     if (this.discoveryOptions.blockedPlugins?.includes(pluginName)) {
@@ -203,7 +287,7 @@ export class PluginManager {
     }
     
     // Check allowed plugins (if specified)
-    if (this.discoveryOptions.allowedPlugins) {
+    if (this.discoveryOptions.allowedPlugins && this.discoveryOptions.allowedPlugins.length > 0) {
       return this.discoveryOptions.allowedPlugins.includes(pluginName)
     }
     
@@ -236,11 +320,22 @@ export class PluginManager {
       throw new Error(`Plugin at ${path} workflows field must be an array`)
     }
     
-    if (plugin.workflows.length === 0) {
-      throw new Error(`Plugin at ${path} must provide at least one workflow`)
+    // Allow empty workflows array if plugin has initialize method (dependency injection pattern)
+    const hasInitializeMethod = typeof plugin.initialize === 'function'
+    if (plugin.workflows.length === 0 && !hasInitializeMethod) {
+      throw new Error(`Plugin at ${path} must provide at least one workflow or an initialize method for dependency injection`)
     }
     
-    // Validate each workflow has required methods
+    // Skip workflow validation for plugins with empty workflows (dependency injection pattern)
+    if (plugin.workflows.length === 0 && hasInitializeMethod) {
+      this.logger?.debug('Plugin has empty workflows array but has initialize method - assuming dependency injection pattern', {
+        plugin: plugin.name,
+        path
+      })
+      return
+    }
+    
+    // Validate each workflow has required methods (for plugins with pre-populated workflows)
     for (let i = 0; i < plugin.workflows.length; i++) {
       const workflow = plugin.workflows[i]
       const requiredMethods = ['getRegistration', 'getOverview', 'executeWithValidation']

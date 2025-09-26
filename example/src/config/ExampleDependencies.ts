@@ -78,9 +78,6 @@ export async function createExampleDependencies(configManager: ConfigManager): P
   // Initialize KV connection before using it
   await kvManager.initialize()
   
-  // 🎯 Initialize library workflow registry with plugin discovery
-  const workflowRegistry = await getWorkflowRegistryWithPlugins(configManager, logger)
-  
   // 🎯 Initialize library credential store
   const credentialStore = new CredentialStore(kvManager, {}, logger)
   
@@ -197,6 +194,12 @@ export async function createExampleDependencies(configManager: ConfigManager): P
   
   // 🎯 Create ExampleCorp API client
   const thirdpartyApiClient = new ExampleApiClient(apiClientConfig, oAuthConsumer, logger)
+  
+  // 🎯 Now create workflow registry with plugin discovery (dependencies available)
+  const workflowRegistry = await getWorkflowRegistryWithPlugins(configManager, logger, {
+    apiClient: thirdpartyApiClient, // Pass dependencies to plugins
+    logger,
+  })
   
   // =============================================================================
   // DEPENDENCY VALIDATION AND HEALTH CHECKS

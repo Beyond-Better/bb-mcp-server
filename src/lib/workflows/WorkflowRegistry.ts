@@ -582,6 +582,7 @@ export class WorkflowRegistry {
   
   /**
    * Validate plugin registration
+   * Enhanced to support dependency injection patterns
    */
   private validatePlugin(plugin: WorkflowPlugin): string[] {
     const errors: string[] = []
@@ -598,8 +599,23 @@ export class WorkflowRegistry {
       errors.push('Plugin description is required')
     }
     
-    if (!Array.isArray(plugin.workflows) || plugin.workflows.length === 0) {
-      errors.push('Plugin must provide at least one workflow')
+    if (!Array.isArray(plugin.workflows)) {
+      errors.push('Plugin workflows must be an array')
+      return errors
+    }
+    
+    // Allow empty workflows if plugin has initialize method (dependency injection pattern)
+    const hasInitializeMethod = typeof plugin.initialize === 'function'
+    if (plugin.workflows.length === 0 && !hasInitializeMethod) {
+      errors.push('Plugin must provide at least one workflow or an initialize method for dependency injection')
+    }
+    
+    // Log debug info for empty workflow plugins
+    if (plugin.workflows.length === 0 && hasInitializeMethod) {
+      this.logger?.debug('Plugin has empty workflows array but has initialize method - assuming dependency injection pattern', {
+        plugin: plugin.name,
+        version: plugin.version
+      })
     }
     
     return errors
