@@ -27,8 +27,8 @@ export { ErrorHandler } from './lib/utils/ErrorHandler.ts';
 export { BaseApiClient } from './lib/clients/BaseApiClient.ts';
 
 // Tool/Workflow/Plugin exports
+export type { ToolContext, ToolResult } from './lib/tools/ToolBase.ts';
 export { ToolBase } from './lib/tools/ToolBase.ts';
-export type { ToolContext, ToolRegistration, ToolResult } from './lib/tools/ToolBase.ts';
 export { ToolRegistry } from './lib/tools/ToolRegistry.ts';
 export { WorkflowBase } from './lib/workflows/WorkflowBase.ts';
 export { WorkflowRegistry } from './lib/workflows/WorkflowRegistry.ts';
@@ -71,6 +71,8 @@ export { BeyondMcpSDKHelpers } from './lib/server/MCPSDKHelpers.ts';
 export { CoreTools } from './lib/tools/CoreTools.ts';
 export { WorkflowTools } from './lib/tools/WorkflowTools.ts';
 export { ToolValidationHelper } from './lib/utils/ToolValidationHelper.ts';
+export { ZodToJsonSchema } from './lib/utils/ZodToJsonSchema.ts';
+export type { JsonSchema } from './lib/utils/ZodToJsonSchema.ts';
 export { getAllDependencies, getAllDependenciesAsync } from './lib/server/DependencyHelpers.ts';
 
 // OAuth dependency types from individual components

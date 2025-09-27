@@ -24,6 +24,7 @@ import {
 
 // Import helper utilities
 import { ToolValidationHelper } from '../utils/ToolValidationHelper.ts'
+import { ZodToJsonSchema } from '../utils/ZodToJsonSchema.ts'
 
 export interface WorkflowToolsDependencies {
   workflowRegistry: WorkflowRegistry
@@ -334,7 +335,10 @@ ${toolData.overviews}
         requiresAuth: registration.requiresAuth,
         estimatedDuration: registration.estimatedDuration,
         tags: registration.tags || [],
-        parameterSchema: registration.parameterSchema, // Essential for understanding workflow parameters
+        parameterSchema: ZodToJsonSchema.convertWithFallback(
+          registration.parameterSchema,
+          `Parameter schema for ${workflow_name} workflow`
+        ), // Convert Zod schema to JSON Schema for tool response
         usage: {
           instructions: [
             '1. Review the parameter schema and required fields',
