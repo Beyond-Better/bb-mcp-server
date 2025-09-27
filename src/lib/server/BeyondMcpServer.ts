@@ -23,6 +23,7 @@ import { ErrorHandler } from '../utils/ErrorHandler.ts';
 import { toError } from '../utils/Error.ts';
 import { ToolRegistry } from '../tools/ToolRegistry.ts';
 import { CoreTools } from '../tools/CoreTools.ts';
+import { WorkflowTools } from '../tools/WorkflowTools.ts';
 import { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
 import { TransportManager } from '../transport/TransportManager.ts';
 import { KVManager } from '../storage/KVManager.ts';
@@ -31,17 +32,20 @@ import { RequestContextManager } from './RequestContextManager.ts';
 import { BeyondMcpSDKHelpers } from './MCPSDKHelpers.ts';
 
 // Import types
-import type {
-  BeyondMcpRequestContext,
-  BeyondMcpServerConfig,
-  BeyondMcpServerDependencies,
-  CreateMessageRequest,
-  CreateMessageResult,
-  ElicitInputRequest,
-  ElicitInputResult,
-  ToolDefinition,
-  ToolHandler,
-  ToolRegistration,
+import {
+  ToolHandlerMode,
+  WorkflowToolNaming,
+  type BeyondMcpRequestContext,
+  type BeyondMcpServerConfig,
+  type BeyondMcpServerDependencies,
+  type CreateMessageRequest,
+  type CreateMessageResult,
+  type ElicitInputRequest,
+  type ElicitInputResult,
+  type ToolDefinition,
+  type ToolHandler,
+  type ToolRegistration,
+  type ToolRegistrationConfig,
 } from '../types/BeyondMcpTypes.ts';
 
 /**
@@ -59,6 +63,7 @@ export class BeyondMcpServer {
   protected workflowRegistry: WorkflowRegistry;
   protected toolRegistry: ToolRegistry;
   protected coreTools: CoreTools;
+  protected workflowTools: WorkflowTools;
 
   protected requestContextManager: RequestContextManager;
   protected mcpSDKHelpers: BeyondMcpSDKHelpers;
@@ -67,12 +72,13 @@ export class BeyondMcpServer {
   protected transportManager: TransportManager;
   protected kvManager?: KVManager;
   protected oauthProvider?: OAuthProvider;
+  protected toolRegistrationConfig: ToolRegistrationConfig;
 
   // AsyncLocalStorage for request context
   private static contextStorage = new AsyncLocalStorage<BeyondMcpRequestContext>();
 
   constructor(
-    config: BeyondMcpServerConfig,
+    config: BeyondMcpServerConfig & { toolRegistration?: ToolRegistrationConfig },
     dependencies: BeyondMcpServerDependencies,
     sdkMcpServer?: SdkMcpServer,
   ) {
@@ -92,6 +98,16 @@ export class BeyondMcpServer {
     }
     if (dependencies.oauthProvider) {
       this.oauthProvider = dependencies.oauthProvider;
+    }
+
+    if (!this.toolRegistry) {
+      throw ErrorHandler.wrapError('Tool Registry must be set', 'BEYOND_MCP_SERVER_INIT_FAILED');
+    }
+    if (!this.workflowRegistry) {
+      throw ErrorHandler.wrapError(
+        'Workflow Registry must be set',
+        'BEYOND_MCP_SERVER_INIT_FAILED',
+      );
     }
 
     // Use provided SDK MCP server for testing or create real one
@@ -131,14 +147,31 @@ export class BeyondMcpServer {
       );
     }
 
+    // Initialize tool registration configuration
+    this.toolRegistrationConfig = config.toolRegistration || {
+      workflowTools: {
+        enabled: true,
+        naming: WorkflowToolNaming.SIMPLE,
+        executeWorkflow: { enabled: true },
+        getSchemaWorkflow: { enabled: true },
+      },
+      defaultHandlerMode: ToolHandlerMode.MANAGED,
+    };
+
     // Initialize components
 
-    this.toolRegistry.sdkMcpServer(this.sdkMcpServer);
+    this.toolRegistry.sdkMcpServer = this.sdkMcpServer;
 
     this.requestContextManager = new RequestContextManager(this.logger);
 
     this.coreTools = new CoreTools({
       sdkMcpServer: this.sdkMcpServer,
+      logger: this.logger,
+      auditLogger: this.auditLogger,
+    });
+
+    this.workflowTools = new WorkflowTools({
+      workflowRegistry: this.workflowRegistry,
       logger: this.logger,
       auditLogger: this.auditLogger,
     });
@@ -286,8 +319,9 @@ export class BeyondMcpServer {
     name: string,
     definition: ToolDefinition<T>,
     handler: ToolHandler<T>,
+    options?: { handlerMode?: ToolHandlerMode },
   ): void {
-    this.toolRegistry.registerTool(name, definition, handler);
+    this.toolRegistry.registerTool(name, definition, handler, options);
   }
 
   /**
@@ -326,9 +360,44 @@ export class BeyondMcpServer {
     // Register all core tools via CoreTools component
     this.coreTools.registerWith(this.toolRegistry);
 
+    // Register workflow tools if enabled and workflows exist
+    await this.registerWorkflowTools();
+
     this.logger.debug('BeyondMcpServer: Core tools registered', {
       toolCount: this.toolRegistry.getToolCount(),
       tools: this.toolRegistry.getToolNames(),
+    });
+  }
+
+  /**
+   * Register workflow tools if workflows exist and tools are enabled
+   */
+  private async registerWorkflowTools(): Promise<void> {
+    if (!this.toolRegistrationConfig.workflowTools.enabled) {
+      this.logger.debug('BeyondMcpServer: Workflow tools disabled in configuration');
+      return;
+    }
+
+    const workflowData = this.workflowRegistry.getWorkflowToolData();
+    
+    if (!workflowData.hasWorkflows) {
+      this.logger.debug('BeyondMcpServer: No workflows registered, skipping workflow tools');
+      return;
+    }
+
+    // Register workflow tools with app name for namespaced mode
+    const appName = this.config.server.name;
+    this.workflowTools.registerWith(
+      this.toolRegistry,
+      this.toolRegistrationConfig,
+      appName,
+    );
+
+    this.logger.info('BeyondMcpServer: Workflow tools registered', {
+      workflowCount: workflowData.count,
+      executeWorkflow: this.toolRegistrationConfig.workflowTools.executeWorkflow.enabled,
+      getSchemaWorkflow: this.toolRegistrationConfig.workflowTools.getSchemaWorkflow.enabled,
+      namingMode: this.toolRegistrationConfig.workflowTools.naming,
     });
   }
 

@@ -10,15 +10,18 @@
  */
 
 import type { Logger } from '../utils/Logger.ts'
+import type { ErrorHandler } from '../utils/ErrorHandler.ts'
 import type {
   WorkflowBase,
   WorkflowRegistration,
-  WorkflowCategory,
   WorkflowMetrics,
   WorkflowRegistryConfig,
-} from './WorkflowTypes.ts'
+} from '../types/WorkflowTypes.ts'
+import type {
+  PluginCategory,
+} from '../types/PluginTypes.ts'
 
-import { DEFAULT_WORKFLOW_CATEGORIES } from './WorkflowTypes.ts'
+import { DEFAULT_PLUGIN_CATEGORIES } from '../types/PluginTypes.ts'
 
 /**
  * Enhanced registry for managing workflow instances, metadata, and plugins
@@ -28,7 +31,7 @@ export class WorkflowRegistry {
   
   private workflows = new Map<string, WorkflowBase>()
   private registrations = new Map<string, WorkflowRegistration>()
-  private categories = new Map<WorkflowCategory, string[]>()
+  private categories = new Map<PluginCategory, string[]>()
   private tags = new Map<string, string[]>()
   private metrics = new Map<string, WorkflowMetrics>()
   private logger: Logger | undefined
@@ -36,10 +39,10 @@ export class WorkflowRegistry {
   private validCategories: Set<string>
     private errorHandler: ErrorHandler;
 
-  private constructor(dependencies?: { logger?: Logger; config?: WorkflowRegistryConfig }) {
-    this.logger = dependencies?.logger
-    this.errorHandler = dependencies?.errorHandler;
-    this.config = dependencies?.config || {}
+  private constructor(dependencies: { logger: Logger; config?: WorkflowRegistryConfig; errorHandler: ErrorHandler }) {
+    this.logger = dependencies.logger
+    this.errorHandler = dependencies.errorHandler;
+    this.config = dependencies.config || {}
     this.validCategories = this.initializeValidCategories()
     this.initializeCategories()
   }
@@ -47,7 +50,7 @@ export class WorkflowRegistry {
   /**
    * Get singleton instance of WorkflowRegistry
    */
-  static getInstance(dependencies?: { logger?: Logger; config?: WorkflowRegistryConfig; errorHandler?: ErrorHandler }): WorkflowRegistry {
+  static getInstance(dependencies: { logger: Logger; config?: WorkflowRegistryConfig; errorHandler: ErrorHandler }): WorkflowRegistry {
     if (!WorkflowRegistry.instance) {
       WorkflowRegistry.instance = new WorkflowRegistry(dependencies)
     }
@@ -65,7 +68,7 @@ export class WorkflowRegistry {
    * Initialize valid categories from configuration
    */
   private initializeValidCategories(): Set<string> {
-    const baseCategories = this.config.validCategories || DEFAULT_WORKFLOW_CATEGORIES
+    const baseCategories = this.config.validCategories || DEFAULT_PLUGIN_CATEGORIES
     const customCategories = this.config.customCategories || []
     
     const allCategories = [...baseCategories, ...customCategories]
@@ -78,7 +81,7 @@ export class WorkflowRegistry {
   private initializeCategories(): void {
     // Initialize all valid categories
     for (const category of this.validCategories) {
-      this.categories.set(category as WorkflowCategory, [])
+      this.categories.set(category as PluginCategory, [])
     }
   }
   
@@ -89,8 +92,8 @@ export class WorkflowRegistry {
     const registration = workflow.getRegistration()
     const name = registration.name
     
-    // Validate registration
-    const validationErrors = this.validateRegistration(registration)
+    // Validate registration and workflow methods
+    const validationErrors = this.validateRegistration(registration, workflow)
     if (validationErrors.length > 0) {
       const errorMessage = `Workflow registration has errors:\n${validationErrors.join('\n')}`
       this.logger?.error('Failed to register workflow', new Error(errorMessage), {
@@ -159,7 +162,7 @@ export class WorkflowRegistry {
   /**
    * Get workflows by category
    */
-  getWorkflowsByCategory(category: WorkflowCategory): WorkflowBase[] {
+  getWorkflowsByCategory(category: PluginCategory): WorkflowBase[] {
     const workflowNames = this.categories.get(category) || []
     return workflowNames
       .map(name => this.workflows.get(name))
@@ -413,11 +416,12 @@ export class WorkflowRegistry {
   }
   
   /**
-   * Validate workflow registration
+   * Validate workflow registration and instance methods
    */
-  private validateRegistration(registration: WorkflowRegistration): string[] {
+  private validateRegistration(registration: WorkflowRegistration, workflow: WorkflowBase): string[] {
     const errors: string[] = []
     
+    // Validate registration data
     if (!registration.name) {
       errors.push('Workflow name is required')
     }
@@ -444,6 +448,15 @@ export class WorkflowRegistry {
       errors.push('requiresAuth must be a boolean')
     }
     
+    // Validate required workflow methods
+    const requiredMethods = ['getRegistration', 'getOverview', 'executeWithValidation']
+    
+    for (const method of requiredMethods) {
+      if (typeof workflow[method as keyof WorkflowBase] !== 'function') {
+        errors.push(`Workflow '${registration.name}' is missing required method: ${method}`)
+      }
+    }
+    
     return errors
   }
   
@@ -461,7 +474,7 @@ export class WorkflowRegistry {
     }
     
     this.validCategories.add(category)
-    this.categories.set(category as WorkflowCategory, [])
+    this.categories.set(category as PluginCategory, [])
     
     this.logger?.info('Added valid category', { category })
   }
@@ -475,14 +488,14 @@ export class WorkflowRegistry {
     }
     
     // Check if any workflows are using this category
-    const workflowsInCategory = this.categories.get(category as WorkflowCategory) || []
+    const workflowsInCategory = this.categories.get(category as PluginCategory) || []
     if (workflowsInCategory.length > 0) {
       throw new Error(`Cannot remove category '${category}': ${workflowsInCategory.length} workflows are still using it`)
     }
     
     const removed = this.validCategories.delete(category)
     if (removed) {
-      this.categories.delete(category as WorkflowCategory)
+      this.categories.delete(category as PluginCategory)
       this.logger?.info('Removed valid category', { category })
     }
     
@@ -508,6 +521,51 @@ export class WorkflowRegistry {
    */
   getConfig(): Readonly<WorkflowRegistryConfig> {
     return { ...this.config }
+  }
+  
+  /**
+   * Build formatted workflow overviews for tool descriptions
+   * Used by workflow tools to generate dynamic descriptions
+   */
+  buildWorkflowOverviews(): string {
+    const workflows = this.getAllRegistrations()
+    
+    if (workflows.length === 0) {
+      return 'No workflows available'
+    }
+    
+    return workflows.map((w, index) => {
+      const workflow = this.getWorkflow(w.name)
+      const overview = workflow?.getOverview() || w.displayName
+      const tags = w.tags ? `\n  Tags: [${w.tags.join(', ')}]` : ''
+      const category = w.category ? `\n  Category: ${w.category}` : ''
+      const version = w.version ? `\n  Version: ${w.version}` : ''
+      const estimatedDuration = w.estimatedDuration ? 
+        `\n  Estimated Workflow Duration: ${w.estimatedDuration} seconds` : ''
+      
+      return `${index + 1}. **${w.name}**: ${overview}${category}${tags}${estimatedDuration}${version}`
+    }).join('\n\n')
+  }
+  
+  /**
+   * Get workflow tool data for tool registration
+   * Provides structured data needed by workflow tools
+   */
+  getWorkflowToolData(): {
+    names: string[]
+    overviews: string
+    count: number
+    hasWorkflows: boolean
+    registrations: WorkflowRegistration[]
+  } {
+    const workflows = this.getAllRegistrations()
+    return {
+      names: workflows.map(w => w.name),
+      overviews: this.buildWorkflowOverviews(),
+      count: workflows.length,
+      hasWorkflows: workflows.length > 0,
+      registrations: workflows
+    }
   }
   
   /**

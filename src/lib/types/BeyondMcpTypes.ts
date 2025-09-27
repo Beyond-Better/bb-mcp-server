@@ -11,6 +11,7 @@
  */
 
 import type { CallToolResult } from 'mcp/types.js';
+import type { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
 import { type ZodSchema, type ZodObject } from 'zod';
 
 // Import component types
@@ -18,8 +19,9 @@ import type { Logger, LogLevel } from '../utils/Logger.ts';
 import type { AuditLogger } from '../utils/AuditLogger.ts';
 import type { ConfigManager } from '../config/ConfigManager.ts';
 import type { ErrorHandler } from '../utils/ErrorHandler.ts';
+import type { ToolRegistry } from '../tools/ToolRegistry.ts';
 import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
-import type { WorkflowRegistryConfig } from '../workflows/WorkflowTypes.ts';
+import type { WorkflowRegistryConfig } from '../types/WorkflowTypes.ts';
 import type { TransportManager } from '../transport/TransportManager.ts';
 import type { KVManager } from '../storage/KVManager.ts';
 import type { OAuthProvider } from '../auth/OAuthProvider.ts';
@@ -70,6 +72,7 @@ export interface BeyondMcpServerDependencies {
   auditLogger: AuditLogger;
   configManager: ConfigManager;
   errorHandler: ErrorHandler;
+  toolRegistry: ToolRegistry;
   workflowRegistry: WorkflowRegistry;
   transportManager: TransportManager;
   kvManager?: KVManager;
@@ -189,6 +192,7 @@ export interface ValidationResult<T> {
 export interface ToolRegistryDependencies {
   logger: Logger;
   errorHandler: ErrorHandler;
+  sdkMcpServer?: SdkMcpServer;
 }
 
 /**
@@ -196,7 +200,7 @@ export interface ToolRegistryDependencies {
  */
 export interface CoreToolsDependencies {
   logger: Logger;
-  sdkMcpServer: any; // SdkMcpServer from mcp/server/mcp.js
+  sdkMcpServer: SdkMcpServer; // SdkMcpServer from mcp/server/mcp.js
   auditLogger: AuditLogger;
 }
 
@@ -306,43 +310,43 @@ export interface ToolPlugin {
  * Tool Registry Interface
  * Defines the interface that ToolRegistry must implement
  */
-export interface ToolRegistry {
-  registerTool<T extends Record<string, ZodSchema>>(
-    name: string,
-    definition: ToolDefinition<T>,
-    handler: ToolHandler<T>
-  ): void;
-  
-  validateToolInput(
-    toolName: string,
-    input: unknown
-  ): Promise<ValidationResult<any>>;
-  
-  getTool(name: string): RegisteredTool | undefined;
-  getTools(): RegisteredTool[];
-  getToolNames(): string[];
-  getToolCount(): number;
-  getToolsByCategory(category: string): RegisteredTool[];
-  getToolSchema(name: string): ZodObject<any> | undefined;
-  getToolDefinition(name: string): ToolDefinition<any> | undefined;
-  getToolStats(name: string): {
-    callCount: number;
-    lastCalled?: Date;
-    averageExecutionTime: number;
-  } | undefined;
-  getRegistryStats(): {
-    totalTools: number;
-    totalCalls: number;
-    averageExecutionTime: number;
-    toolsByCategory: Record<string, number>;
-    mostUsedTools: Array<{ name: string; callCount: number }>;
-  };
-  
-  updateToolStats(toolName: string, executionTimeMs: number): void;
-  testToolValidation(name: string, input: unknown): Promise<ValidationResult<any>>;
-  clear(): void;
-  removeTool(name: string): boolean;
-}
+// export interface ToolRegistry {
+//   registerTool<T extends Record<string, ZodSchema>>(
+//     name: string,
+//     definition: ToolDefinition<T>,
+//     handler: ToolHandler<T>
+//   ): void;
+//   
+//   validateToolInput(
+//     toolName: string,
+//     input: unknown
+//   ): Promise<ValidationResult<any>>;
+//   
+//   getTool(name: string): RegisteredTool | undefined;
+//   getTools(): RegisteredTool[];
+//   getToolNames(): string[];
+//   getToolCount(): number;
+//   getToolsByCategory(category: string): RegisteredTool[];
+//   getToolSchema(name: string): ZodObject<any> | undefined;
+//   getToolDefinition(name: string): ToolDefinition<any> | undefined;
+//   getToolStats(name: string): {
+//     callCount: number;
+//     lastCalled?: Date;
+//     averageExecutionTime: number;
+//   } | undefined;
+//   getRegistryStats(): {
+//     totalTools: number;
+//     totalCalls: number;
+//     averageExecutionTime: number;
+//     toolsByCategory: Record<string, number>;
+//     mostUsedTools: Array<{ name: string; callCount: number }>;
+//   };
+//   
+//   updateToolStats(toolName: string, executionTimeMs: number): void;
+//   testToolValidation(name: string, input: unknown): Promise<ValidationResult<any>>;
+//   clear(): void;
+//   removeTool(name: string): boolean;
+// }
 
 /**
  * Server Lifecycle States
@@ -478,4 +482,50 @@ export interface AuthenticationInfo {
 }
 
 // Re-export LogLevel from Logger for convenience
+/**
+ * Tool handler modes for registration
+ */
+export enum ToolHandlerMode {
+  MANAGED = 'managed',    // Current complex validation/error handling (default)
+  NATIVE = 'native'       // Direct registration, tool handles own validation
+}
+
+/**
+ * Tool naming modes for workflow tools
+ */
+export enum WorkflowToolNaming {
+  SIMPLE = 'simple',           // execute_workflow, get_schema_for_workflow
+  NAMESPACED = 'namespaced',   // execute_workflow_$name, get_schema_for_workflow_$name
+  CUSTOM = 'custom'            // Completely custom tool names
+}
+
+/**
+ * Tool registration options
+ */
+export interface ToolRegistrationOptions {
+  handlerMode?: ToolHandlerMode;
+  // Additional options can be added here
+}
+
+/**
+ * Tool registration configuration
+ */
+export interface ToolRegistrationConfig {
+  workflowTools: {
+    enabled: boolean;
+    naming: WorkflowToolNaming;
+    customNames?: {
+      executeWorkflow?: string;
+      getSchemaWorkflow?: string;
+    };
+    executeWorkflow: {
+      enabled: boolean;
+    };
+    getSchemaWorkflow: {
+      enabled: boolean;
+    };
+  };
+  defaultHandlerMode: ToolHandlerMode;
+}
+
 export type { LogLevel };

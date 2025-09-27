@@ -9,7 +9,9 @@ import type { Logger } from '../utils/Logger.ts';
 import type { AppPlugin, LoadedPlugin, PluginDiscoveryOptions } from '../types/PluginTypes.ts';
 import type { AppServerDependencies } from '../types/AppServerTypes.ts';
 import type { ToolRegistry } from '../tools/ToolRegistry.ts';
+import type { ToolBase } from '../types/ToolTypes.ts';
 import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
+import type { WorkflowBase } from '../workflows/WorkflowBase.ts';
 
 /**
  * Manager for plugin discovery, loading, and lifecycle management
@@ -67,17 +69,17 @@ export class PluginManager {
       let plugin = null;
 
       if (pluginModule.default && typeof pluginModule.default === 'function') {
-        // 1. Try default export as function
+        // 1a. Try default export as function
         plugin = pluginModule.default(this.pluginDependencies);
-        await plugin.initialize(this.toolRegistry, this.workflowRegistry, this.pluginDependencies);
       } else if (pluginModule.default && typeof pluginModule.default === 'object') {
-        // 1. Try default export as object
+        // 1b. Try default export as object
         plugin = pluginModule.default;
-        await plugin.initialize(this.toolRegistry, this.workflowRegistry, this.pluginDependencies);
+      } else if (pluginModule.plugin && typeof pluginModule.plugin === 'function') {
+        // 2a. Try named 'plugin' export as function
+        plugin = pluginModule.plugin(this.pluginDependencies);
       } else if (pluginModule.plugin && typeof pluginModule.plugin === 'object') {
-        // 2. Try named 'plugin' export
+        // 2b. Try named 'plugin' export as object
         plugin = pluginModule.plugin;
-        await plugin.initialize(this.toolRegistry, this.workflowRegistry, this.pluginDependencies);
       } else {
         // 3. Try factory function exports (createXxxPlugin)
         const factoryNames = Object.keys(pluginModule).filter((key) =>
@@ -88,10 +90,24 @@ export class PluginManager {
             path: pluginPath,
             availableExports: Object.keys(pluginModule),
           });
-          // Skip factory functions for now - they need dependencies
-          throw new Error(
-            `Plugin at ${pluginPath} exports factory functions but no plugin object. Use factory functions manually for dependency injection.`,
-          );
+
+          // Call factory function with dependencies
+          try {
+            const factoryFunction = pluginModule[factoryNames[0]!]; // Safe: already checked length > 0
+            plugin = factoryFunction(this.pluginDependencies);
+
+            this.logger?.debug('Successfully created plugin using factory function', {
+              path: pluginPath,
+              factoryName: factoryNames[0],
+              pluginName: plugin?.name,
+            });
+          } catch (error) {
+            throw new Error(
+              `Failed to create plugin using factory function ${
+                factoryNames[0]
+              } at ${pluginPath}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            );
+          }
         }
       }
 
@@ -103,8 +119,21 @@ export class PluginManager {
         );
       }
 
+      // Call optional initialize method for async setup
+      if (plugin.initialize && typeof plugin.initialize === 'function') {
+        await plugin.initialize(this.pluginDependencies, this.toolRegistry, this.workflowRegistry);
+      }
+
       // Validate plugin structure
-      this.validatePlugin(plugin, pluginPath);
+      const validationErrors = this.validatePlugin(plugin);
+      if (validationErrors.length > 0) {
+        const errorMessage = `Plugin registration has errors:\n${validationErrors.join('\n')}`;
+        this.logger?.error('Failed to register plugin', new Error(errorMessage), {
+          plugin: plugin.name,
+          errors: validationErrors,
+        });
+        throw new Error(errorMessage);
+      }
 
       this.logger?.info('Registering plugin', { name: plugin.name });
 
@@ -151,15 +180,16 @@ export class PluginManager {
   }
 
   async registerPlugin(plugin: AppPlugin): Promise<void> {
-    const validationErrors = this.validatePlugin(plugin);
-    if (validationErrors.length > 0) {
-      const errorMessage = `Plugin registration has errors:\n${validationErrors.join('\n')}`;
-      this.logger?.error('Failed to register plugin', new Error(errorMessage), {
-        plugin: plugin.name,
-        errors: validationErrors,
-      });
-      throw new Error(errorMessage);
-    }
+    // gets validated in loadPlugin
+    //const validationErrors = this.validatePlugin(plugin);
+    //if (validationErrors.length > 0) {
+    //  const errorMessage = `Plugin registration has errors:\n${validationErrors.join('\n')}`;
+    //  this.logger?.error('Failed to register plugin', new Error(errorMessage), {
+    //    plugin: plugin.name,
+    //    errors: validationErrors,
+    //  });
+    //  throw new Error(errorMessage);
+    //}
 
     try {
       // Track which items came from this plugin for cleanup
@@ -180,26 +210,6 @@ export class PluginManager {
         // Note: Tools need proper registration pattern - this will need updating based on tool structure
         // this.toolRegistry.registerTool(tool.name, tool.definition, tool.handler);
         // pluginItems.tools.push(tool.name);
-      }
-
-      // Call optional initialize method for async setup
-      if (plugin.initialize && typeof plugin.initialize === 'function') {
-        await plugin.initialize(this.toolRegistry, this.workflowRegistry);
-        
-        // After initialize, register any newly added workflows/tools
-        // Check for new workflows added during initialize
-        for (const workflow of plugin.workflows || []) {
-          const registration = workflow.getRegistration();
-          if (!pluginItems.workflows.includes(registration.name)) {
-            this.workflowRegistry.registerWorkflow(workflow);
-            pluginItems.workflows.push(registration.name);
-          }
-        }
-        
-        // Check for new tools added during initialize
-        for (const tool of plugin.tools || []) {
-          // Similar pattern for tools once tool structure is defined
-        }
       }
 
       // Store loaded plugin with item tracking
@@ -314,6 +324,10 @@ export class PluginManager {
         'Plugin must provide at least one tool/workflow or an initialize method for dependency injection',
       );
     }
+
+    // Note: Individual workflow and tool method validation is now handled by their respective registries
+    // WorkflowRegistry.validateRegistration() validates workflow methods during registration
+    // ToolRegistry.validateToolRegistration() validates tool definitions and handlers during registration
 
     // Log debug info for empty workflow plugins
     if (plugin.tools.length === 0 && plugin.workflows.length === 0 && hasInitializeMethod) {
@@ -496,59 +510,6 @@ export class PluginManager {
   }
 
   /**
-   * Validate plugin structure
-   */
-  private validatePlugin(plugin: any, path: string): void {
-    const requiredFields = ['name', 'version', 'description', 'workflows'];
-
-    for (const field of requiredFields) {
-      if (!(field in plugin)) {
-        throw new Error(`Plugin at ${path} is missing required field: ${field}`);
-      }
-    }
-
-    if (!Array.isArray(plugin.workflows)) {
-      throw new Error(`Plugin at ${path} workflows field must be an array`);
-    }
-
-    // Allow empty workflows array if plugin has initialize method (dependency injection pattern)
-    const hasInitializeMethod = typeof plugin.initialize === 'function';
-    if (plugin.workflows.length === 0 && !hasInitializeMethod) {
-      throw new Error(
-        `Plugin at ${path} must provide at least one workflow or an initialize method for dependency injection`,
-      );
-    }
-
-    // Skip workflow validation for plugins with empty workflows (dependency injection pattern)
-    if (plugin.workflows.length === 0 && hasInitializeMethod) {
-      this.logger?.debug(
-        'Plugin has empty workflows array but has initialize method - assuming dependency injection pattern',
-        {
-          plugin: plugin.name,
-          path,
-        },
-      );
-      return;
-    }
-
-    // Validate each workflow has required methods (for plugins with pre-populated workflows)
-    for (let i = 0; i < plugin.workflows.length; i++) {
-      const workflow = plugin.workflows[i];
-      const requiredMethods = ['getRegistration', 'getOverview', 'executeWithValidation'];
-
-      for (const method of requiredMethods) {
-        if (typeof workflow[method] !== 'function') {
-          throw new Error(
-            `Plugin at ${path} workflow ${i} is missing required method: ${method}`,
-          );
-        }
-      }
-    }
-  }
-
-
-
-  /**
    * Check if a plugin is loaded
    */
   isPluginLoaded(name: string): boolean {
@@ -661,7 +622,8 @@ export class PluginManager {
     name: string,
     version: string,
     description: string,
-    workflows: any[],
+    workflows: WorkflowBase[],
+    tools: ToolBase[],
     options: {
       author?: string;
       license?: string;
@@ -674,6 +636,7 @@ export class PluginManager {
       version,
       description,
       workflows,
+      tools,
     };
 
     if (options.author) plugin.author = options.author;
