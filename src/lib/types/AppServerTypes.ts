@@ -45,13 +45,13 @@ export interface AppServerDependencies {
   //config: ConfigManager;
   logger: Logger;
   auditLogger: AuditLogger;
-  kvManager?: KVManager;
+  kvManager: KVManager;
   sessionStore: SessionStore;
   eventStore: TransportEventStore;
   credentialStore: CredentialStore;
   errorHandler: ErrorHandler;
   workflowRegistry: WorkflowRegistry;
-  oauthProvider?: OAuthProvider;
+  oauthProvider: OAuthProvider;
   transportManager: TransportManager;
   
   // Beyond MCP Server (must be created with all dependencies)
@@ -72,6 +72,8 @@ export interface AppServerDependencies {
     description: string;
   };
   
+  additionalHealthChecks?: DependenciesHealthCheck[];
+  
   // Custom workflows and tools
   customWorkflows?: WorkflowBase[];
   customTools?: ToolRegistration[];
@@ -80,6 +82,16 @@ type AppOnlyKeys = 'sessionStore' | 'eventStore' | 'credentialStore' | 'beyondMc
 
 export type  AppServerDependenciesPartial = Omit<AppServerDependencies, AppOnlyKeys>;
 
+export interface CreateCustomAppServerDependencies {
+  configManager: ConfigManager;
+  logger: Logger;
+  kvManager: KVManager;
+}
+
+export type DependenciesHealthCheck = {
+  name: string;
+  check: () => Promise<{ healthy: boolean; status: string }>;
+};
 
 /**
  * Partial dependencies for consumer override
@@ -96,7 +108,45 @@ export interface AppServerOverrides extends Partial<AppServerDependencies> {
 export type DependencyFactory<T> = (config: ConfigManager, logger?: Logger) => T | Promise<T>;
 
 /**
+ * Third-party API health status information
+ */
+export interface ThirdPartyHealthStatus {
+  healthy: boolean;
+  version: string;
+  uptime: number;
+  services: Record<string, 'healthy' | 'degraded' | 'down'>;
+}
+
+/**
+ * API information and capabilities
+ */
+export interface ApiInfo {
+  /** API name */
+  name: string;
+  /** API version */
+  version: string;
+  /** API description */
+  description?: string;
+  /** Available endpoints or capabilities */
+  capabilities?: string[];
+  /** API documentation URL */
+  documentationUrl?: string;
+  /** Rate limiting information */
+  rateLimits?: {
+    requestsPerMinute?: number;
+    requestsPerHour?: number;
+    requestsPerDay?: number;
+  };
+  /** API status page URL */
+  statusPageUrl?: string;
+  /** Additional metadata */
+  metadata?: Record<string, any>;
+}
+
+/**
  * Consumer API client interface (for type safety)
+ * 
+ * @deprecated Use BaseApiClient abstract class instead for stronger type safety
  */
 export interface ConsumerApiClient {
   healthCheck(): Promise<{ healthy: boolean; status?: string }>;

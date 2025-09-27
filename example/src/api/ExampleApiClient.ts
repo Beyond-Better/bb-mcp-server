@@ -8,8 +8,10 @@
  * - Type-safe API methods with proper TypeScript interfaces
  */
 
-// 🎯 Library imports - logging only (API client is consumer-specific)
+// 🎯 Library imports - API client base class, logging, and types
+import { BaseApiClient, type BaseApiClientConfig } from '@bb/mcp-server'
 import { Logger } from '@bb/mcp-server'
+import type { ThirdPartyHealthStatus, ApiInfo } from '@bb/mcp-server'
 
 // 🎯 Consumer-specific imports
 import { ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts'
@@ -17,13 +19,9 @@ import { ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts'
 /**
  * Configuration for ExampleCorp API client
  */
-export interface ExampleApiClientConfig {
-  baseUrl: string
-  apiVersion: string
-  timeout: number
-  retryAttempts: number
-  retryDelayMs: number
-  userAgent?: string
+export interface ExampleApiClientConfig extends BaseApiClientConfig {
+  // Add any ExampleCorp-specific configuration here
+  // All base configuration is inherited from BaseApiClientConfig
 }
 
 /**
@@ -40,12 +38,7 @@ export interface ApiResponse<T = any> {
   }
 }
 
-export interface HealthStatus {
-  healthy: boolean
-  version: string
-  uptime: number
-  services: Record<string, 'healthy' | 'degraded' | 'down'>
-}
+
 
 export interface Customer {
   id: string
@@ -102,20 +95,18 @@ export interface Product {
  * 🎯 Demonstrates third-party API integration patterns
  * 🎯 Shows OAuth integration using library OAuth consumer
  * 🎯 Consumer-specific - each MCP server will have different API clients
+ * 🎯 Extends BaseApiClient for standardized health check and API info contract
  */
-export class ExampleApiClient {
-  private config: ExampleApiClientConfig
+export class ExampleApiClient extends BaseApiClient {
   private oauthConsumer: ExampleOAuthConsumer
-  private logger: Logger
   
   constructor(
     config: ExampleApiClientConfig,
     oauthConsumer: ExampleOAuthConsumer,
     logger: Logger
   ) {
-    this.config = config
+    super(config, logger)
     this.oauthConsumer = oauthConsumer
-    this.logger = logger
   }
   
   // =============================================================================
@@ -125,7 +116,7 @@ export class ExampleApiClient {
   /**
    * Check API health status (using JSONPlaceholder /posts/1 as health check)
    */
-  async healthCheck(): Promise<HealthStatus> {
+  async healthCheck(): Promise<ThirdPartyHealthStatus> {
     try {
       // Use JSONPlaceholder /posts/1 as a simple health check
       const response = await fetch(`${this.config.baseUrl}/posts/1`)
@@ -148,7 +139,7 @@ export class ExampleApiClient {
       }
       
     } catch (error) {
-      this.logger.warn('ExampleCorp health check failed', {})
+      this.getLogger().warn('ExampleCorp health check failed', {})
       return {
         healthy: false,
         version: 'unknown',
@@ -161,11 +152,42 @@ export class ExampleApiClient {
   /**
    * Get API information and capabilities
    */
-  async getApiInfo(): Promise<any> {
-    const response = await this.makeRequest('GET', '/info', {
-      requireAuth: false,
-    })
-    return response.data
+  async getApiInfo(): Promise<ApiInfo> {
+    try {
+      // For JSONPlaceholder demo, return static API info
+      // In a real implementation, this would query the API's info endpoint
+      return {
+        name: 'ExampleCorp API',
+        version: 'v1.0',
+        description: 'Demonstration API using JSONPlaceholder for MCP server integration patterns',
+        capabilities: [
+          'customer-management',
+          'order-processing',
+          'product-catalog',
+          'inventory-tracking',
+          'analytics-reporting',
+          'refund-processing',
+          'data-migration'
+        ],
+        documentationUrl: 'https://jsonplaceholder.typicode.com/',
+        rateLimits: {
+          requestsPerMinute: 60,
+          requestsPerHour: 3600,
+          requestsPerDay: 86400
+        },
+        statusPageUrl: 'https://jsonplaceholder.typicode.com/',
+        metadata: {
+          provider: 'JSONPlaceholder',
+          baseUrl: this.getConfig().baseUrl,
+          apiVersion: this.getConfig().apiVersion,
+          timeout: this.getConfig().timeout,
+          retryAttempts: this.getConfig().retryAttempts
+        }
+      }
+    } catch (error) {
+      this.getLogger().error('Failed to get API info', error instanceof Error ? error : new Error(String(error)))
+      throw new Error('Failed to retrieve API information')
+    }
   }
   
   // =============================================================================
@@ -236,7 +258,7 @@ export class ExampleApiClient {
       }
       
     } catch (error) {
-      this.logger.error('Failed to query customers', error instanceof Error ? error : new Error(String(error)))
+      this.getLogger().error('Failed to query customers', error instanceof Error ? error : new Error(String(error)))
       return { items: [], totalCount: 0, pagination: {} }
     }
   }
@@ -282,11 +304,11 @@ export class ExampleApiClient {
         updatedAt: new Date().toISOString(),
       }
       
-      this.logger.info('Customer created successfully', { customerId: customer.id, name: customer.name })
+      this.getLogger().info('Customer created successfully', { customerId: customer.id, name: customer.name })
       return customer
       
     } catch (error) {
-      this.logger.error('Failed to create customer', error instanceof Error ? error : new Error(String(error)))
+      this.getLogger().error('Failed to create customer', error instanceof Error ? error : new Error(String(error)))
       throw new Error('Failed to create customer')
     }
   }
@@ -375,7 +397,7 @@ export class ExampleApiClient {
       }
       
     } catch (error) {
-      this.logger.error('Failed to query orders', error instanceof Error ? error : new Error(String(error)))
+      this.getLogger().error('Failed to query orders', error instanceof Error ? error : new Error(String(error)))
       return { items: [], totalCount: 0, pagination: {} }
     }
   }
@@ -659,7 +681,7 @@ export class ExampleApiClient {
    * Disconnect from ExampleCorp API
    */
   async disconnect(): Promise<void> {
-    this.logger.info('ExampleCorp API client disconnected')
+    this.getLogger().info('ExampleCorp API client disconnected')
   }
   
   // =============================================================================
@@ -716,7 +738,7 @@ export class ExampleApiClient {
       // Parse response
       const responseData = await response.json() as ApiResponse<T>
       
-      this.logger.debug('ExampleCorp API request completed', {
+      this.getLogger().debug('ExampleCorp API request completed', {
         method,
         endpoint,
         status: response.status,
@@ -727,7 +749,7 @@ export class ExampleApiClient {
       return responseData
       
     } catch (error) {
-      this.logger.error('ExampleCorp API request failed', error instanceof Error ? error : new Error(String(error)), {
+      this.getLogger().error('ExampleCorp API request failed', error instanceof Error ? error : new Error(String(error)), {
         method,
         endpoint,
         requestId,
@@ -781,7 +803,7 @@ export class ExampleApiClient {
       )
       
       if (shouldRetry) {
-        this.logger.warn('ExampleCorp API request failed, retrying', {
+        this.getLogger().warn('ExampleCorp API request failed, retrying', {
           url,
           attempt,
           maxAttempts: this.config.retryAttempts,
@@ -804,15 +826,17 @@ export class ExampleApiClient {
  * 
  * This file demonstrates third-party API integration patterns:
  * 
+ * ✅ Base Class Contract: Extends BaseApiClient for standardized health check and API info methods
+ * ✅ Type Safety: Uses ThirdPartyHealthStatus and ApiInfo types from library
  * ✅ OAuth Integration: Uses library OAuthConsumer for authentication (~2 lines)
  * ✅ Error Handling: Comprehensive HTTP error handling and retry logic (~50 lines)
- * ✅ Type Safety: Full TypeScript interfaces for API requests/responses
- * ✅ Logging: Uses library Logger for structured API logging (~5 lines)
+ * ✅ Logging: Uses library Logger through BaseApiClient protected methods
  * ✅ HTTP Client: Custom implementation for ExampleCorp-specific patterns
  * ✅ Business Methods: ~20 API methods covering full business operations (~400 lines)
  * ✅ Rollback Support: Methods for operation rollback (delete, cancel, restore)
  * 
  * ARCHITECTURE BENEFITS:
+ * - Standardized Contract: All API clients implement healthCheck() and getApiInfo() methods
  * - Third-Party Integration: Clean separation of API client from MCP infrastructure
  * - OAuth Abstraction: Library handles token management, client handles API calls
  * - Error Recovery: Comprehensive retry logic and error classification

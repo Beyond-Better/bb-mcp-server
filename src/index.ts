@@ -1,8 +1,8 @@
 /**
  * bb-mcp-server Library
- * 
+ *
  * A comprehensive library for building Deno-based MCP servers with OAuth and workflow capabilities.
- * 
+ *
  * @module bb-mcp-server
  * @version 0.1.0
  */
@@ -23,6 +23,9 @@ export { AuditLogger } from './lib/utils/AuditLogger.ts';
 export { ValidationHelpers } from './lib/utils/ValidationHelpers.ts';
 export { ErrorHandler } from './lib/utils/ErrorHandler.ts';
 
+// API Client exports
+export { BaseApiClient } from './lib/clients/BaseApiClient.ts';
+
 // Workflow exports (Phase 2)
 export { WorkflowBase } from './lib/workflows/WorkflowBase.ts';
 export { WorkflowRegistry } from './lib/workflows/WorkflowRegistry.ts';
@@ -33,7 +36,12 @@ export { TransportManager } from './lib/transport/TransportManager.ts';
 export { HttpTransport } from './lib/transport/HttpTransport.ts';
 export { StdioTransport } from './lib/transport/StdioTransport.ts';
 export { SessionManager } from './lib/transport/SessionManager.ts';
-export { RequestContext, executeWithRequestContext, getCurrentRequestContext, requireRequestContext } from './lib/transport/RequestContext.ts';
+export {
+  executeWithRequestContext,
+  getCurrentRequestContext,
+  RequestContext,
+  requireRequestContext,
+} from './lib/transport/RequestContext.ts';
 
 // OAuth exports (Phase 4)
 export { OAuthProvider } from './lib/auth/OAuthProvider.ts';
@@ -77,170 +85,179 @@ export type { CallToolResult } from 'mcp/types.js';
 
 // OAuth type exports (Phase 4) - specific exports to avoid conflicts
 export type {
-  // Token types
-  MCPAccessToken,
-  MCPRefreshToken,
-  MCPAuthorizationCode,
-  TokenValidation,
-  TokenRefreshResult,
-  TokenConfig,
+  AuthCallbackResult,
+  // Auth flow types
+  AuthFlowResult,
   // Request/Response types
   AuthorizeRequest,
   AuthorizeResponse,
-  TokenRequest,
-  TokenResponse,
+  ClientRegistration,
   // Client registration types
   ClientRegistrationRequest,
   ClientRegistrationResponse,
-  ClientRegistration,
   ClientValidation,
-  // Auth flow types
-  AuthFlowResult,
-  AuthCallbackResult,
-  TokenResult,
+  CodeChallengeResult,
+  // Token types
+  MCPAccessToken,
+  MCPAuthContext,
+  MCPAuthorizationCode,
   // MCP types
   MCPAuthorizationRequest,
-  MCPAuthContext,
+  MCPRefreshToken,
   // PKCE types
   PKCEMethod,
   PKCEValidation,
-  CodeChallengeResult,
+  TokenConfig,
+  TokenRefreshResult,
+  TokenRequest,
+  TokenResponse,
+  TokenResult,
+  TokenValidation,
 } from './lib/auth/OAuthTypes.ts';
 
 // Storage types (avoiding conflicts with consumer.types.ts)
 export type {
-  OAuthCredentials,
-  KVStats,
-  KVPrefixes,
   KVManagerConfig,
+  KVPrefixes,
   KVSetOptions,
+  KVStats,
+  OAuthCredentials,
 } from './lib/storage/StorageTypes.ts';
 export { DEFAULT_KV_PREFIXES } from './lib/storage/StorageTypes.ts';
 
 // Config types (avoiding conflicts with WorkflowTypes.ts)
 export type {
   AppConfig,
-  ServerConfig,
-  LoggingConfig,
   AuditConfig,
   ConfigLoaderOptions,
   ConfigValidationResult,
   EnvironmentMapping,
+  LoggingConfig,
+  ServerConfig,
 } from './lib/config/ConfigTypes.ts';
 
 // Workflow types (avoiding conflicts with consumer.types.ts)
 export type {
-  WorkflowCategory,
-  WorkflowRegistryConfig,
-  WorkflowError,
-  WorkflowStep,
+  BaseWorkflowParameters,
   FailedStep,
-  WorkflowPlugin,
   LoadedPlugin,
   PluginDiscoveryOptions,
-  WorkflowResource,
-  BaseWorkflowParameters,
-  WorkflowResult,
+  WorkflowCategory,
   WorkflowContext,
+  WorkflowError,
+  WorkflowPlugin,
   WorkflowRegistration,
+  WorkflowRegistryConfig,
+  WorkflowResource,
+  WorkflowResult,
+  WorkflowStep,
 } from './lib/workflows/WorkflowTypes.ts';
 export { DEFAULT_WORKFLOW_CATEGORIES } from './lib/workflows/WorkflowTypes.ts';
 
 // Transport types (Phase 3)
 export type {
-  Transport,
-  TransportType,
-  TransportConfig,
+  AuthenticationResult,
+  CreateSessionData,
   HttpTransportConfig,
-  StdioTransportConfig,
-  SessionConfig,
+  HttpTransportMetrics,
+  MCPError,
   MCPRequest,
   MCPResponse,
-  MCPError,
-  SessionData,
-  CreateSessionData,
-  SessionValidationResult,
   RequestContextData,
+  SessionConfig,
+  SessionData,
+  SessionValidationResult,
+  StdioTransportConfig,
+  StdioTransportMetrics,
+  Transport,
+  TransportConfig,
+  TransportDependencies,
   TransportEvent,
   TransportMetrics,
-  HttpTransportMetrics,
-  StdioTransportMetrics,
-  TransportDependencies,
-  AuthenticationResult,
+  TransportType,
 } from './lib/transport/TransportTypes.ts';
 
 // HTTP Server types (Phase 5) - with alias exports to avoid conflicts
 export type {
+  APIConfig,
+  CompleteServerConfig,
+  ComponentStatus,
+  CORSConfig,
+  EndpointRegistry,
+  HealthCheckResult,
   HttpServerConfig,
   HttpServerDependencies,
-  APIConfig,
-  CORSConfig,
-  ServerMetrics,
-  HealthCheckResult,
   RateLimitInfo,
-  ServerMiddleware,
   RouteHandler,
+  SecurityConfig,
+  ServerEvents,
   ServerFactory,
   ServerInitOptions,
-  SecurityConfig,
-  CompleteServerConfig,
-  EndpointRegistry,
-  ComponentStatus,
+  ServerMetrics,
+  ServerMiddleware,
   ServerStatus,
-  ServerEvents,
 } from './lib/server/ServerTypes.ts';
 
 // HTTP Server types with aliases to avoid conflicts
 export type {
+  AuthContext as HttpAuthContext,
+  ConfigValidationResult as HttpConfigValidationResult,
+  EndpointInfo as HttpEndpointInfo,
+  ErrorInfo as HttpErrorInfo,
+  LoggingConfig as HttpLoggingConfig,
   RequestContext as HttpRequestContext,
   ResponseMetadata as HttpResponseMetadata,
-  ErrorInfo as HttpErrorInfo,
-  EndpointInfo as HttpEndpointInfo,
-  AuthContext as HttpAuthContext,
-  LoggingConfig as HttpLoggingConfig,
-  ConfigValidationResult as HttpConfigValidationResult,
 } from './lib/server/ServerTypes.ts';
 
 // Beyond MCP Server types (Phase 6)
 export type {
+  AuditEvent,
+  AuthenticationInfo,
+  BeyondMcpRequestContext,
   BeyondMcpServerConfig,
   BeyondMcpServerDependencies,
-  BeyondMcpRequestContext,
-  CreateContextData,
-  ToolDefinition,
-  ToolHandler,
-  ToolRegistration,
-  ToolExample,
-  ToolCallExtra,
-  RegisteredTool,
-  ValidationResult,
-  ToolRegistryDependencies,
+  ConfigValidationResult as MCPConfigValidationResult,
   CoreToolsDependencies,
+  CreateContextData,
   CreateMessageRequest,
   CreateMessageResult,
   ElicitInputRequest,
   ElicitInputResult,
-  ToolStats,
-  ToolRegistryStats,
+  RateLimitInfo as MCPRateLimitInfo,
+  RegisteredTool,
   SchemaValidationError,
   SchemaValidationResult,
-  ToolPlugin,
   ServerState,
-  ConfigValidationResult as MCPConfigValidationResult,
-  ToolExecutionContext,
-  AuditEvent,
-  RateLimitInfo as MCPRateLimitInfo,
   SessionInfo,
-  AuthenticationInfo,
+  ToolCallExtra,
+  ToolDefinition,
+  ToolExample,
+  ToolExecutionContext,
+  ToolHandler,
+  ToolPlugin,
+  ToolRegistration,
+  ToolRegistryDependencies,
+  ToolRegistryStats,
+  ToolStats,
+  ValidationResult,
 } from './lib/types/BeyondMcpTypes.ts';
 
 // AppServer types
 export type {
+  ApiInfo,
   AppServerConfig,
   AppServerDependencies,
   AppServerDependenciesPartial,
   AppServerOverrides,
-  DependencyFactory,
   ConsumerApiClient,
   ConsumerOAuthConsumer,
+  CreateCustomAppServerDependencies,
+  DependenciesHealthCheck,
+  DependencyFactory,
+  ThirdPartyHealthStatus,
 } from './lib/types/AppServerTypes.ts';
+
+// API Client types
+export type {
+  BaseApiClientConfig,
+} from './lib/clients/BaseApiClient.ts';
