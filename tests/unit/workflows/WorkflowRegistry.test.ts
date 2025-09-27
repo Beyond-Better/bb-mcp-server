@@ -294,57 +294,9 @@ Deno.test("WorkflowRegistry - search workflows", () => {
   assertEquals(caseResults.length, 1)
 })
 
-Deno.test("WorkflowRegistry - plugin registration", () => {
-  const registry = WorkflowRegistry.getInstance()
-  registry.clear()
-  
-  const plugin = createTestPlugin()
-  
-  // Register plugin
-  registry.registerPlugin(plugin)
-  
-  // Check that plugin workflows were registered
-  assertEquals(registry.hasWorkflow('test_workflow_a'), true)
-  assertEquals(registry.hasWorkflow('test_workflow_b'), true)
-  
-  // Check plugin info in registration
-  const registrationA = registry.getRegistration('test_workflow_a')
-  assertExists(registrationA?.plugin)
-  assertEquals(registrationA.plugin.name, 'test_plugin')
-  assertEquals(registrationA.plugin.version, '1.0.0')
-  assertEquals(registrationA.plugin.author, 'Test Author')
-  
-  // Check loaded plugins
-  const loadedPlugins = registry.getLoadedPlugins()
-  assertEquals(loadedPlugins.length, 1)
-  assertEquals(loadedPlugins[0]!.plugin.name, 'test_plugin')
-  assertEquals(loadedPlugins[0]!.active, true)
-  assertExists(loadedPlugins[0]!.loadedAt)
-})
+// Plugin registration test removed - plugins are now managed by PluginManager
 
-Deno.test("WorkflowRegistry - plugin unregistration", () => {
-  const registry = WorkflowRegistry.getInstance()
-  registry.clear()
-  
-  const plugin = createTestPlugin()
-  
-  // Register plugin
-  registry.registerPlugin(plugin)
-  assertEquals(registry.getWorkflowNames().length, 2)
-  
-  // Unregister plugin
-  const success = registry.unregisterPlugin('test_plugin')
-  assertEquals(success, true)
-  
-  // Check that workflows were removed
-  assertEquals(registry.hasWorkflow('test_workflow_a'), false)
-  assertEquals(registry.hasWorkflow('test_workflow_b'), false)
-  assertEquals(registry.getWorkflowNames().length, 0)
-  
-  // Check that plugin was removed
-  const loadedPlugins = registry.getLoadedPlugins()
-  assertEquals(loadedPlugins.length, 0)
-})
+// Plugin unregistration test removed - plugins are now managed by PluginManager
 
 Deno.test("WorkflowRegistry - workflow unregistration", () => {
   const registry = WorkflowRegistry.getInstance()
@@ -377,21 +329,18 @@ Deno.test("WorkflowRegistry - clear registry", () => {
   const workflowB = new TestWorkflowB()
   const plugin = createTestPlugin()
   
-  // Register workflows and plugin
-  registry.register(workflowA)
-  registry.register(workflowB)
-  registry.registerPlugin(plugin)
+  // Register workflows
+  registry.registerWorkflow(workflowA)
+  registry.registerWorkflow(workflowB)
   
-  // Should have workflows and plugins
+  // Should have workflows
   assert(registry.getWorkflowNames().length > 0)
-  assert(registry.getLoadedPlugins().length > 0)
   
   // Clear registry
   registry.clear()
   
   // Should be empty
   assertEquals(registry.getWorkflowNames().length, 0)
-  assertEquals(registry.getLoadedPlugins().length, 0)
   assertEquals(registry.getAllRegistrations().length, 0)
 })
 
@@ -437,25 +386,10 @@ Deno.test("WorkflowRegistry - statistics", () => {
   const stats = registry.getStats()
   
   assertEquals(stats.totalWorkflows, 2)
-  assertEquals(stats.totalPlugins, 0)
   assertEquals(stats.authRequired, 1) // Only workflowA requires auth
   assertEquals(stats.averageEstimatedDuration, 60) // Only workflowB has duration
   assertEquals(stats.categories.utility, 1)
   assertEquals(stats.categories.automation, 1)
 })
 
-Deno.test("WorkflowRegistry - plugin validation errors", () => {
-  const registry = WorkflowRegistry.getInstance()
-  registry.clear()
-  
-  const invalidPlugin = {
-    // Missing required fields
-    workflows: [],
-  }
-  
-  assertThrows(
-    () => registry.registerPlugin(invalidPlugin as any),
-    Error,
-    'Plugin registration has errors'
-  )
-})
+// Plugin validation test removed - plugins are now managed by PluginManager
