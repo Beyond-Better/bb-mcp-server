@@ -118,15 +118,16 @@ export async function createExampleDependencies(
     },
 
     // 🎯 Tool registration configuration - demonstrates new flexible system
-    toolRegistrationConfig: {
-      workflowTools: {
-        enabled: true,
-        naming: WorkflowToolNaming.NAMESPACED, // Will create execute_workflow_examplecorp-mcp-server
-        executeWorkflow: { enabled: true },
-        getSchemaWorkflow: { enabled: true },
-      },
-      defaultHandlerMode: ToolHandlerMode.MANAGED, // Use managed validation by default
-    },
+    // NOTE: This would be used when creating BeyondMcpServer, not returned from dependencies
+    // toolRegistrationConfig: {
+    //   workflowTools: {
+    //     enabled: true,
+    //     naming: WorkflowToolNaming.NAMESPACED, // Will create execute_workflow_examplecorp-mcp-server
+    //     executeWorkflow: { enabled: true },
+    //     getSchemaWorkflow: { enabled: true },
+    //   },
+    //   defaultHandlerMode: ToolHandlerMode.MANAGED, // Use managed validation by default
+    // },
   };
 }
 

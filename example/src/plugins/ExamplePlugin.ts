@@ -9,7 +9,6 @@ import type {
   AppPlugin,
   AppServerDependencies,
   Logger,
-  ToolBase,
   ToolRegistration,
   ToolRegistry,
   WorkflowBase,
@@ -50,7 +49,7 @@ class ExampleCorpPlugin implements AppPlugin {
   tags = ['examplecorp', 'business', 'query', 'operation', 'api'];
 
   workflows: WorkflowBase[] = [];
-  tools: ToolBase[] = [];
+  tools: ToolRegistration[] = [];
   dependencies = ['@bb/mcp-server'];
 
   /**
@@ -125,7 +124,7 @@ export default function createPlugin(dependencies: AppServerDependencies): AppPl
       auditLogger,
     };
 
-    plugin.tools = createExampleTools(exampleToolsDependencies) as ToolBase[];
+    plugin.tools = createExampleTools(exampleToolsDependencies);
   } else {
     logger.warn('ExamplePlugin: Skipping tool creation due to missing dependencies');
     plugin.tools = [];
