@@ -26,12 +26,14 @@ export { ErrorHandler } from './lib/utils/ErrorHandler.ts';
 // API Client exports
 export { BaseApiClient } from './lib/clients/BaseApiClient.ts';
 
-// Workflow exports (Phase 2)
+// Tool/Workflow/Plugin exports
+export type { ToolBase } from './lib/types/ToolTypes.ts';
+export { ToolRegistry } from './lib/tools/ToolRegistry.ts';
 export { WorkflowBase } from './lib/workflows/WorkflowBase.ts';
 export { WorkflowRegistry } from './lib/workflows/WorkflowRegistry.ts';
-export { PluginManager } from './lib/workflows/discovery/PluginManager.ts';
+export { PluginManager } from './lib/plugins/PluginManager.ts';
 
-// Transport exports (Phase 3)
+// Transport exports
 export { TransportManager } from './lib/transport/TransportManager.ts';
 export { HttpTransport } from './lib/transport/HttpTransport.ts';
 export { StdioTransport } from './lib/transport/StdioTransport.ts';
@@ -43,7 +45,7 @@ export {
   requireRequestContext,
 } from './lib/transport/RequestContext.ts';
 
-// OAuth exports (Phase 4)
+// OAuth exports
 export { OAuthProvider } from './lib/auth/OAuthProvider.ts';
 export { OAuthConsumer } from './lib/auth/OAuthConsumer.ts';
 export { TokenManager } from './lib/auth/TokenManager.ts';
@@ -52,7 +54,7 @@ export { ClientRegistry } from './lib/auth/ClientRegistry.ts';
 export { AuthorizationHandler } from './lib/auth/AuthorizationHandler.ts';
 export { OAuthMetadata } from './lib/auth/OAuthMetadata.ts';
 
-// HTTP Server exports (Phase 5)
+// HTTP Server exports
 export { HttpServer } from './lib/server/HttpServer.ts';
 export { OAuthEndpoints } from './lib/server/OAuthEndpoints.ts';
 export { APIRouter } from './lib/server/APIRouter.ts';
@@ -60,13 +62,14 @@ export { StatusEndpoints } from './lib/server/StatusEndpoints.ts';
 export { CORSHandler } from './lib/server/CORSHandler.ts';
 export { ErrorPages } from './lib/server/ErrorPages.ts';
 
-// Beyond MCP Server exports (Phase 6)
+// Beyond MCP Server exports
 export { BeyondMcpServer } from './lib/server/BeyondMcpServer.ts';
 export { AppServer } from './lib/server/AppServer.ts';
-export { ToolRegistry } from './lib/server/ToolRegistry.ts';
 export { RequestContextManager } from './lib/server/RequestContextManager.ts';
 export { BeyondMcpSDKHelpers } from './lib/server/MCPSDKHelpers.ts';
 export { CoreTools } from './lib/tools/CoreTools.ts';
+export { WorkflowTools } from './lib/tools/WorkflowTools.ts';
+export { ToolValidationHelper } from './lib/utils/ToolValidationHelper.ts';
 export { getAllDependencies, getAllDependenciesAsync } from './lib/server/DependencyHelpers.ts';
 
 // OAuth dependency types from individual components
@@ -83,7 +86,7 @@ export type * from './types/consumer.types.ts';
 // MCP SDK types
 export type { CallToolResult } from 'mcp/types.js';
 
-// OAuth type exports (Phase 4) - specific exports to avoid conflicts
+// OAuth type exports - specific exports to avoid conflicts
 export type {
   AuthCallbackResult,
   // Auth flow types
@@ -140,19 +143,20 @@ export type {
 export type {
   BaseWorkflowParameters,
   FailedStep,
-  LoadedPlugin,
-  PluginDiscoveryOptions,
-  WorkflowCategory,
+  //WorkflowCategory,
   WorkflowContext,
   WorkflowError,
-  WorkflowPlugin,
   WorkflowRegistration,
   WorkflowRegistryConfig,
   WorkflowResource,
   WorkflowResult,
   WorkflowStep,
-} from './lib/workflows/WorkflowTypes.ts';
-export { DEFAULT_WORKFLOW_CATEGORIES } from './lib/workflows/WorkflowTypes.ts';
+} from './lib/types/WorkflowTypes.ts';
+//export { DEFAULT_WORKFLOW_CATEGORIES } from './lib/types/WorkflowTypes.ts';
+
+// Plugin types
+export type { AppPlugin, LoadedPlugin, PluginDiscoveryOptions, PluginCategory } from './lib/types/PluginTypes.ts';
+export { DEFAULT_PLUGIN_CATEGORIES } from './lib/types/PluginTypes.ts';
 
 // Transport types (Phase 3)
 export type {
@@ -177,7 +181,7 @@ export type {
   TransportType,
 } from './lib/transport/TransportTypes.ts';
 
-// HTTP Server types (Phase 5) - with alias exports to avoid conflicts
+// HTTP Server types - with alias exports to avoid conflicts
 export type {
   APIConfig,
   CompleteServerConfig,
@@ -209,7 +213,12 @@ export type {
   ResponseMetadata as HttpResponseMetadata,
 } from './lib/server/ServerTypes.ts';
 
-// Beyond MCP Server types (Phase 6)
+// Beyond MCP Server types
+export {
+  ToolHandlerMode,
+  WorkflowToolNaming,
+} from './lib/types/BeyondMcpTypes.ts';
+
 export type {
   AuditEvent,
   AuthenticationInfo,
@@ -236,6 +245,8 @@ export type {
   ToolHandler,
   ToolPlugin,
   ToolRegistration,
+  ToolRegistrationConfig,
+  ToolRegistrationOptions,
   ToolRegistryDependencies,
   ToolRegistryStats,
   ToolStats,
@@ -244,7 +255,6 @@ export type {
 
 // AppServer types
 export type {
-  ApiInfo,
   AppServerConfig,
   AppServerDependencies,
   AppServerDependenciesPartial,
@@ -254,10 +264,9 @@ export type {
   CreateCustomAppServerDependencies,
   DependenciesHealthCheck,
   DependencyFactory,
-  ThirdPartyHealthStatus,
+  ThirdPartyApiHealthStatus,
+  ThirdPartyApiInfo,
 } from './lib/types/AppServerTypes.ts';
 
 // API Client types
-export type {
-  BaseApiClientConfig,
-} from './lib/clients/BaseApiClient.ts';
+export type { BaseApiClientConfig } from './lib/clients/BaseApiClient.ts';

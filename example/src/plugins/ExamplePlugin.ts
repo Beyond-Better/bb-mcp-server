@@ -5,13 +5,23 @@
  * according to the bb-mcp-server plugin strategy.
  */
 
-import type { AppPlugin } from '@bb/mcp-server';
+import type {
+  AppPlugin,
+  AppServerDependencies,
+  Logger,
+  ToolBase,
+  ToolRegistry,
+  WorkflowBase,
+  WorkflowRegistry,
+} from '@bb/mcp-server';
 import { ExampleQueryWorkflow } from '../workflows/ExampleQueryWorkflow.ts';
 import { ExampleOperationWorkflow } from '../workflows/ExampleOperationWorkflow.ts';
 import type { ExampleQueryWorkflowDependencies } from '../workflows/ExampleQueryWorkflow.ts';
 import type { ExampleOperationWorkflowDependencies } from '../workflows/ExampleOperationWorkflow.ts';
-import type { Logger } from '@bb/mcp-server';
 import type { ExampleApiClient } from '../api/ExampleApiClient.ts';
+import { ExampleTools } from '../tools/ExampleTools.ts';
+import type { ExampleToolsDependencies } from '../tools/ExampleTools.ts';
+import type { ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts';
 
 /**
  * Plugin dependencies interface
@@ -19,7 +29,8 @@ import type { ExampleApiClient } from '../api/ExampleApiClient.ts';
  * Dependencies need to be handled differently in the plugin system
  */
 export interface ExamplePluginDependencies {
-  apiClient: ExampleApiClient;
+  thirdpartyApiClient: ExampleApiClient;
+  oAuthConsumer: ExampleOAuthConsumer;
   logger: Logger;
 }
 
@@ -37,7 +48,8 @@ class ExampleCorpPlugin implements AppPlugin {
   license = 'MIT';
   tags = ['examplecorp', 'business', 'query', 'operation', 'api'];
 
-  workflows: any[] = [];
+  workflows: WorkflowBase[] = [];
+  tools: ToolBase[] = [];
   dependencies = ['@bb/mcp-server'];
 
   /**
@@ -45,10 +57,16 @@ class ExampleCorpPlugin implements AppPlugin {
    * Called by the plugin manager during plugin loading
    * Note: Dependencies need to be injected separately in the current plugin architecture
    */
-  async initialize(registry: any): Promise<void> {
-    // In the current plugin architecture, workflows need to be created with dependencies
-    // before the plugin is registered. This method is called after registration.
-    console.log(`${this.name} plugin initialized with registry`);
+  async initialize(
+    dependencies: AppServerDependencies,
+    toolRegistry: ToolRegistry,
+    workflowRegistry: WorkflowRegistry,
+  ): Promise<void> {
+    dependencies.logger.info(`${this.name} plugin initialized`, {
+      workflows: this.workflows.length,
+      tools: this.tools.length,
+      note: 'Tools and workflows registered by PluginManager',
+    });
   }
 
   /**
@@ -65,20 +83,30 @@ class ExampleCorpPlugin implements AppPlugin {
  * Factory function to create plugin instance
  * This pattern allows for dependency injection during plugin creation
  */
-export default function createPlugin(dependencies: ExamplePluginDependencies): AppPlugin {
+export default function createPlugin(dependencies: AppServerDependencies): AppPlugin {
   const plugin = new ExampleCorpPlugin();
 
   // Initialize the plugin synchronously for simple use cases
   // Note: For async initialization, use the initialize() method
-  const { apiClient, logger } = dependencies;
+  const { thirdpartyApiClient, oAuthConsumer, logger, auditLogger } = dependencies;
 
+  // Validate required dependencies
+  if (!thirdpartyApiClient || !oAuthConsumer) {
+    logger.warn('ExamplePlugin: Missing required dependencies', {
+      hasApiClient: !!thirdpartyApiClient,
+      hasOAuthConsumer: !!oAuthConsumer,
+      impact: 'Some tools and workflows may not function correctly',
+    });
+  }
+
+  // Create workflows
   const queryWorkflowDeps: ExampleQueryWorkflowDependencies = {
-    apiClient,
+    apiClient: thirdpartyApiClient,
     logger,
   };
 
   const operationWorkflowDeps: ExampleOperationWorkflowDependencies = {
-    apiClient,
+    apiClient: thirdpartyApiClient,
     logger,
   };
 
@@ -87,19 +115,57 @@ export default function createPlugin(dependencies: ExamplePluginDependencies): A
     new ExampleOperationWorkflow(operationWorkflowDeps),
   ];
 
+  // Create tools - PluginManager will register these
+  if (thirdpartyApiClient && oAuthConsumer) {
+    const exampleToolsDependencies: ExampleToolsDependencies = {
+      apiClient: thirdpartyApiClient,
+      oauthConsumer: oAuthConsumer,
+      logger,
+      auditLogger,
+    };
+
+    plugin.tools = createExampleTools(exampleToolsDependencies);
+  } else {
+    logger.warn('ExamplePlugin: Skipping tool creation due to missing dependencies');
+    plugin.tools = [];
+  }
+
   return plugin;
 }
 
 /**
- * Default export for plugin discovery
- *
- * This plugin demonstrates the BROKEN PATTERN - don't use this approach.
- * The initialize method creates workflows but has no way to register them.
- *
- * Better approaches:
- * 1. Use the factory function manually: createExamplePlugin({ apiClient, logger })
- * 2. Use the workflow wrapper plugin: example/src/workflows/plugin.ts
- * 3. Use direct registration: workflowRegistry.registerWorkflow(new Workflow())
+ * Create ExampleCorp tools for plugin registration
+ * Returns tool objects that PluginManager can register
+ */
+function createExampleTools(dependencies: ExampleToolsDependencies): ToolBase[] {
+  const exampleTools = new ExampleTools(dependencies);
+  
+  // Get tool definitions and handlers from ExampleTools
+  const toolDefinitions = exampleTools.getTools();
+  
+  // Convert to ToolBase format expected by PluginManager
+  return toolDefinitions.map(tool => ({
+    name: tool.name,
+    definition: tool.definition,
+    handler: tool.handler,
+  })) as ToolBase[];
+}
+
+/**
+ * UPDATED PLUGIN ARCHITECTURE:
+ * 
+ * This plugin now demonstrates the CORRECT PATTERN for tool and workflow registration:
+ * 
+ * ✅ **Plugin populates tools array**: PluginManager registers tools automatically
+ * ✅ **Plugin populates workflows array**: PluginManager registers workflows automatically  
+ * ✅ **No manual registration**: Plugin doesn't call registerWith() directly
+ * ✅ **Dependency injection**: Factory function handles proper dependency setup
+ * ✅ **Dual tool support**: ExampleTools supports both plugin and direct registration patterns
+ * 
+ * USAGE APPROACHES:
+ * 1. **Automatic Discovery** (Recommended): PluginManager finds and registers everything
+ * 2. **Factory Function**: Manual plugin creation with createExamplePlugin()
+ * 3. **Direct Registration**: Still supported via ExampleTools.registerWith()
  */
 // const plugin: AppPlugin = {
 //   name: 'example-corp-plugin',
@@ -118,7 +184,7 @@ export default function createPlugin(dependencies: ExamplePluginDependencies): A
 //     pluginDependencies.logger.info('Use createExamplePlugin() factory function instead for working functionality')
 //
 //     // This creates a plugin but we can't access its workflows to register them:
-//     // const plugin = createExamplePlugin({ apiClient, logger }) // ← apiClient, logger not available!
+//     // const plugin = createExamplePlugin({ thirdpartyApiClient, logger }) // ← thirdpartyApiClient, logger not available!
 //   },
 //
 //   async cleanup(): Promise<void> {
@@ -152,7 +218,7 @@ export default function createPlugin(dependencies: ExamplePluginDependencies): A
  *
  * 2. Manual Registration:
  *    - Import createExamplePlugin factory
- *    - Provide dependencies (apiClient, logger, etc.)
+ *    - Provide dependencies (thirdpartyApiClient, logger, etc.)
  *    - Register plugin with WorkflowRegistry manually
  *
  * 3. Dependency Injection:
