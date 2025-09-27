@@ -1,7 +1,6 @@
 /**
  * Beyond MCP Server - Higher-level wrapper around the MCP SDK
- * Extracted from ActionStepMCPServer.ts - Generic MCP functionality only
- * 
+ *
  * Provides base functionality for any MCP server implementation with:
  * - Official MCP TypeScript SDK integration
  * - Tool registration with Zod validation
@@ -22,24 +21,24 @@ import { AuditLogger } from '../utils/AuditLogger.ts';
 import { ConfigManager } from '../config/ConfigManager.ts';
 import { ErrorHandler } from '../utils/ErrorHandler.ts';
 import { toError } from '../utils/Error.ts';
+import { ToolRegistry } from '../tools/ToolRegistry.ts';
+import { CoreTools } from '../tools/CoreTools.ts';
 import { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
 import { TransportManager } from '../transport/TransportManager.ts';
 import { KVManager } from '../storage/KVManager.ts';
 import { OAuthProvider } from '../auth/OAuthProvider.ts';
-import { ToolRegistry } from './ToolRegistry.ts';
 import { RequestContextManager } from './RequestContextManager.ts';
-import { CoreTools } from '../tools/CoreTools.ts';
 import { BeyondMcpSDKHelpers } from './MCPSDKHelpers.ts';
 
 // Import types
 import type {
+  BeyondMcpRequestContext,
+  BeyondMcpServerConfig,
+  BeyondMcpServerDependencies,
   CreateMessageRequest,
   CreateMessageResult,
   ElicitInputRequest,
   ElicitInputResult,
-  BeyondMcpRequestContext,
-  BeyondMcpServerConfig,
-  BeyondMcpServerDependencies,
   ToolDefinition,
   ToolHandler,
   ToolRegistration,
@@ -50,35 +49,41 @@ import type {
  * Provides base functionality that any MCP server can extend
  */
 export class BeyondMcpServer {
-  protected sdkMcpServer: SdkMcpServer;
-  protected toolRegistry: ToolRegistry;
-  protected requestContextManager: RequestContextManager;
-  protected coreTools: CoreTools;
-  protected mcpSDKHelpers: BeyondMcpSDKHelpers;
-  protected config: BeyondMcpServerConfig;
   protected initialized = false;
-  
-  // AsyncLocalStorage for request context (preserve exact pattern from ActionStepMCPServer)
-  private static contextStorage = new AsyncLocalStorage<BeyondMcpRequestContext>();
-  
-  // Dependencies from all previous phases
+
   protected logger: Logger;
-  protected auditLogger: AuditLogger;
+  protected config: BeyondMcpServerConfig;
   protected configManager: ConfigManager;
-  protected errorHandler: ErrorHandler;
+
+  protected sdkMcpServer: SdkMcpServer;
   protected workflowRegistry: WorkflowRegistry;
+  protected toolRegistry: ToolRegistry;
+  protected coreTools: CoreTools;
+
+  protected requestContextManager: RequestContextManager;
+  protected mcpSDKHelpers: BeyondMcpSDKHelpers;
+  protected errorHandler: ErrorHandler;
+  protected auditLogger: AuditLogger;
   protected transportManager: TransportManager;
   protected kvManager?: KVManager;
   protected oauthProvider?: OAuthProvider;
-  
-  constructor(config: BeyondMcpServerConfig, dependencies: BeyondMcpServerDependencies, mockSdkMcpServer?: SdkMcpServer) {
+
+  // AsyncLocalStorage for request context
+  private static contextStorage = new AsyncLocalStorage<BeyondMcpRequestContext>();
+
+  constructor(
+    config: BeyondMcpServerConfig,
+    dependencies: BeyondMcpServerDependencies,
+    sdkMcpServer?: SdkMcpServer,
+  ) {
     this.config = config;
-    
+
     // Inject dependencies from all previous phases
     this.logger = dependencies.logger;
     this.auditLogger = dependencies.auditLogger;
     this.configManager = dependencies.configManager;
     this.errorHandler = dependencies.errorHandler;
+    this.toolRegistry = dependencies.toolRegistry;
     this.workflowRegistry = dependencies.workflowRegistry;
     this.transportManager = dependencies.transportManager;
     // Only assign optional dependencies if they exist (exactOptionalPropertyTypes compliance)
@@ -88,10 +93,10 @@ export class BeyondMcpServer {
     if (dependencies.oauthProvider) {
       this.oauthProvider = dependencies.oauthProvider;
     }
-    
-    // Use mock SDK MCP server for testing or create real one
-    if (mockSdkMcpServer) {
-      this.sdkMcpServer = mockSdkMcpServer;
+
+    // Use provided SDK MCP server for testing or create real one
+    if (sdkMcpServer) {
+      this.sdkMcpServer = sdkMcpServer;
     } else {
       // Create MCP server with official SDK
       const serverOptions: {
@@ -109,12 +114,12 @@ export class BeyondMcpServer {
           logging: {},
         },
       };
-      
+
       // Only add instructions if they exist (exactOptionalPropertyTypes compliance)
       if (config.instructions) {
         serverOptions.instructions = config.instructions;
       }
-      
+
       this.sdkMcpServer = new SdkMcpServer(
         {
           name: config.server.name,
@@ -125,31 +130,29 @@ export class BeyondMcpServer {
         serverOptions,
       );
     }
-    
+
     // Initialize components
-    this.toolRegistry = new ToolRegistry(this.sdkMcpServer, {
-      logger: this.logger,
-      errorHandler: this.errorHandler,
-    });
-    
+
+    this.toolRegistry.sdkMcpServer(this.sdkMcpServer);
+
     this.requestContextManager = new RequestContextManager(this.logger);
-    
+
     this.coreTools = new CoreTools({
-      logger: this.logger,
       sdkMcpServer: this.sdkMcpServer,
+      logger: this.logger,
       auditLogger: this.auditLogger,
     });
-    
+
     this.mcpSDKHelpers = new BeyondMcpSDKHelpers(this.sdkMcpServer, this.logger);
   }
-  
+
   /**
    * Get the underlying SDK MCP Server instance
    */
   getSdkMcpServer(): SdkMcpServer {
     return this.sdkMcpServer;
   }
-  
+
   /**
    * Execute an operation within the context of an authenticated user
    * PRESERVED: Exact AsyncLocalStorage pattern from ActionStepMCPServer
@@ -163,27 +166,25 @@ export class BeyondMcpServer {
       clientId: context.clientId,
       requestId: context.requestId,
     });
-    
+
     return BeyondMcpServer.contextStorage.run(context, operation);
   }
-  
+
   /**
    * Get the current authenticated user context from AsyncLocalStorage
-   * PRESERVED: Exact pattern from ActionStepMCPServer
    */
   protected getAuthContext(): BeyondMcpRequestContext | null {
     return BeyondMcpServer.contextStorage.getStore() || null;
   }
-  
+
   /**
    * Get the current authenticated user ID (backward compatibility)
-   * PRESERVED: Exact method from ActionStepMCPServer
    */
   getAuthenticatedUserId(): string | null {
     const context = this.getAuthContext();
     return context?.authenticatedUserId || null;
   }
-  
+
   /**
    * Initialize the Beyond MCP server
    */
@@ -191,22 +192,22 @@ export class BeyondMcpServer {
     if (this.initialized) {
       return this;
     }
-    
+
     this.logger.info('MCPServer: Initializing MCP server...');
-    
+
     try {
       // Register core tools
       await this.registerCoreTools();
-      
+
       // Setup transport integration
       await this.setupTransport();
-      
+
       this.initialized = true;
       this.logger.info('BeyondMcpServer: Beyond MCP server initialized successfully', {
         coreToolsCount: this.toolRegistry.getToolCount(),
         transport: this.config.transport?.type || 'stdio',
       });
-      
+
       // Log system startup
       await this.auditLogger.logSystemEvent({
         event: 'beyond_mcp_server_startup',
@@ -217,14 +218,14 @@ export class BeyondMcpServer {
           transport: this.config.transport?.type || 'stdio',
         },
       });
-      
+
       return this;
     } catch (error) {
       this.logger.error('BeyondMcpServer: Failed to initialize Beyond MCP server:', toError(error));
       throw ErrorHandler.wrapError(error, 'BEYOND_MCP_SERVER_INIT_FAILED');
     }
   }
-  
+
   /**
    * Start the Beyond MCP server
    */
@@ -232,9 +233,9 @@ export class BeyondMcpServer {
     if (!this.initialized) {
       await this.initialize();
     }
-    
+
     this.logger.info('BeyondMcpServer: Starting Beyond MCP server...');
-    
+
     // Start based on transport type
     if (this.config.transport?.type === 'stdio') {
       const transport = new StdioServerTransport();
@@ -245,30 +246,30 @@ export class BeyondMcpServer {
       await this.transportManager.start();
       this.logger.info('BeyondMcpServer: HTTP transport started via TransportManager');
     }
-    
+
     this.logger.info('BeyondMcpServer: Beyond MCP server started successfully');
   }
-  
+
   /**
    * Shutdown the Beyond MCP server
    */
   async shutdown(): Promise<void> {
     this.logger.info('BeyondMcpServer: Shutting down Beyond MCP server...');
-    
+
     try {
       // Log system shutdown
       await this.auditLogger.logSystemEvent({
         event: 'beyond_mcp_server_shutdown',
         severity: 'info',
       });
-      
+
       // Close SDK MCP connections
       if (this.config.transport?.type === 'stdio') {
         await this.sdkMcpServer.close();
       } else if (this.config.transport?.type === 'http') {
         await this.transportManager.cleanup();
       }
-      
+
       this.initialized = false;
       this.logger.info('BeyondMcpServer: Beyond MCP server shutdown complete');
     } catch (error) {
@@ -276,7 +277,7 @@ export class BeyondMcpServer {
       throw error;
     }
   }
-  
+
   /**
    * Register a tool with the MCP server
    * Delegates to ToolRegistry with Zod validation
@@ -284,11 +285,11 @@ export class BeyondMcpServer {
   registerTool<T extends Record<string, ZodSchema>>(
     name: string,
     definition: ToolDefinition<T>,
-    handler: ToolHandler<T>
+    handler: ToolHandler<T>,
   ): void {
     this.toolRegistry.registerTool(name, definition, handler);
   }
-  
+
   /**
    * Register multiple tools at once
    */
@@ -302,37 +303,35 @@ export class BeyondMcpServer {
    * Register a workflow with the workflow registry
    */
   registerWorkflow(workflow: any): void { // WorkflowBase type
-    this.workflowRegistry.register(workflow);
+    this.workflowRegistry.registerWorkflow(workflow);
   }
-  
+
   /**
    * MCP SDK integration methods
-   * PRESERVED: Exact patterns from ActionStepMCPServer
    */
   async createMessage(request: CreateMessageRequest): Promise<CreateMessageResult> {
     return await this.mcpSDKHelpers.createMessage(request);
   }
-  
+
   async elicitInput(request: ElicitInputRequest): Promise<ElicitInputResult> {
     return await this.mcpSDKHelpers.elicitInput(request);
   }
-  
+
   /**
    * Register core tools that every Beyond MCP server needs
-   * EXTRACTED: Generic tools from ActionStepMCPServer
    */
   protected async registerCoreTools(): Promise<void> {
     this.logger.debug('BeyondMcpServer: Registering core tools...');
-    
+
     // Register all core tools via CoreTools component
     this.coreTools.registerWith(this.toolRegistry);
-    
+
     this.logger.debug('BeyondMcpServer: Core tools registered', {
       toolCount: this.toolRegistry.getToolCount(),
       tools: this.toolRegistry.getToolNames(),
     });
   }
-  
+
   /**
    * Setup transport integration
    */
@@ -343,10 +342,9 @@ export class BeyondMcpServer {
       await this.transportManager.initialize(this.sdkMcpServer as any);
     }
   }
-  
+
   /**
    * Get server status - generic implementation
-   * EXTRACTED: From ActionStepMCPServer getServerStatus()
    */
   protected async getServerStatus(): Promise<CallToolResult> {
     const status = {
@@ -366,7 +364,7 @@ export class BeyondMcpServer {
       },
       timestamp: new Date().toISOString(),
     };
-    
+
     return {
       content: [{ type: 'text', text: JSON.stringify(status, null, 2) }],
     };
@@ -375,9 +373,9 @@ export class BeyondMcpServer {
 
 // Re-export types for consumers
 export type {
+  BeyondMcpRequestContext,
   BeyondMcpServerConfig,
   BeyondMcpServerDependencies,
-  BeyondMcpRequestContext,
   ToolDefinition,
   ToolHandler,
   ToolRegistration,

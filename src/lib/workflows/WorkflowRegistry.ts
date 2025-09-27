@@ -13,12 +13,11 @@ import type { Logger } from '../utils/Logger.ts'
 import type {
   WorkflowBase,
   WorkflowRegistration,
-  WorkflowPlugin,
-  LoadedPlugin,
   WorkflowCategory,
   WorkflowMetrics,
   WorkflowRegistryConfig,
 } from './WorkflowTypes.ts'
+
 import { DEFAULT_WORKFLOW_CATEGORIES } from './WorkflowTypes.ts'
 
 /**
@@ -29,16 +28,17 @@ export class WorkflowRegistry {
   
   private workflows = new Map<string, WorkflowBase>()
   private registrations = new Map<string, WorkflowRegistration>()
-  private plugins = new Map<string, LoadedPlugin>()
   private categories = new Map<WorkflowCategory, string[]>()
   private tags = new Map<string, string[]>()
   private metrics = new Map<string, WorkflowMetrics>()
   private logger: Logger | undefined
   private config: WorkflowRegistryConfig
   private validCategories: Set<string>
-  
+    private errorHandler: ErrorHandler;
+
   private constructor(dependencies?: { logger?: Logger; config?: WorkflowRegistryConfig }) {
     this.logger = dependencies?.logger
+    this.errorHandler = dependencies?.errorHandler;
     this.config = dependencies?.config || {}
     this.validCategories = this.initializeValidCategories()
     this.initializeCategories()
@@ -47,7 +47,7 @@ export class WorkflowRegistry {
   /**
    * Get singleton instance of WorkflowRegistry
    */
-  static getInstance(dependencies?: { logger?: Logger; config?: WorkflowRegistryConfig }): WorkflowRegistry {
+  static getInstance(dependencies?: { logger?: Logger; config?: WorkflowRegistryConfig; errorHandler?: ErrorHandler }): WorkflowRegistry {
     if (!WorkflowRegistry.instance) {
       WorkflowRegistry.instance = new WorkflowRegistry(dependencies)
     }
@@ -85,7 +85,7 @@ export class WorkflowRegistry {
   /**
    * Register a workflow instance
    */
-  register(workflow: WorkflowBase): void {
+  registerWorkflow(workflow: WorkflowBase): void {
     const registration = workflow.getRegistration()
     const name = registration.name
     
@@ -138,112 +138,9 @@ export class WorkflowRegistry {
     })
   }
   
-  /**
-   * Register a plugin and its workflows
-   */
-  registerPlugin(plugin: WorkflowPlugin): void {
-    const validationErrors = this.validatePlugin(plugin)
-    if (validationErrors.length > 0) {
-      const errorMessage = `Plugin registration has errors:\n${validationErrors.join('\n')}`
-      this.logger?.error('Failed to register plugin', new Error(errorMessage), {
-        plugin: plugin.name,
-        errors: validationErrors,
-      })
-      throw new Error(errorMessage)
-    }
-    
-    try {
-      // Initialize plugin if it has an initialization method
-      if (plugin.initialize) {
-        plugin.initialize(this)
-      }
-      
-      // Register all plugin workflows
-      for (const workflow of plugin.workflows) {
-        // Add plugin info to workflow registration
-        const originalGetRegistration = workflow.getRegistration.bind(workflow)
-        workflow.getRegistration = () => {
-          const registration = originalGetRegistration()
-          return {
-            ...registration,
-            plugin: {
-              name: plugin.name,
-              version: plugin.version,
-              author: plugin.author || 'Unknown',
-              description: plugin.description,
-            },
-          }
-        }
-        
-        this.register(workflow)
-      }
-      
-      // Store loaded plugin
-      this.plugins.set(plugin.name, {
-        plugin,
-        loadedAt: new Date(),
-        active: true,
-      })
-      
-      this.logger?.info('Registered plugin', {
-        plugin: plugin.name,
-        version: plugin.version,
-        workflows: plugin.workflows.length,
-        author: plugin.author,
-      })
-      
-    } catch (error) {
-      this.plugins.set(plugin.name, {
-        plugin,
-        loadedAt: new Date(),
-        active: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      })
-      
-      this.logger?.error('Failed to initialize plugin', error as Error, {
-        plugin: plugin.name,
-      })
-      
-      throw error
-    }
-  }
+
   
-  /**
-   * Unregister a plugin and its workflows
-   */
-  unregisterPlugin(pluginName: string): boolean {
-    const loadedPlugin = this.plugins.get(pluginName)
-    if (!loadedPlugin) {
-      return false
-    }
-    
-    try {
-      // Cleanup plugin if it has a cleanup method
-      if (loadedPlugin.plugin.cleanup) {
-        loadedPlugin.plugin.cleanup()
-      }
-      
-      // Unregister all plugin workflows
-      for (const workflow of loadedPlugin.plugin.workflows) {
-        this.unregister(workflow.name)
-      }
-      
-      // Remove plugin
-      this.plugins.delete(pluginName)
-      
-      this.logger?.info('Unregistered plugin', {
-        plugin: pluginName,
-      })
-      
-      return true
-      
-    } catch (error) {
-      this.logger?.error('Failed to unregister plugin', error as Error, {
-        plugin: pluginName,
-      })
-      return false
-    }
-  }
+
   
   /**
    * Get a workflow instance by name
@@ -334,12 +231,7 @@ export class WorkflowRegistry {
     return this.getWorkflow(name)
   }
   
-  /**
-   * Get all loaded plugins
-   */
-  getLoadedPlugins(): LoadedPlugin[] {
-    return Array.from(this.plugins.values())
-  }
+
   
   /**
    * Check if a workflow exists
@@ -348,12 +240,7 @@ export class WorkflowRegistry {
     return this.workflows.has(name)
   }
   
-  /**
-   * Check if a plugin is loaded
-   */
-  hasPlugin(name: string): boolean {
-    return this.plugins.has(name)
-  }
+
   
   /**
    * Unregister a workflow
@@ -377,30 +264,14 @@ export class WorkflowRegistry {
   }
   
   /**
-   * Clear all registered workflows and plugins
+   * Clear all registered workflows
    */
   clear(): void {
     const workflowCount = this.workflows.size
-    const pluginCount = this.plugins.size
-    
-    // Cleanup all plugins
-    for (const loadedPlugin of this.plugins.values()) {
-      try {
-        if (loadedPlugin.plugin.cleanup) {
-          loadedPlugin.plugin.cleanup()
-        }
-      } catch (error) {
-        this.logger?.warn('Failed to cleanup plugin during clear', {
-          plugin: loadedPlugin.plugin.name,
-          error,
-        })
-      }
-    }
     
     // Clear all maps
     this.workflows.clear()
     this.registrations.clear()
-    this.plugins.clear()
     this.metrics.clear()
     
     // Reinitialize category indexes
@@ -409,7 +280,6 @@ export class WorkflowRegistry {
     
     this.logger?.info('Cleared registry', {
       workflows: workflowCount,
-      plugins: pluginCount,
     })
   }
   
@@ -451,7 +321,6 @@ export class WorkflowRegistry {
    */
   getStats(): {
     totalWorkflows: number
-    totalPlugins: number
     categories: Record<string, number>
     authRequired: number
     averageEstimatedDuration?: number
@@ -480,12 +349,10 @@ export class WorkflowRegistry {
     
     const result = {
       totalWorkflows: registrations.length,
-      totalPlugins: this.plugins.size,
       categories,
       authRequired,
     } as {
       totalWorkflows: number
-      totalPlugins: number
       categories: Record<string, number>
       authRequired: number
       averageEstimatedDuration?: number
@@ -575,47 +442,6 @@ export class WorkflowRegistry {
     
     if (typeof registration.requiresAuth !== 'boolean') {
       errors.push('requiresAuth must be a boolean')
-    }
-    
-    return errors
-  }
-  
-  /**
-   * Validate plugin registration
-   * Enhanced to support dependency injection patterns
-   */
-  private validatePlugin(plugin: WorkflowPlugin): string[] {
-    const errors: string[] = []
-    
-    if (!plugin.name) {
-      errors.push('Plugin name is required')
-    }
-    
-    if (!plugin.version) {
-      errors.push('Plugin version is required')
-    }
-    
-    if (!plugin.description) {
-      errors.push('Plugin description is required')
-    }
-    
-    if (!Array.isArray(plugin.workflows)) {
-      errors.push('Plugin workflows must be an array')
-      return errors
-    }
-    
-    // Allow empty workflows if plugin has initialize method (dependency injection pattern)
-    const hasInitializeMethod = typeof plugin.initialize === 'function'
-    if (plugin.workflows.length === 0 && !hasInitializeMethod) {
-      errors.push('Plugin must provide at least one workflow or an initialize method for dependency injection')
-    }
-    
-    // Log debug info for empty workflow plugins
-    if (plugin.workflows.length === 0 && hasInitializeMethod) {
-      this.logger?.debug('Plugin has empty workflows array but has initialize method - assuming dependency injection pattern', {
-        plugin: plugin.name,
-        version: plugin.version
-      })
     }
     
     return errors
