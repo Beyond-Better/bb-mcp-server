@@ -2,6 +2,37 @@
 
 This guide explains the bb-mcp-server plugin architecture and the differences between tools, workflows, and plugins. Understanding these concepts is essential for building maintainable and scalable MCP servers.
 
+## 🏗️ **Architecture Overview (Updated)**
+
+**Important**: The plugin system has been refactored for cleaner separation of concerns:
+
+### **Core Registries (Single Responsibility)**
+- **`ToolRegistry`**: Manages individual tools via `registerTool()`
+- **`WorkflowRegistry`**: Manages individual workflows via `registerWorkflow()`
+- **No plugin methods**: Registries focus only on individual item management
+
+### **Plugin Management (Orchestration)**
+- **`PluginManager`**: Handles plugin loading, discovery, and orchestration
+- **Unpacks plugins**: Calls registry methods for each tool/workflow in the plugin
+- **Tracks relationships**: Maintains which items came from which plugins for cleanup
+
+### **Two Registration Paths**
+```typescript
+// Path 1: Direct Registration (Manual)
+toolRegistry.registerTool('my_tool', definition, handler)
+workflowRegistry.registerWorkflow(new MyWorkflow())
+
+// Path 2: Plugin Registration (Dynamic Loading)
+pluginManager.registerPlugin(plugin)
+// ↳ Internally calls toolRegistry.registerTool() and workflowRegistry.registerWorkflow()
+```
+
+**Key Benefits**:
+- ✅ **Consistent behavior**: Both paths use same core registration logic
+- ✅ **Clean separation**: Registries don't know about plugins
+- ✅ **Flexible**: Use manual registration OR plugin discovery as needed
+- ✅ **Maintainable**: Single source of truth for tool/workflow management
+
 ## Table of Contents
 
 - [Quick Reference](#quick-reference)
@@ -216,6 +247,18 @@ export class MyTools {
 }
 ```
 
+### Tool Registration Pattern
+
+**Important**: Tools are registered with `ToolRegistry` using `registerTool()`, not via plugins:
+
+```typescript
+// Direct tool registration (recommended)
+toolRegistry.registerTool('get_my_data', definition, handler)
+
+// Plugin-based tool registration (managed by PluginManager)
+pluginManager.registerPlugin(plugin) // → calls toolRegistry.registerTool() internally
+```
+
 ### Tool Best Practices
 
 1. **Single Responsibility**: Each tool should do one thing well
@@ -385,7 +428,7 @@ export class MyBusinessWorkflow extends WorkflowBase {
 
 ```typescript
 // index.ts - Main plugin export
-import type { WorkflowPlugin } from '@bb/mcp-server'
+import type { AppPlugin } from '@bb/mcp-server'
 import { MyBusinessWorkflow } from './workflows/MyWorkflow.ts'
 import { MyTools } from './tools/MyTools.ts'
 
@@ -396,7 +439,7 @@ export interface MyPluginDependencies {
 }
 
 // Plugin factory function
-export function createMyPlugin(dependencies: MyPluginDependencies): WorkflowPlugin {
+export function createMyPlugin(dependencies: MyPluginDependencies): AppPlugin {
   const { apiClient, logger } = dependencies
   
   // Create workflow instances
@@ -425,7 +468,7 @@ export function createMyPlugin(dependencies: MyPluginDependencies): WorkflowPlug
 }
 
 // Default export for plugin discovery
-const plugin: WorkflowPlugin = {
+const plugin: AppPlugin = {
   name: 'my-business-plugin',
   version: '1.0.0',
   description: 'Business workflows and tools for MyCompany',

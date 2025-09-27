@@ -4,6 +4,21 @@
 
 The plugin system has been redesigned to be more flexible and less error-prone. Here's what you need to know:
 
+### 🏗️ **How Registration Works (Updated)**
+
+**Plugin Registration Flow:**
+1. **PluginManager** discovers and loads plugins
+2. **PluginManager** unpacks each plugin and calls:
+   - `toolRegistry.registerTool()` for each tool in `plugin.tools`
+   - `workflowRegistry.registerWorkflow()` for each workflow in `plugin.workflows`
+3. **Registries** handle the actual tool/workflow management
+4. **PluginManager** tracks which items came from which plugins for cleanup
+
+**Key Points:**
+- ✅ **Registries are plugin-agnostic**: They only know about individual tools/workflows
+- ✅ **PluginManager orchestrates**: Handles the packaging/organizational concerns
+- ✅ **Consistent behavior**: Manual and plugin registration use the same core logic
+
 ## 🎯 **Key Simplifications**
 
 ### 1. **Smart File Detection**
@@ -111,9 +126,9 @@ my-project/
 ### Pattern 1: Structured Plugin (Recommended)
 ```typescript
 // src/plugins/MyPlugin.ts
-import { WorkflowPlugin } from '@bb/mcp-server'
+import { AppPlugin } from '@bb/mcp-server'
 
-export default: WorkflowPlugin = {
+export default: AppPlugin = {
   name: 'my-plugin',
   version: '1.0.0',
   description: 'My structured plugin',
