@@ -10,9 +10,11 @@
 
 // 🎯 Library imports - tool infrastructure
 import {
+  ToolBase,
   type ToolRegistry,
   type ToolDefinition,
   type CallToolResult,
+  type ToolRegistration,
   WorkflowRegistry,
   Logger,
   AuditLogger,
@@ -33,18 +35,37 @@ export interface ExampleToolsDependencies {
 /**
  * ExampleCorp-specific MCP tools
  * Demonstrates custom tool implementation using library infrastructure
+ * Now extends ToolBase for consistent patterns and enhanced functionality
  */
-export class ExampleTools {
+export class ExampleTools extends ToolBase {
+  // Required abstract properties from ToolBase
+  readonly name = 'examplecorp-tools'
+  readonly version = '1.0.0'
+  readonly description = 'ExampleCorp business tools for customer management, orders, and API integration'
+  readonly category = 'business' as const
+  readonly tags = ['examplecorp', 'business', 'customers', 'orders', 'api']
+  readonly estimatedDuration = 5 // seconds
+  readonly requiresAuth = true
+
   private apiClient: ExampleApiClient
   private oauthConsumer: ExampleOAuthConsumer
   private logger: Logger
   private auditLogger?: AuditLogger
   
   constructor(dependencies: ExampleToolsDependencies) {
+    super() // Call ToolBase constructor
     this.apiClient = dependencies.apiClient
     this.oauthConsumer = dependencies.oauthConsumer
     this.logger = dependencies.logger
     this.auditLogger = dependencies.auditLogger || new AuditLogger({ enabled: false, logAllApiCalls: false }, dependencies.logger)
+  }
+
+  /**
+   * Get tool overview for documentation and descriptions
+   * Required abstract method from ToolBase
+   */
+  getOverview(): string {
+    return `ExampleCorp business tools providing comprehensive API integration for customer management, order processing, and system information. Includes OAuth-authenticated operations for querying customers, creating orders, checking order status, and retrieving API connectivity information. All tools support proper error handling and audit logging.`
   }
   
   /**
@@ -73,12 +94,9 @@ export class ExampleTools {
   /**
    * 🎯 Get tool definitions for plugin registration
    * Returns tool objects that PluginManager can register automatically
+   * Required abstract method from ToolBase
    */
-  getTools(): Array<{
-    name: string;
-    definition: ToolDefinition<any>;
-    handler: ToolHandler<any>;
-  }> {
+  getTools(): ToolRegistration[] {
     return [
       {
         name: 'query_customers_example',

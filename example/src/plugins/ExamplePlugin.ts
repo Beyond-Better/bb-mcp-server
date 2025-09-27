@@ -10,6 +10,7 @@ import type {
   AppServerDependencies,
   Logger,
   ToolBase,
+  ToolRegistration,
   ToolRegistry,
   WorkflowBase,
   WorkflowRegistry,
@@ -124,7 +125,7 @@ export default function createPlugin(dependencies: AppServerDependencies): AppPl
       auditLogger,
     };
 
-    plugin.tools = createExampleTools(exampleToolsDependencies);
+    plugin.tools = createExampleTools(exampleToolsDependencies) as ToolBase[];
   } else {
     logger.warn('ExamplePlugin: Skipping tool creation due to missing dependencies');
     plugin.tools = [];
@@ -136,19 +137,16 @@ export default function createPlugin(dependencies: AppServerDependencies): AppPl
 /**
  * Create ExampleCorp tools for plugin registration
  * Returns tool objects that PluginManager can register
+ * Now works with the ToolBase class and ToolRegistration interface
  */
-function createExampleTools(dependencies: ExampleToolsDependencies): ToolBase[] {
+function createExampleTools(dependencies: ExampleToolsDependencies): ToolRegistration[] {
   const exampleTools = new ExampleTools(dependencies);
   
-  // Get tool definitions and handlers from ExampleTools
-  const toolDefinitions = exampleTools.getTools();
+  // Get tool registrations from the ToolBase class
+  const toolRegistrations = exampleTools.getTools();
   
-  // Convert to ToolBase format expected by PluginManager
-  return toolDefinitions.map(tool => ({
-    name: tool.name,
-    definition: tool.definition,
-    handler: tool.handler,
-  })) as ToolBase[];
+  // ToolRegistrations are already in the correct format for PluginManager
+  return toolRegistrations;
 }
 
 /**

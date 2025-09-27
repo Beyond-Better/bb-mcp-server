@@ -27,7 +27,8 @@ export { ErrorHandler } from './lib/utils/ErrorHandler.ts';
 export { BaseApiClient } from './lib/clients/BaseApiClient.ts';
 
 // Tool/Workflow/Plugin exports
-export type { ToolBase } from './lib/types/ToolTypes.ts';
+export { ToolBase } from './lib/tools/ToolBase.ts';
+export type { ToolContext, ToolRegistration, ToolResult } from './lib/tools/ToolBase.ts';
 export { ToolRegistry } from './lib/tools/ToolRegistry.ts';
 export { WorkflowBase } from './lib/workflows/WorkflowBase.ts';
 export { WorkflowRegistry } from './lib/workflows/WorkflowRegistry.ts';
