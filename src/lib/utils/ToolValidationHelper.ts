@@ -272,7 +272,12 @@ export class ToolValidationHelper {
     ) as string | undefined
     const clientId = (args.clientId || extra?.clientId) as string | undefined
 
-    return { userId, requestId, clientId }
+    const result: { userId?: string; requestId?: string; clientId?: string } = {}
+    if (userId) result.userId = userId
+    if (requestId) result.requestId = requestId
+    if (clientId) result.clientId = clientId
+    
+    return result
   }
 
   /**
@@ -305,13 +310,22 @@ export class ToolValidationHelper {
       errors.push('parameters.dryRun must be a boolean if provided')
     }
 
-    return {
+    const result: {
+      isValid: boolean
+      errors: string[]
+      userId?: string
+      requestId?: string
+      dryRun?: boolean
+    } = {
       isValid: errors.length === 0,
       errors,
-      userId,
-      requestId,
       dryRun: dryRun || false,
     }
+    
+    if (userId) result.userId = userId
+    if (requestId) result.requestId = requestId
+    
+    return result
   }
 
   /**

@@ -42,7 +42,9 @@ export class WorkflowTools {
   constructor(dependencies: WorkflowToolsDependencies) {
     this.workflowRegistry = dependencies.workflowRegistry
     this.logger = dependencies.logger
-    this.auditLogger = dependencies.auditLogger
+    if (dependencies.auditLogger) {
+      this.auditLogger = dependencies.auditLogger
+    }
   }
 
   /**
@@ -108,7 +110,7 @@ export class WorkflowTools {
           }).passthrough().describe('Workflow parameters'),
         },
       },
-      async (args, extra) => await this.executeWorkflow(args, extra),
+      async (args, extra) => await this.executeWorkflow(args, extra as Record<string, unknown>),
       { handlerMode: ToolHandlerMode.MANAGED }, // Use managed mode for workflows
     )
   }
@@ -137,7 +139,7 @@ export class WorkflowTools {
           ),
         },
       },
-      async (args, extra) => await this.getSchemaForWorkflow(args, extra),
+      async (args, extra) => await this.getSchemaForWorkflow(args, extra as Record<string, unknown>),
       { handlerMode: ToolHandlerMode.MANAGED }, // Use managed mode for workflows
     )
   }
@@ -332,7 +334,7 @@ ${toolData.overviews}
         requiresAuth: registration.requiresAuth,
         estimatedDuration: registration.estimatedDuration,
         tags: registration.tags || [],
-        parameterSchema: registration.parameterSchema,
+        // parameterSchema: registration.parameterSchema, // TODO: Add parameterSchema to WorkflowRegistration type
         usage: {
           instructions: [
             '1. Review the parameter schema and required fields',
