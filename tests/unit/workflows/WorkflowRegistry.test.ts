@@ -11,8 +11,10 @@ import type {
   WorkflowContext,
   WorkflowRegistration,
   WorkflowResult,
-  WorkflowPlugin,
-} from "../../../src/lib/workflows/WorkflowTypes.ts"
+} from "../../../src/lib/types/WorkflowTypes.ts"
+import type {
+  AppPlugin,
+} from "../../../src/lib/types/PluginTypes.ts"
 import { Logger } from "../../../src/lib/utils/Logger.ts"
 
 // Test workflows for registry testing
@@ -127,7 +129,7 @@ class InvalidWorkflow extends WorkflowBase {
 }
 
 // Test plugin
-const createTestPlugin = (): WorkflowPlugin => ({
+const createTestPlugin = (): AppPlugin => ({
   name: 'test_plugin',
   version: '1.0.0',
   description: 'Test plugin for registry testing',
@@ -150,7 +152,7 @@ Deno.test("WorkflowRegistry - workflow registration", () => {
   const workflow = new TestWorkflowA()
   
   // Register workflow
-  registry.register(workflow)
+  registry.registerWorkflow(workflow)
   
   // Check registration
   assertEquals(registry.hasWorkflow('test_workflow_a'), true)
