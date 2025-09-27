@@ -334,7 +334,7 @@ ${toolData.overviews}
         requiresAuth: registration.requiresAuth,
         estimatedDuration: registration.estimatedDuration,
         tags: registration.tags || [],
-        // parameterSchema: registration.parameterSchema, // TODO: Add parameterSchema to WorkflowRegistration type
+        parameterSchema: registration.parameterSchema, // Essential for understanding workflow parameters
         usage: {
           instructions: [
             '1. Review the parameter schema and required fields',

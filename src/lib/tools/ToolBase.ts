@@ -42,15 +42,7 @@ export interface ToolContext {
   auditLogger?: AuditLogger
 }
 
-/**
- * Tool registration information for plugin system
- */
-// export interface ToolRegistration {
-//   name: string
-//   definition: ToolDefinition<any>
-//   handler: ToolHandler<any>
-//   options?: ToolRegistrationOptions
-// }
+// ToolRegistration is imported from BeyondMcpTypes.ts
 
 /**
  * Tool execution result with enhanced metadata

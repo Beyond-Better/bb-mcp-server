@@ -9,7 +9,7 @@ import type { Logger } from '../utils/Logger.ts';
 import type { AppPlugin, LoadedPlugin, PluginDiscoveryOptions } from '../types/PluginTypes.ts';
 import type { AppServerDependencies } from '../types/AppServerTypes.ts';
 import type { ToolRegistry } from '../tools/ToolRegistry.ts';
-import type { ToolBase } from '../types/ToolTypes.ts';
+import type { ToolRegistration } from '../types/BeyondMcpTypes.ts';
 import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
 import type { WorkflowBase } from '../workflows/WorkflowBase.ts';
 
@@ -623,7 +623,7 @@ export class PluginManager {
     version: string,
     description: string,
     workflows: WorkflowBase[],
-    tools: ToolBase[],
+    tools: ToolRegistration[],
     options: {
       author?: string;
       license?: string;

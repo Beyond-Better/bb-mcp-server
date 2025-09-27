@@ -7,7 +7,7 @@
 //import { z, type ZodSchema } from 'zod'
 //import type { Logger } from '../utils/Logger.ts'
 import type { AppServerDependencies } from './AppServerTypes.ts';
-import type { ToolRegistration } from '../tools/ToolBase.ts';
+import type { ToolRegistration } from './BeyondMcpTypes.ts';
 import type { WorkflowBase } from './WorkflowTypes.ts';
 import type { ToolRegistry } from '../tools/ToolRegistry.ts';
 import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';

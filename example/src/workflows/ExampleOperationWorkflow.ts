@@ -159,6 +159,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       estimatedDuration: this.estimatedDuration || 180,
       tags: this.tags,
       author: 'ExampleCorp Integration Team',
+      parameterSchema: this.parameterSchema, // Include parameter schema for get_schema_for_workflow tool
     }
   }
 

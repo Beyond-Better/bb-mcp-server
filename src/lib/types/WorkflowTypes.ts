@@ -1,51 +1,52 @@
 /**
  * Enhanced workflow types for bb-mcp-server
- * 
+ *
  * Comprehensive type definitions with Phase 1 integration and plugin support
  */
 
-import { z, type ZodSchema } from 'zod'
-import type { Logger } from '../utils/Logger.ts'
-import type { AuditLogger } from '../utils/AuditLogger.ts'
-import type { KVManager } from '../storage/KVManager.ts'
+import { z, type ZodSchema } from 'zod';
+import type { Logger } from '../utils/Logger.ts';
+import type { AuditLogger } from '../utils/AuditLogger.ts';
+import type { KVManager } from '../storage/KVManager.ts';
+import { PluginCategory, PluginInfo, RateLimitConfig } from './PluginTypes.ts';
 
-// Enhanced workflow categories
-export type WorkflowCategory = 
-  | 'integration'      // Third-party API integrations
-  | 'data'            // Data processing
-  | 'automation'      // Automated tasks
-  | 'analysis'        // Analysis and reporting
-  | 'management'      // Resource management
-  | 'utility'         // Utility workflows
-  | 'custom'          // Custom workflows
-  | 'query'           // Query operations
-  | 'operation'       // Business operations
-
-/**
- * Default workflow categories - extracted from WorkflowCategory type
- */
-export const DEFAULT_WORKFLOW_CATEGORIES: readonly WorkflowCategory[] = [
-  'integration',
-  'data', 
-  'automation',
-  'analysis',
-  'management',
-  'utility',
-  'custom',
-  'query',
-  'operation'
-] as const
+// // Enhanced workflow categories
+// export type WorkflowCategory =
+//   | 'integration'      // Third-party API integrations
+//   | 'data'            // Data processing
+//   | 'automation'      // Automated tasks
+//   | 'analysis'        // Analysis and reporting
+//   | 'management'      // Resource management
+//   | 'utility'         // Utility workflows
+//   | 'custom'          // Custom workflows
+//   | 'query'           // Query operations
+//   | 'operation'       // Business operations
+//
+// /**
+//  * Default workflow categories - extracted from WorkflowCategory type
+//  */
+// export const DEFAULT_WORKFLOW_CATEGORIES: readonly WorkflowCategory[] = [
+//   'integration',
+//   'data',
+//   'automation',
+//   'analysis',
+//   'management',
+//   'utility',
+//   'custom',
+//   'query',
+//   'operation'
+// ] as const
 
 /**
  * Configuration for workflow registry
  */
 export interface WorkflowRegistryConfig {
   /** Valid workflow categories (defaults to DEFAULT_WORKFLOW_CATEGORIES) */
-  validCategories?: readonly WorkflowCategory[]
+  validCategories?: readonly PluginCategory[];
   /** Allow dynamic category registration */
-  allowDynamicCategories?: boolean
+  allowDynamicCategories?: boolean;
   /** Custom categories beyond the predefined ones */
-  customCategories?: readonly string[]
+  customCategories?: readonly string[];
 }
 
 /**
@@ -53,99 +54,99 @@ export interface WorkflowRegistryConfig {
  */
 export interface BaseWorkflowParameters {
   /** User ID for authentication and audit logging */
-  userId: string
+  userId: string;
   /** Optional request ID for tracking */
-  requestId?: string
+  requestId?: string;
   /** Dry run mode - validate but don't execute */
-  dryRun?: boolean
+  dryRun?: boolean;
 }
 
 /**
  * Enhanced workflow context with Phase 1 integrations
  */
 export interface WorkflowContext {
-  userId: string
-  requestId: string
-  workflowName: string
-  startTime: Date
-  
+  userId: string;
+  requestId: string;
+  workflowName: string;
+  startTime: Date;
+
   // Services (from Phase 1)
-  auditLogger: AuditLogger
-  logger: Logger | undefined
-  kvManager: KVManager | undefined
-  
+  auditLogger: AuditLogger;
+  logger: Logger | undefined;
+  kvManager: KVManager | undefined;
+
   // Third-party integration (generic)
-  thirdPartyClient: any | undefined
-  
+  thirdPartyClient: any | undefined;
+
   // Request metadata
-  parameterUserId: string | undefined
-  _meta: Record<string, unknown>
-  
+  parameterUserId: string | undefined;
+  _meta: Record<string, unknown>;
+
   // Authentication context
-  authenticatedUserId: string | undefined
-  clientId: string | undefined
-  scopes: string[] | undefined
+  authenticatedUserId: string | undefined;
+  clientId: string | undefined;
+  scopes: string[] | undefined;
 }
 
 /**
  * Enhanced workflow result with performance data
  */
 export interface WorkflowResult {
-  success: boolean
-  data?: unknown
-  error?: WorkflowError
-  completed_steps: WorkflowStep[]
-  failed_steps: FailedStep[]
-  metadata: Record<string, unknown>
-  duration?: number // NEW: execution time in ms
-  resources?: WorkflowResource[] // NEW: resource tracking
+  success: boolean;
+  data?: unknown;
+  error?: WorkflowError;
+  completed_steps: WorkflowStep[];
+  failed_steps: FailedStep[];
+  metadata: Record<string, unknown>;
+  duration?: number; // NEW: execution time in ms
+  resources?: WorkflowResource[]; // NEW: resource tracking
 }
 
 /**
  * Individual workflow step result
  */
 export interface WorkflowStep {
-  operation: string
-  success: boolean
-  data?: unknown
-  duration_ms: number
-  timestamp: string
+  operation: string;
+  success: boolean;
+  data?: unknown;
+  duration_ms: number;
+  timestamp: string;
 }
 
 /**
  * Failed step with enhanced error information
  */
 export interface FailedStep {
-  operation: string
-  error_type: 'validation' | 'authentication' | 'api_error' | 'system_error' | 'timeout'
-  message: string
-  details?: string
-  code?: string
-  retry_after?: number
-  timestamp: string
+  operation: string;
+  error_type: 'validation' | 'authentication' | 'api_error' | 'system_error' | 'timeout';
+  message: string;
+  details?: string;
+  code?: string;
+  retry_after?: number;
+  timestamp: string;
 }
 
 /**
  * Enhanced workflow error
  */
 export interface WorkflowError {
-  type: 'validation' | 'authentication' | 'api_error' | 'system_error' | 'timeout'
-  message: string
-  details: string | undefined
-  code: string | undefined
-  stack: string | undefined
-  recoverable: boolean
+  type: 'validation' | 'authentication' | 'api_error' | 'system_error' | 'timeout';
+  message: string;
+  details: string | undefined;
+  code: string | undefined;
+  stack: string | undefined;
+  recoverable: boolean;
 }
 
 /**
  * Workflow resource tracking
  */
 export interface WorkflowResource {
-  type: 'api_call' | 'storage_operation' | 'file_access' | 'external_service'
-  name: string
-  duration_ms: number
-  status: 'success' | 'failure' | 'timeout'
-  metadata: Record<string, unknown> | undefined
+  type: 'api_call' | 'storage_operation' | 'file_access' | 'external_service';
+  name: string;
+  duration_ms: number;
+  status: 'success' | 'failure' | 'timeout';
+  metadata: Record<string, unknown> | undefined;
 }
 
 /**
@@ -153,125 +154,117 @@ export interface WorkflowResource {
  */
 export interface WorkflowRegistration {
   /** Unique workflow name */
-  name: string
+  name: string;
   /** Human-readable display name */
-  displayName: string
+  displayName: string;
   /** Workflow description */
-  description: string
+  description: string;
   /** Workflow version */
-  version: string
+  version: string;
   /** Workflow category */
-  category: WorkflowCategory
+  category: PluginCategory;
   /** Whether workflow requires authentication */
-  requiresAuth: boolean
+  requiresAuth: boolean;
   /** Estimated execution time in seconds */
-  estimatedDuration?: number
+  estimatedDuration?: number;
   /** Tags for workflow discovery */
-  tags?: string[]
+  tags?: string[];
   /** Author information */
-  author?: string
+  author?: string;
   /** License information */
-  license?: string
+  license?: string;
   /** Plugin information (if from plugin) */
-  plugin?: PluginInfo
+  plugin?: PluginInfo;
+  /** Parameter schema for validation and documentation */
+  parameterSchema: ZodSchema<any>;
 }
-
 
 /**
  * Workflow validation result with Zod integration
  */
 export interface ValidationResult<T = any> {
-  valid: boolean
-  data?: T
-  errors: ValidationError[]
-  warnings?: string[]
+  valid: boolean;
+  data?: T;
+  errors: ValidationError[];
+  warnings?: string[];
 }
 
 /**
  * Enhanced validation error
  */
 export interface ValidationError {
-  path: string
-  message: string
-  code: string
-  expected: string | undefined
-  received: string | undefined
-}
-
-/**
- * Rate limiting configuration
- */
-export interface RateLimitConfig {
-  requests: number
-  window: number // seconds
-  burst?: number
+  path: string;
+  message: string;
+  code: string;
+  expected: string | undefined;
+  received: string | undefined;
 }
 
 /**
  * Workflow execution options
  */
 export interface WorkflowExecutionOptions {
-  timeout?: number // milliseconds
-  retries?: number
-  priority?: 'low' | 'normal' | 'high'
-  metadata?: Record<string, unknown>
+  timeout?: number; // milliseconds
+  retries?: number;
+  priority?: 'low' | 'normal' | 'high';
+  metadata?: Record<string, unknown>;
 }
 
 /**
  * Forward declarations to avoid circular dependencies
  */
 export interface WorkflowBase {
-  readonly name: string
-  readonly version: string
-  readonly description: string
-  readonly category: WorkflowCategory
-  readonly tags: string[]
-  readonly estimatedDuration?: number
-  readonly requiresAuth: boolean
-  readonly rateLimit?: RateLimitConfig
-  readonly parameterSchema: ZodSchema<any>
-  
-  executeWithValidation(params: unknown, context: WorkflowContext): Promise<WorkflowResult>
-  validateParameters(params: unknown): Promise<ValidationResult<any>>
-  getRegistration(): WorkflowRegistration
-  getOverview(): string
+  readonly name: string;
+  readonly version: string;
+  readonly description: string;
+  readonly category: PluginCategory;
+  readonly tags: string[];
+  readonly estimatedDuration?: number;
+  readonly requiresAuth: boolean;
+  readonly rateLimit?: RateLimitConfig;
+  readonly parameterSchema: ZodSchema<any>;
+
+  executeWithValidation(params: unknown, context: WorkflowContext): Promise<WorkflowResult>;
+  validateParameters(params: unknown): Promise<ValidationResult<any>>;
+  getRegistration(): WorkflowRegistration;
+  getOverview(): string;
 }
 
 export interface WorkflowRegistry {
-  registerWorkflow(workflow: WorkflowBase): void
-  getWorkflow(name: string): WorkflowBase | undefined
-  getWorkflowsByCategory(category: WorkflowCategory): WorkflowBase[]
-  getWorkflowsByTag(tag: string): WorkflowBase[]
-  searchWorkflows(query: string): WorkflowBase[]
-  getRegistration(name: string): WorkflowRegistration | undefined
-  hasWorkflow(name: string): boolean
-  unregister(name: string): boolean
-  clear(): void
+  registerWorkflow(workflow: WorkflowBase): void;
+  getWorkflow(name: string): WorkflowBase | undefined;
+  getWorkflowsByCategory(category: PluginCategory): WorkflowBase[];
+  getWorkflowsByTag(tag: string): WorkflowBase[];
+  searchWorkflows(query: string): WorkflowBase[];
+  getRegistration(name: string): WorkflowRegistration | undefined;
+  hasWorkflow(name: string): boolean;
+  unregister(name: string): boolean;
+  clear(): void;
 }
 
 /**
  * Workflow execution metrics
  */
 export interface WorkflowMetrics {
-  totalExecutions: number
-  successfulExecutions: number
-  failedExecutions: number
-  averageDuration: number
-  lastExecuted?: Date
-  errorRate: number
+  totalExecutions: number;
+  successfulExecutions: number;
+  failedExecutions: number;
+  averageDuration: number;
+  lastExecuted?: Date;
+  errorRate: number;
 }
 
 /**
  * Workflow audit entry
  */
 export interface WorkflowAuditEntry {
-  timestamp: string
-  userId: string
-  workflow: string
-  requestId: string
-  action: string
-  details: Record<string, unknown>
-  result: 'success' | 'failure' | 'partial'
-  durationMs?: number
-  resources?: WorkflowResource[]
+  timestamp: string;
+  userId: string;
+  workflow: string;
+  requestId: string;
+  action: string;
+  details: Record<string, unknown>;
+  result: 'success' | 'failure' | 'partial';
+  durationMs?: number;
+  resources?: WorkflowResource[];
 }
