@@ -26,7 +26,6 @@ import { ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts'
 export interface ExampleToolsDependencies {
   apiClient: ExampleApiClient
   oauthConsumer: ExampleOAuthConsumer
-  workflowRegistry: WorkflowRegistry
   logger: Logger
   auditLogger?: AuditLogger
 }
@@ -38,14 +37,12 @@ export interface ExampleToolsDependencies {
 export class ExampleTools {
   private apiClient: ExampleApiClient
   private oauthConsumer: ExampleOAuthConsumer
-  private workflowRegistry: WorkflowRegistry
   private logger: Logger
   private auditLogger?: AuditLogger
   
   constructor(dependencies: ExampleToolsDependencies) {
     this.apiClient = dependencies.apiClient
     this.oauthConsumer = dependencies.oauthConsumer
-    this.workflowRegistry = dependencies.workflowRegistry
     this.logger = dependencies.logger
     this.auditLogger = dependencies.auditLogger || new AuditLogger({ enabled: false, logAllApiCalls: false }, dependencies.logger)
   }
@@ -53,48 +50,27 @@ export class ExampleTools {
   /**
    * 🎯 Register all ExampleCorp tools with the library's ToolRegistry
    * Library handles: tool registration, Zod validation, error handling
+   * NOTE: Workflow tools (execute_workflow, get_schema_for_workflow) are now handled by the library
    */
   registerWith(toolRegistry: ToolRegistry): void {
-    this.registerExecuteWorkflowTool(toolRegistry)
     this.registerQueryCustomersTool(toolRegistry)
     this.registerCreateOrderTool(toolRegistry)
     this.registerGetOrderStatusTool(toolRegistry)
     this.registerGetApiInfoTool(toolRegistry)
     
-    this.logger.info('ExampleCorp tools registered', {
-      count: 5,
+    this.logger.info('ExampleCorp custom tools registered', {
+      count: 4,
       tools: [
-        'execute_workflow_example',
         'query_customers_example',
         'create_order_example',
         'get_order_status_example',
         'get_api_info_example',
       ],
+      note: 'Workflow tools (execute_workflow, get_schema_for_workflow) are registered by the library',
     })
   }
   
-  /**
-   * 🎯 Workflow execution tool
-   * Demonstrates integration with library WorkflowRegistry
-   */
-  private registerExecuteWorkflowTool(registry: ToolRegistry): void {
-    const workflows = this.workflowRegistry.list()
-    
-    registry.registerTool('execute_workflow_example', {
-      title: '🎯 Execute ExampleCorp Workflow',
-      description: 'Execute specialized ExampleCorp business workflows with comprehensive parameter validation and structured results.',
-      category: 'ExampleCorp',
-      tags: ['workflow', 'business-logic', 'examplecorp'],
-      inputSchema: {
-        workflow_name: z.enum(workflows.map(w => w.name) as [string, ...string[]]).describe('Workflow to execute'),
-        parameters: z.object({
-          userId: z.string().describe('User ID for authentication and audit logging (required for all workflows)'),
-          requestId: z.string().optional().describe('Optional request ID for tracking'),
-          dryRun: z.boolean().optional().default(false).describe('Dry run mode - validate but do not execute'),
-        }).passthrough().describe('Workflow parameters'),
-      },
-    }, async (args, extra) => await this.executeWorkflow(args, extra))
-  }
+
   
   /**
    * 🎯 Customer query tool
@@ -187,66 +163,7 @@ export class ExampleTools {
   // TOOL IMPLEMENTATIONS
   // =============================================================================
   
-  /**
-   * 🎯 Execute ExampleCorp workflow
-   * Demonstrates workflow integration with library infrastructure
-   */
-  private async executeWorkflow(args: any, extra?: any): Promise<CallToolResult> {
-    try {
-      const { workflow_name, parameters } = args
-      
-      // 🎯 Get workflow from library registry
-      const workflow = this.workflowRegistry.get(workflow_name)
-      if (!workflow) {
-        return {
-          content: [{
-            type: 'text',
-            text: `Workflow '${workflow_name}' not found. Available workflows: ${this.workflowRegistry.list().map(w => w.name).join(', ')}`,
-          }],
-          isError: true,
-        }
-      }
-      
-      // 🎯 Execute with authentication context (library handles context management)
-      const result = await workflow.executeWithValidation(parameters, {
-        userId: parameters.userId,
-        requestId: parameters.requestId || 'unknown',
-        workflowName: workflow.name,
-        startTime: new Date(),
-        auditLogger: this.auditLogger ?? new AuditLogger({ enabled: false, logAllApiCalls: false }, this.logger),
-        logger: this.logger,
-        kvManager: undefined,
-        thirdPartyClient: undefined,
-        parameterUserId: parameters.userId,
-        _meta: {},
-        authenticatedUserId: parameters.userId,
-        clientId: 'example-tools',
-        scopes: [],
-      })
-      
-      return {
-        content: [{
-          type: 'text',
-          text: JSON.stringify({
-            workflow: workflow_name,
-            status: 'success',
-            result,
-            timestamp: new Date().toISOString(),
-          }, null, 2),
-        }],
-      }
-      
-    } catch (error) {
-      this.logger.error('Workflow execution failed', error instanceof Error ? error : new Error(String(error)))
-      return {
-        content: [{
-          type: 'text',
-          text: `Workflow execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        }],
-        isError: true,
-      }
-    }
-  }
+
   
   /**
    * 🎯 Query customers from ExampleCorp API
