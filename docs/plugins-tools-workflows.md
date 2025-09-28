@@ -457,7 +457,13 @@ export function createMyPlugin(dependencies: MyPluginDependencies): AppPlugin {
     dependencies: ['@bb/mcp-server'],
     tags: ['business', 'mycompany'],
     
-    async initialize(registry: any): Promise<void> {
+    // ✅ CORRECT signature for initialize method (when needed):
+    async initialize(
+      dependencies: AppServerDependencies,
+      toolRegistry: ToolRegistry,
+      workflowRegistry: WorkflowRegistry
+    ): Promise<void> {
+      // PluginManager calls: plugin.initialize(pluginDependencies, toolRegistry, workflowRegistry)
       logger.info('MyBusiness plugin initialized')
     },
     
@@ -474,7 +480,13 @@ const plugin: AppPlugin = {
   description: 'Business workflows and tools for MyCompany',
   workflows: [], // Populated by factory function
   
-  async initialize(registry: any): Promise<void> {
+  // ✅ CORRECT signature for initialize method (when needed):
+  async initialize(
+    dependencies: AppServerDependencies,
+    toolRegistry: ToolRegistry,
+    workflowRegistry: WorkflowRegistry
+  ): Promise<void> {
+    // PluginManager calls: plugin.initialize(pluginDependencies, toolRegistry, workflowRegistry)
     console.log('Plugin discovered and initialized')
   }
 }

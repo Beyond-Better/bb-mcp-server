@@ -1,0 +1,59 @@
+{
+  // Simple MCP Server - Deno Configuration
+  // This configuration enables the example to run with proper imports and permissions
+  
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window"],
+    "strict": true
+  },
+  
+  "fmt": {
+    "files": {
+      "include": ["src/", "main.ts"],
+      "exclude": ["data/"]
+    },
+    "options": {
+      "useTabs": false,
+      "lineWidth": 100,
+      "indentWidth": 2,
+      "singleQuote": true
+    }
+  },
+  
+  "lint": {
+    "files": {
+      "include": ["src/", "main.ts"],
+      "exclude": ["data/", "*.test.ts"]
+    }
+  },
+  
+  "test": {
+    "files": {
+      "include": ["src/tests/"]
+    }
+  },
+  
+  "tasks": {
+    "start": "deno run --allow-all main.ts",
+    "start:http": "MCP_TRANSPORT=http deno run --allow-all main.ts",
+    "start:debug": "LOG_LEVEL=debug deno run --allow-all main.ts",
+    "dev": "deno run --allow-all --watch main.ts",
+    "test": "deno test --allow-all src/tests/",
+    "test:watch": "deno test --allow-all --watch src/tests/",
+    "fmt": "deno fmt",
+    "lint": "deno lint",
+    "check": "deno check main.ts src/**/*.ts"
+  },
+  
+  "imports": {
+    "@bb/mcp-server": "../src/index.ts",
+    "@std/assert": "https://deno.land/std@0.208.0/assert/mod.ts",
+    "@std/testing": "https://deno.land/std@0.208.0/testing/mod.ts"
+  },
+  
+  "exclude": [
+    "data/",
+    ".env"
+  ]
+}
