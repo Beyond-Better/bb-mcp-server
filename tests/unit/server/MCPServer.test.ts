@@ -20,7 +20,7 @@ import { TransportManager } from '../../../src/lib/transport/TransportManager.ts
 import type { BeyondMcpServerConfig, BeyondMcpServerDependencies, BeyondMcpRequestContext } from '../../../src/lib/types/BeyondMcpTypes.ts';
 
 // Test helpers
-import { createMockLogger, createMockAuditLogger, createMockSdkMcpServer, MockSdkMcpServer } from '../../utils/test-helpers.ts';
+import { createMockLogger, createMockAuditLogger, createMockSdkMcpServer, MockSdkMcpServer, createMockToolRegistry } from '../../utils/test-helpers.ts';
 
 describe('MCPServer', () => {
   let server: BeyondMcpServer;
@@ -69,6 +69,7 @@ describe('MCPServer', () => {
       auditLogger: mockAuditLogger,
       configManager: mockConfigManager,
       errorHandler: mockErrorHandler,
+      toolRegistry: createMockToolRegistry(),
       workflowRegistry: mockWorkflowRegistry,
       transportManager: mockTransportManager,
     };
@@ -426,6 +427,7 @@ describe('MCPServer Integration', () => {
       auditLogger: mockAuditLogger,
       configManager: {} as ConfigManager,
       errorHandler: { wrapError: (e: any) => e } as ErrorHandler,
+      toolRegistry: createMockToolRegistry(),
       workflowRegistry: {
         getWorkflowNames: () => ['test'],
         register: () => {},

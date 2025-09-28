@@ -10,7 +10,7 @@ import type {
   WorkflowContext,
   WorkflowRegistration,
   WorkflowResult,
-} from "../../../src/lib/workflows/WorkflowTypes.ts"
+} from "../../../src/lib/types/WorkflowTypes.ts"
 import { Logger } from "../../../src/lib/utils/Logger.ts"
 import { AuditLogger } from "../../../src/lib/utils/AuditLogger.ts"
 import { KVManager } from "../../../src/lib/storage/KVManager.ts"
@@ -42,6 +42,7 @@ class TestWorkflow extends WorkflowBase {
       requiresAuth: this.requiresAuth,
       estimatedDuration: this.estimatedDuration,
       tags: this.tags,
+      parameterSchema: this.parameterSchema,
     }
   }
   
@@ -101,6 +102,7 @@ class FailingTestWorkflow extends WorkflowBase {
       version: this.version,
       category: this.category,
       requiresAuth: this.requiresAuth,
+      parameterSchema: this.parameterSchema,
     }
   }
   

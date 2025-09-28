@@ -16,6 +16,25 @@ import type {
   AppPlugin,
 } from "../../../src/lib/types/PluginTypes.ts"
 import { Logger } from "../../../src/lib/utils/Logger.ts"
+import { ErrorHandler } from "../../../src/lib/utils/ErrorHandler.ts"
+
+// Helper to create registry dependencies
+function createRegistryDependencies() {
+  const logger = new Logger({ level: 'debug', format: 'text' });
+  const errorHandler = {
+    wrapError: (error: any, code?: string, context?: any) => {
+      const wrappedError = error instanceof Error ? error : new Error(String(error));
+      if (code) {
+        wrappedError.message = `${code}: ${wrappedError.message}`;
+      }
+      return wrappedError;
+    },
+    handleError: () => {},
+    isRecoverableError: () => false,
+  } as ErrorHandler;
+  
+  return { logger, errorHandler };
+}
 
 // Test workflows for registry testing
 class TestWorkflowA extends WorkflowBase {
@@ -39,6 +58,7 @@ class TestWorkflowA extends WorkflowBase {
       category: this.category,
       requiresAuth: this.requiresAuth,
       tags: this.tags,
+      parameterSchema: this.parameterSchema,
     }
   }
   
@@ -80,6 +100,7 @@ class TestWorkflowB extends WorkflowBase {
       requiresAuth: this.requiresAuth,
       estimatedDuration: this.estimatedDuration,
       tags: this.tags,
+      parameterSchema: this.parameterSchema,
     }
   }
   
@@ -116,6 +137,7 @@ class InvalidWorkflow extends WorkflowBase {
       version: this.version,
       category: this.category,
       requiresAuth: this.requiresAuth,
+      parameterSchema: this.parameterSchema,
     }
   }
   
@@ -135,18 +157,21 @@ const createTestPlugin = (): AppPlugin => ({
   description: 'Test plugin for registry testing',
   author: 'Test Author',
   workflows: [new TestWorkflowA(), new TestWorkflowB()],
+  tools: [],
   tags: ['test', 'plugin'],
 })
 
 Deno.test("WorkflowRegistry - singleton instance", () => {
-  const registry1 = WorkflowRegistry.getInstance()
-  const registry2 = WorkflowRegistry.getInstance()
+  const deps = createRegistryDependencies();
+  const registry1 = WorkflowRegistry.getInstance(deps)
+  const registry2 = WorkflowRegistry.getInstance(deps)
   
   assertEquals(registry1, registry2) // Same instance
 })
 
 Deno.test("WorkflowRegistry - workflow registration", () => {
-  const registry = WorkflowRegistry.getInstance()
+  const deps = createRegistryDependencies();
+  const registry = WorkflowRegistry.getInstance(deps)
   registry.clear() // Start fresh
   
   const workflow = new TestWorkflowA()
@@ -173,14 +198,15 @@ Deno.test("WorkflowRegistry - workflow registration", () => {
 })
 
 Deno.test("WorkflowRegistry - invalid workflow registration", () => {
-  const registry = WorkflowRegistry.getInstance()
+  const deps = createRegistryDependencies();
+  const registry = WorkflowRegistry.getInstance(deps)
   registry.clear()
   
   const invalidWorkflow = new InvalidWorkflow()
   
   // Should throw error for invalid registration
   assertThrows(
-    () => registry.register(invalidWorkflow),
+    () => registry.registerWorkflow(invalidWorkflow),
     Error,
     'Workflow registration has errors'
   )
@@ -191,19 +217,19 @@ Deno.test("WorkflowRegistry - invalid workflow registration", () => {
 })
 
 Deno.test("WorkflowRegistry - workflow overwriting", () => {
-  const logger = new Logger({ level: 'debug', format: 'text' })
-  const registry = WorkflowRegistry.getInstance({ logger })
+  const deps = createRegistryDependencies();
+  const registry = WorkflowRegistry.getInstance(deps)
   registry.clear()
   
   const workflow1 = new TestWorkflowA()
   const workflow2 = new TestWorkflowA() // Same name, should overwrite
   
   // Register first workflow
-  registry.register(workflow1)
+  registry.registerWorkflow(workflow1)
   assertEquals(registry.getWorkflowNames().length, 1)
   
   // Register second workflow with same name (should overwrite)
-  registry.register(workflow2)
+  registry.registerWorkflow(workflow2)
   assertEquals(registry.getWorkflowNames().length, 1) // Still only 1
   
   // Should be the second workflow
@@ -212,14 +238,15 @@ Deno.test("WorkflowRegistry - workflow overwriting", () => {
 })
 
 Deno.test("WorkflowRegistry - category-based retrieval", () => {
-  const registry = WorkflowRegistry.getInstance()
+  const deps = createRegistryDependencies();
+  const registry = WorkflowRegistry.getInstance(deps)
   registry.clear()
   
   const workflowA = new TestWorkflowA() // category: 'utility'
   const workflowB = new TestWorkflowB() // category: 'automation'
   
-  registry.register(workflowA)
-  registry.register(workflowB)
+  registry.registerWorkflow(workflowA)
+  registry.registerWorkflow(workflowB)
   
   // Get workflows by category
   const utilityWorkflows = registry.getWorkflowsByCategory('utility')
@@ -235,14 +262,15 @@ Deno.test("WorkflowRegistry - category-based retrieval", () => {
 })
 
 Deno.test("WorkflowRegistry - tag-based retrieval", () => {
-  const registry = WorkflowRegistry.getInstance()
+  const deps = createRegistryDependencies();
+  const registry = WorkflowRegistry.getInstance(deps)
   registry.clear()
   
   const workflowA = new TestWorkflowA() // tags: ['test', 'alpha']
   const workflowB = new TestWorkflowB() // tags: ['test', 'beta']
   
-  registry.register(workflowA)
-  registry.register(workflowB)
+  registry.registerWorkflow(workflowA)
+  registry.registerWorkflow(workflowB)
   
   // Get workflows by tag
   const testWorkflows = registry.getWorkflowsByTag('test')
@@ -261,14 +289,15 @@ Deno.test("WorkflowRegistry - tag-based retrieval", () => {
 })
 
 Deno.test("WorkflowRegistry - search workflows", () => {
-  const registry = WorkflowRegistry.getInstance()
+  const deps = createRegistryDependencies();
+  const registry = WorkflowRegistry.getInstance(deps)
   registry.clear()
   
   const workflowA = new TestWorkflowA() // name: 'test_workflow_a', description: 'First test workflow'
   const workflowB = new TestWorkflowB() // name: 'test_workflow_b', description: 'Second test workflow'
   
-  registry.register(workflowA)
-  registry.register(workflowB)
+  registry.registerWorkflow(workflowA)
+  registry.registerWorkflow(workflowB)
   
   // Search by name fragment
   const aResults = registry.searchWorkflows('workflow_a')
@@ -299,13 +328,14 @@ Deno.test("WorkflowRegistry - search workflows", () => {
 // Plugin unregistration test removed - plugins are now managed by PluginManager
 
 Deno.test("WorkflowRegistry - workflow unregistration", () => {
-  const registry = WorkflowRegistry.getInstance()
+  const deps = createRegistryDependencies();
+  const registry = WorkflowRegistry.getInstance(deps)
   registry.clear()
   
   const workflow = new TestWorkflowA()
   
   // Register workflow
-  registry.register(workflow)
+  registry.registerWorkflow(workflow)
   assertEquals(registry.hasWorkflow('test_workflow_a'), true)
   
   // Unregister workflow
@@ -322,7 +352,8 @@ Deno.test("WorkflowRegistry - workflow unregistration", () => {
 })
 
 Deno.test("WorkflowRegistry - clear registry", () => {
-  const registry = WorkflowRegistry.getInstance()
+  const deps = createRegistryDependencies();
+  const registry = WorkflowRegistry.getInstance(deps)
   registry.clear()
   
   const workflowA = new TestWorkflowA()
@@ -345,11 +376,12 @@ Deno.test("WorkflowRegistry - clear registry", () => {
 })
 
 Deno.test("WorkflowRegistry - metrics tracking", () => {
-  const registry = WorkflowRegistry.getInstance()
+  const deps = createRegistryDependencies();
+  const registry = WorkflowRegistry.getInstance(deps)
   registry.clear()
   
   const workflow = new TestWorkflowA()
-  registry.register(workflow)
+  registry.registerWorkflow(workflow)
   
   // Initial metrics should be zero
   const initialMetrics = registry.getMetrics('test_workflow_a')
@@ -374,14 +406,15 @@ Deno.test("WorkflowRegistry - metrics tracking", () => {
 })
 
 Deno.test("WorkflowRegistry - statistics", () => {
-  const registry = WorkflowRegistry.getInstance()
+  const deps = createRegistryDependencies();
+  const registry = WorkflowRegistry.getInstance(deps)
   registry.clear()
   
   const workflowA = new TestWorkflowA() // requiresAuth: true
   const workflowB = new TestWorkflowB() // requiresAuth: false, estimatedDuration: 60
   
-  registry.register(workflowA)
-  registry.register(workflowB)
+  registry.registerWorkflow(workflowA)
+  registry.registerWorkflow(workflowB)
   
   const stats = registry.getStats()
   

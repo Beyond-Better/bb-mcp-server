@@ -19,6 +19,7 @@ import type {
   LogLevel,
   AuditEvent 
 } from '../../src/lib/types/BeyondMcpTypes.ts';
+import { ToolRegistry } from '../../src/lib/tools/ToolRegistry.ts';
 
 /**
  * Create mock logger for testing
@@ -74,7 +75,39 @@ export function createMockWorkflowRegistry(): WorkflowRegistry {
     validateWorkflow: () => ({ valid: true }),
     getWorkflowCount: () => 0,
     clearWorkflows: () => {},
+    getWorkflowToolData: () => ({}), // Add missing method for registerWorkflowTools
   } as unknown as WorkflowRegistry;
+}
+
+/**
+ * Create mock tool registry for testing
+ */
+export function createMockToolRegistry(): ToolRegistry {
+  // Use type casting to create ToolRegistry mock
+  return {
+    registerTool: () => {},
+    getTool: () => undefined,
+    getTools: () => [],
+    getToolNames: () => [],
+    getToolCount: () => 0,
+    getToolsByCategory: () => [],
+    getToolSchema: () => undefined,
+    getToolDefinition: () => undefined,
+    validateToolInput: async () => ({ success: true }),
+    updateToolStats: () => {},
+    testToolValidation: async () => ({ success: true }),
+    getToolStats: () => undefined,
+    getRegistryStats: () => ({
+      totalTools: 0,
+      totalCalls: 0,
+      averageExecutionTime: 0,
+      toolsByCategory: {},
+      mostUsedTools: [],
+    }),
+    clear: () => {},
+    removeTool: () => false,
+    sdkMcpServer: undefined,
+  } as unknown as ToolRegistry;
 }
 
 /**
@@ -134,6 +167,7 @@ export function createMockBeyondMcpServerDependencies(): BeyondMcpServerDependen
     auditLogger: createMockAuditLogger(),
     configManager: createMockConfigManager(),
     errorHandler: createMockErrorHandler(),
+    toolRegistry: createMockToolRegistry(),
     workflowRegistry: createMockWorkflowRegistry(),
     transportManager: createMockTransportManager(),
     oauthProvider: createMockOAuthProvider(),
@@ -187,6 +221,7 @@ export function createTestRequestContext(overrides: Partial<BeyondMcpRequestCont
 
 /**
  * Mock MCP Server for testing
+ * Comprehensive mock that satisfies McpServer interface
  */
 export class MockSdkMcpServer {
   public name: string;
@@ -196,7 +231,21 @@ export class MockSdkMcpServer {
   public capabilities: any;
   public instructions?: string;
   
-  private registeredTools = new Map<string, any>();
+  // MCP SDK required properties
+  public _registeredResources = new Map();
+  public _registeredResourceTemplates = new Map();
+  public _registeredTools = new Map<string, any>();
+  public _registeredPrompts = new Map();
+  public _handlerMap = new Map();
+  public _onRequest: any;
+  public _onNotification: any;
+  public _onOpen: any;
+  public _onClose: any;
+  public _onError: any;
+  public _requestHandlers = new Map();
+  public _notificationHandlers = new Map();
+  public _transport: any = null;
+  public _isConnected = false;
   
   constructor(info: any, options: any) {
     this.name = info.name;
@@ -208,23 +257,71 @@ export class MockSdkMcpServer {
   }
   
   registerTool(name: string, definition: any, handler: any) {
-    this.registeredTools.set(name, { name, definition, handler });
+    this._registeredTools.set(name, { name, definition, handler });
   }
   
   getRegisteredTool(name: string) {
-    return this.registeredTools.get(name);
+    return this._registeredTools.get(name);
   }
   
   getRegisteredTools() {
-    return Array.from(this.registeredTools.values());
+    return Array.from(this._registeredTools.values());
   }
   
   clearTools() {
-    this.registeredTools.clear();
+    this._registeredTools.clear();
+  }
+  
+  // Additional MCP SDK required methods
+  registerPrompt(name: string, definition: any, handler: any) {
+    this._registeredPrompts.set(name, { name, definition, handler });
+  }
+  
+  registerResource(name: string, definition: any, handler: any) {
+    this._registeredResources.set(name, { name, definition, handler });
+  }
+  
+  registerResourceTemplate(name: string, definition: any, handler: any) {
+    this._registeredResourceTemplates.set(name, { name, definition, handler });
+  }
+  
+  setRequestHandler(method: string, handler: any) {
+    this._requestHandlers.set(method, handler);
+  }
+  
+  setNotificationHandler(method: string, handler: any) {
+    this._notificationHandlers.set(method, handler);
+  }
+  
+  request(params: any) {
+    return Promise.resolve({ result: 'mock-response' });
+  }
+  
+  notification(params: any) {
+    return Promise.resolve();
+  }
+  
+  onRequest(handler: any) {
+    this._onRequest = handler;
+  }
+  
+  onNotification(handler: any) {
+    this._onNotification = handler;
+  }
+  
+  onOpen(handler: any) {
+    this._onOpen = handler;
+  }
+  
+  onClose(handler: any) {
+    this._onClose = handler;
+  }
+  
+  onError(handler: any) {
+    this._onError = handler;
   }
   
   // Mock server for MCP SDK integration
-  private _isConnected = false;
   
   server = {
     createMessage: async (request: any) => {

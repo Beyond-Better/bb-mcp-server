@@ -13,10 +13,11 @@ import { Logger } from '../../../src/lib/utils/Logger.ts';
 import { AuditLogger } from '../../../src/lib/utils/AuditLogger.ts';
 
 // Import types
-import type { CoreToolsDependencies, ToolRegistry } from '../../../src/lib/types/BeyondMcpTypes.ts';
+import type { CoreToolsDependencies } from '../../../src/lib/types/BeyondMcpTypes.ts';
+import type { ToolRegistry } from '../../../src/lib/tools/ToolRegistry.ts';
 
 // Test helpers
-import { createMockLogger, createMockAuditLogger } from '../../utils/test-helpers.ts';
+import { createMockLogger, createMockAuditLogger, MockSdkMcpServer } from '../../utils/test-helpers.ts';
 
 // Mock MCP Server with sampling/elicitation capabilities
 class MockMcpServer {
@@ -322,10 +323,18 @@ describe('CoreTools', () => {
     });
     
     it('should handle MCP server unavailable', async () => {
-      // Create CoreTools with no MCP server
+      // Create CoreTools with unavailable MCP server
+      const faultyMcpServer = new MockSdkMcpServer(
+        { name: 'test', version: '1.0.0', description: 'test' },
+        { capabilities: {}, instructions: undefined }
+      );
+      // Mock server methods to simulate unavailable state
+      faultyMcpServer.server.createMessage = async () => {
+        throw new Error('MCP server not available for sampling');
+      };
       const faultyDependencies = {
         ...dependencies,
-        sdkMcpServer: null,
+        sdkMcpServer: faultyMcpServer as any,
       };
       const faultyCoreTools = new CoreTools(faultyDependencies);
       faultyCoreTools.registerWith(mockToolRegistry as any);
@@ -341,18 +350,18 @@ describe('CoreTools', () => {
     });
     
     it('should handle sampling failure gracefully', async () => {
-      // Mock MCP server to throw error
-      const errorMcpServer = {
-        server: {
-          createMessage: async () => {
-            throw new Error('Sampling failed');
-          },
-        },
+      // Create MockSdkMcpServer that throws error
+      const errorMcpServer = new MockSdkMcpServer(
+        { name: 'error-server', version: '1.0.0', description: 'Error server' },
+        { capabilities: {}, instructions: undefined }
+      );
+      errorMcpServer.server.createMessage = async () => {
+        throw new Error('Sampling failed');
       };
       
       const faultyDependencies = {
         ...dependencies,
-        sdkMcpServer: errorMcpServer,
+        sdkMcpServer: errorMcpServer as any,
       };
       const faultyCoreTools = new CoreTools(faultyDependencies);
       faultyCoreTools.registerWith(mockToolRegistry as any);
@@ -485,9 +494,18 @@ describe('CoreTools', () => {
     });
     
     it('should handle MCP server unavailable', async () => {
+      // Create CoreTools with unavailable MCP server
+      const faultyMcpServer = new MockSdkMcpServer(
+        { name: 'test', version: '1.0.0', description: 'test' },
+        { capabilities: {}, instructions: undefined }
+      );
+      // Mock server methods to simulate unavailable state
+      faultyMcpServer.server.elicitInput = async () => {
+        throw new Error('MCP server not available for elicitation');
+      };
       const faultyDependencies = {
         ...dependencies,
-        sdkMcpServer: null,
+        sdkMcpServer: faultyMcpServer as any,
       };
       const faultyCoreTools = new CoreTools(faultyDependencies);
       faultyCoreTools.registerWith(mockToolRegistry as any);
@@ -506,17 +524,18 @@ describe('CoreTools', () => {
     });
     
     it('should handle elicitation failure gracefully', async () => {
-      const errorMcpServer = {
-        server: {
-          elicitInput: async () => {
-            throw new Error('Elicitation failed');
-          },
-        },
+      // Create MockSdkMcpServer that throws error
+      const errorMcpServer = new MockSdkMcpServer(
+        { name: 'error-server', version: '1.0.0', description: 'Error server' },
+        { capabilities: {}, instructions: undefined }
+      );
+      errorMcpServer.server.elicitInput = async () => {
+        throw new Error('Elicitation failed');
       };
       
       const faultyDependencies = {
         ...dependencies,
-        sdkMcpServer: errorMcpServer,
+        sdkMcpServer: errorMcpServer as any,
       };
       const faultyCoreTools = new CoreTools(faultyDependencies);
       faultyCoreTools.registerWith(mockToolRegistry as any);
@@ -547,18 +566,18 @@ describe('CoreTools', () => {
     
     it('should handle different elicitation responses', async () => {
       // Test accept response
-      const acceptMcpServer = {
-        server: {
-          elicitInput: async () => ({
-            action: 'accept',
-            content: { userResponse: 'accepted' },
-          }),
-        },
-      };
+      const acceptMcpServer = new MockSdkMcpServer(
+        { name: 'accept-server', version: '1.0.0', description: 'Accept server' },
+        { capabilities: {}, instructions: undefined }
+      );
+      acceptMcpServer.server.elicitInput = async () => ({
+        action: 'accept',
+        content: { mockResponse: true, message: 'accepted' },
+      });
       
       const acceptDependencies = {
         ...dependencies,
-        sdkMcpServer: acceptMcpServer,
+        sdkMcpServer: acceptMcpServer as any,
       };
       const acceptCoreTools = new CoreTools(acceptDependencies);
       acceptCoreTools.registerWith(mockToolRegistry as any);
@@ -603,13 +622,13 @@ describe('CoreTools', () => {
     });
     
     it('should handle constructor with missing dependencies gracefully', () => {
-      // Missing logger
+      // Missing logger - should throw a clear error
       try {
         new CoreTools({ sdkMcpServer: mockMcpServer as any, auditLogger: mockAuditLogger } as any);
-        assert(false, 'Should have handled missing logger');
+        assert(false, 'Should have thrown error for missing logger');
       } catch (error) {
-        // Should either throw a clear error or handle gracefully
-        assert(error instanceof Error || error === undefined);
+        // Should throw a clear error about missing dependencies
+        assert(error instanceof Error);
       }
     });
   });
