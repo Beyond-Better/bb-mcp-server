@@ -118,7 +118,7 @@ describe('MCPServer', () => {
         clientId: 'test-client',
         scopes: ['read'],
         requestId: 'test-request',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: {},
       };
 
@@ -142,7 +142,7 @@ describe('MCPServer', () => {
         clientId: 'test-client',
         scopes: ['read'],
         requestId: 'outer-request',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: {},
       };
 
@@ -151,7 +151,7 @@ describe('MCPServer', () => {
         clientId: 'test-client',
         scopes: ['write'],
         requestId: 'inner-request',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: {},
       };
 
@@ -463,7 +463,7 @@ describe('MCPServer Integration', () => {
         clientId: 'integration-client',
         scopes: ['read', 'write'],
         requestId: 'integration-request',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: { test: true },
       };
 

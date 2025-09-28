@@ -104,7 +104,7 @@ export abstract class ToolBase {
     execution: (args: Record<string, unknown>, context: ToolContext) => Promise<T>,
     context?: Partial<ToolContext>,
   ): Promise<ToolResult> {
-    const startTime = Date.now();
+    const startTime = performance.now();
     const toolContext: ToolContext = {
       startTime: new Date(),
       logger: context?.logger || this.createFallbackLogger(),
@@ -129,7 +129,7 @@ export abstract class ToolBase {
       });
 
       const result = await execution(args, toolContext);
-      const executionTime = Date.now() - startTime;
+      const executionTime = performance.now() - startTime;
 
       this.logInfo(`Tool execution completed: ${toolName}`, {
         tool: toolName,
@@ -155,7 +155,7 @@ export abstract class ToolBase {
         },
       };
     } catch (error) {
-      const executionTime = Date.now() - startTime;
+      const executionTime = performance.now() - startTime;
       const toolError = error instanceof Error ? error : new Error(String(error));
 
       this.logError(`Tool execution failed: ${toolName}`, toolError, {

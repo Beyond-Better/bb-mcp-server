@@ -341,7 +341,7 @@ export class BeyondMcpSDKHelpers {
     } = {
       toolName,
       args,
-      startTime: Date.now(),
+      startTime: performance.now(),
       requestId: crypto.randomUUID(),
     };
 
@@ -357,6 +357,6 @@ export class BeyondMcpSDKHelpers {
    * Calculate tool execution time
    */
   calculateExecutionTime(startTime: number): number {
-    return Date.now() - startTime;
+    return performance.now() - startTime;
   }
 }

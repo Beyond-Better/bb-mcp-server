@@ -126,7 +126,7 @@ my-project/
 ### Pattern 1: Structured Plugin (Recommended)
 ```typescript
 // src/plugins/MyPlugin.ts
-import { AppPlugin } from '@bb/mcp-server'
+import { AppPlugin } from '@beyondbetter/bb-mcp-server'
 
 export default: AppPlugin = {
   name: 'my-plugin',

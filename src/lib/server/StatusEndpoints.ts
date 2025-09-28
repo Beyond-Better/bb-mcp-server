@@ -87,7 +87,7 @@ export class StatusEndpoints {
    */
   private async handleServerStatus(): Promise<Response> {
     try {
-      const uptime = Date.now() - this.startTime.getTime();
+      const uptime = performance.now() - this.startTime.getTime();
 
       const status = {
         server: {
@@ -212,7 +212,7 @@ export class StatusEndpoints {
    */
   private async handleLivenessCheck(): Promise<Response> {
     try {
-      const uptime = Date.now() - this.startTime.getTime();
+      const uptime = performance.now() - this.startTime.getTime();
 
       const liveness = {
         status: 'alive',
@@ -329,7 +329,7 @@ export class StatusEndpoints {
    * Get detailed server statistics
    */
   getServerStats() {
-    const uptime = Date.now() - this.startTime.getTime();
+    const uptime = performance.now() - this.startTime.getTime();
 
     return {
       server: {

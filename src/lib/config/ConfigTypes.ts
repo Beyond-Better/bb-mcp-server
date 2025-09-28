@@ -112,6 +112,7 @@ export interface TransportConfig {
     enableCORS: boolean;
     corsOrigins: string[];
     preserveCompatibilityMode: boolean;
+    allowInsecure: boolean; // Allow HTTP transport without OAuth provider (development only)
     // Optional transport persistence settings
     enableTransportPersistence?: boolean;
     sessionRestoreEnabled?: boolean;

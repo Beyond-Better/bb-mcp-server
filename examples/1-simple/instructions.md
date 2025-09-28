@@ -5,7 +5,7 @@ This guide walks you through setting up and running the simple MCP server exampl
 ## 📋 Prerequisites
 
 ### Required Software
-- **Deno 1.37+**: [Install Deno](https://deno.land/manual/getting_started/installation)
+- **Deno 2.0+**: [Install Deno](https://deno.land/manual/getting_started/installation) (tested with v2.5.x)
 - **Text Editor**: VS Code, Vim, or your preferred editor
 - **Terminal/Command Line**: Bash, Zsh, PowerShell, or similar
 
@@ -31,7 +31,18 @@ ls -la
 # You should see: main.ts, src/, README.md, etc.
 ```
 
-### Step 2: Environment Configuration
+### Step 2: Install Dependencies
+```bash
+# Install required dependencies (Deno v2+)
+deno add jsr:@std/assert@^1.0.0
+deno add jsr:@std/testing@^1.0.0
+deno add npm:zod@^3.22.4
+
+# Verify dependencies are installed
+cat deno.jsonc | grep -A 10 "imports"
+```
+
+### Step 3: Environment Configuration
 ```bash
 # Copy the environment template
 cp .env.example .env
@@ -58,7 +69,7 @@ MCP_TRANSPORT=stdio
 DEV_MODE=true
 ```
 
-### Step 3: Understand the Code Structure
+### Step 4: Understand the Code Structure
 ```bash
 # Explore the project structure
 tree -I 'node_modules|.git'
@@ -72,7 +83,7 @@ find . -type f -name '*.ts' -o -name '*.md' -o -name '*.json*' | sort
 - `.env.example`: Configuration template
 - `deno.jsonc`: Deno configuration and tasks
 
-### Step 4: Examine the Plugin Code
+### Step 5: Examine the Plugin Code
 ```bash
 # Look at the main entry point
 cat main.ts
@@ -197,10 +208,10 @@ echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | deno run --allow-al
 
 ```bash
 # Run all tests
-deno test --allow-all src/tests/
+deno test --allow-all tests/
 
 # Run specific tool tests
-deno test --allow-all src/tests/tools/
+deno test --allow-all tests/tools/
 
 # Run in watch mode for development
 deno task test:watch

@@ -296,7 +296,7 @@ export class HttpServer {
    * Get server metrics for monitoring
    */
   getMetrics() {
-    const uptime = Date.now() - this.startTime.getTime();
+    const uptime = performance.now() - this.startTime.getTime();
 
     return {
       uptime: {

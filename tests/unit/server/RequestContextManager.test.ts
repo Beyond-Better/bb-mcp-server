@@ -115,7 +115,7 @@ describe('RequestContextManager', () => {
         clientId: 'client-456',
         scopes: ['read'],
         requestId: 'request-789',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: {},
       };
 
@@ -129,7 +129,7 @@ describe('RequestContextManager', () => {
         clientId: 'client-456',
         scopes: ['read'],
         requestId: 'request-789',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: {},
       } as BeyondMcpRequestContext;
 
@@ -149,7 +149,7 @@ describe('RequestContextManager', () => {
         clientId: '',
         scopes: ['read'],
         requestId: 'request-789',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: {},
       } as BeyondMcpRequestContext;
 
@@ -163,7 +163,7 @@ describe('RequestContextManager', () => {
         clientId: 'client-456',
         scopes: 'not-an-array' as any,
         requestId: 'request-789',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: {},
       } as BeyondMcpRequestContext;
 
@@ -179,7 +179,7 @@ describe('RequestContextManager', () => {
         clientId: 'async-client',
         scopes: ['read', 'write'],
         requestId: 'async-request',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: { async: true },
       };
 
@@ -218,7 +218,7 @@ describe('RequestContextManager', () => {
         clientId: 'outer-client',
         scopes: ['read'],
         requestId: 'outer-request',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: { level: 'outer' },
       };
 
@@ -227,7 +227,7 @@ describe('RequestContextManager', () => {
         clientId: 'inner-client',
         scopes: ['write'],
         requestId: 'inner-request',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: { level: 'inner' },
       };
 
@@ -254,7 +254,7 @@ describe('RequestContextManager', () => {
         clientId: 'client-1',
         scopes: ['read'],
         requestId: 'request-1',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: {},
       };
 
@@ -263,7 +263,7 @@ describe('RequestContextManager', () => {
         clientId: 'client-2',
         scopes: ['write'],
         requestId: 'request-2',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: {},
       };
 
@@ -290,7 +290,7 @@ describe('RequestContextManager', () => {
         clientId: 'client-456',
         scopes: ['read', 'write', 'admin'],
         requestId: 'request-789',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: {},
       };
 
@@ -315,7 +315,7 @@ describe('RequestContextManager', () => {
         clientId: 'client-456',
         scopes: ['read', 'write'],
         requestId: 'request-789',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: {},
       };
 
@@ -340,7 +340,7 @@ describe('RequestContextManager', () => {
         clientId: 'client-456',
         scopes: ['read', 'write', 'admin'],
         requestId: 'request-789',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: {},
       };
 
@@ -374,7 +374,7 @@ describe('RequestContextManager', () => {
         clientId: 'client-456',
         scopes: ['read'],
         requestId: 'request-789',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: { initial: true },
       };
 
@@ -412,7 +412,7 @@ describe('RequestContextManager', () => {
 
   describe('Context Duration Tracking', () => {
     it('should calculate context duration', async () => {
-      const startTime = Date.now();
+      const startTime = performance.now();
       const context: BeyondMcpRequestContext = {
         authenticatedUserId: 'user-123',
         clientId: 'client-456',
@@ -447,7 +447,7 @@ describe('RequestContextManager', () => {
         clientId: 'client-456',
         scopes: ['read'],
         requestId: 'request-789',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: {},
       };
 
@@ -468,7 +468,7 @@ describe('RequestContextManager', () => {
         clientId: 'summary-client',
         scopes: ['read', 'write'],
         requestId: 'summary-request',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: {},
       };
 
@@ -496,7 +496,7 @@ describe('RequestContextManager', () => {
         clientId: 'log-client',
         scopes: ['read'],
         requestId: 'log-request',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: { test: true },
       };
 
@@ -517,7 +517,7 @@ describe('RequestContextManager', () => {
         clientId: 'base-client',
         scopes: ['read'],
         requestId: 'base-request',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: { level: 'base' },
       };
 

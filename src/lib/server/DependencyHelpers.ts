@@ -298,35 +298,43 @@ export function getHttpServerConfig(configManager: ConfigManager): HttpServerCon
 // =============================================================================
 
 /**
- * Validate required configuration for ExampleCorp integration
+ * Validate required configuration for OAuth consumer integration (only if actually used)
  */
 export async function validateConfiguration(
   configManager: ConfigManager,
   logger: Logger,
+  dependencies?: { oAuthConsumer?: unknown },
 ): Promise<void> {
-  const requiredConfig = [
-    'OAUTH_CONSUMER_CLIENT_ID',
-    'OAUTH_CONSUMER_CLIENT_SECRET',
-    'THIRDPARTY_API_BASE_URL',
-  ];
+  // Only validate OAuth consumer config if OAuth consumer is actually being used
+  if (dependencies?.oAuthConsumer) {
+    const requiredConfig = [
+      'OAUTH_CONSUMER_CLIENT_ID',
+      'OAUTH_CONSUMER_CLIENT_SECRET',
+      'THIRDPARTY_API_BASE_URL',
+    ];
 
-  const missingConfig: string[] = [];
+    const missingConfig: string[] = [];
 
-  for (const key of requiredConfig) {
-    // Use ConfigManager's enhanced get() method with fallback logic
-    const value = configManager.get(key);
-    if (!value || (typeof value === 'string' && value.startsWith('your-'))) {
-      missingConfig.push(key);
+    for (const key of requiredConfig) {
+      // Use ConfigManager's enhanced get() method with fallback logic
+      const value = configManager.get(key);
+      if (!value || (typeof value === 'string' && value.startsWith('your-'))) {
+        missingConfig.push(key);
+      }
     }
+
+    if (missingConfig.length > 0) {
+      const error = `Missing required OAuth consumer configuration: ${missingConfig.join(', ')}`;
+      logger.error('OAuth consumer configuration validation failed', new Error(error), { missingConfig });
+      throw new Error(error);
+    }
+
+    logger.debug('OAuth consumer configuration validation passed');
+  } else {
+    logger.debug('OAuth consumer not configured - skipping OAuth consumer validation');
   }
 
-  if (missingConfig.length > 0) {
-    const error = `Missing required configuration: ${missingConfig.join(', ')}`;
-    logger.error('Configuration validation failed', new Error(error), { missingConfig });
-    throw new Error(error);
-  }
-
-  // Validate OAuth provider configuration if HTTP transport is used
+  // Validate OAuth provider configuration if HTTP transport is used AND OAuth provider is configured
   if (configManager.get('MCP_TRANSPORT') === 'http') {
     const oauthProviderConfig = [
       'OAUTH_PROVIDER_CLIENT_ID',
@@ -341,12 +349,38 @@ export async function validateConfiguration(
       }
     }
 
+    // Check if user explicitly wants to disable OAuth provider requirement
+    const transportConfig = configManager.getTransportConfig();
+    const allowInsecureHttp = transportConfig?.http?.allowInsecure === true;
+    
     if (missingOAuthConfig.length > 0) {
-      const error = `Missing OAuth provider configuration: ${missingOAuthConfig.join(', ')}`;
-      logger.error('OAuth provider configuration validation failed', new Error(error), {
-        missingOAuthConfig,
-      });
-      throw new Error(error);
+      if (allowInsecureHttp) {
+        logger.warn('🚨 SECURITY WARNING: Running HTTP transport without OAuth provider', {
+          security: 'INSECURE',
+          transport: 'http',
+          reason: 'HTTP_ALLOW_INSECURE=true',
+          recommendation: 'Configure OAuth provider for production use',
+          missingConfig: missingOAuthConfig,
+          environment: configManager.get('NODE_ENV', 'development'),
+        });
+        logger.warn('🔓 HTTP server will accept unauthenticated requests - suitable for development only');
+      } else {
+        logger.warn('🚨 HTTP transport without OAuth provider detected', {
+          missingConfig: missingOAuthConfig,
+          securityRisk: 'HTTP server will accept unauthenticated requests',
+          solution: 'Set HTTP_ALLOW_INSECURE=true to explicitly allow insecure mode, or configure OAuth provider',
+          recommendation: 'OAuth provider is strongly recommended for production HTTP transport',
+        });
+        
+        const error = `Missing OAuth provider configuration for HTTP transport: ${missingOAuthConfig.join(', ')}. Set HTTP_ALLOW_INSECURE=true to allow insecure HTTP mode.`;
+        logger.error('OAuth provider configuration validation failed', new Error(error), {
+          missingOAuthConfig,
+          allowInsecureHint: 'Set HTTP_ALLOW_INSECURE=true to bypass this requirement',
+        });
+        throw new Error(error);
+      }
+    } else {
+      logger.debug('OAuth provider configuration validated for HTTP transport');
     }
   }
 

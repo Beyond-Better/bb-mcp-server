@@ -298,9 +298,9 @@ describe('ToolBase Performance Integration', () => {
       })),
     };
 
-    const startTime = Date.now();
+    const startTime = performance.now();
     const result = await mockTool.testValidateParameters(schema, largeParams);
-    const duration = Date.now() - startTime;
+    const duration = performance.now() - startTime;
 
     assertEquals(result.success, true);
     assert(duration < 1000, `Validation took ${duration}ms, should be under 1000ms`);
@@ -309,14 +309,14 @@ describe('ToolBase Performance Integration', () => {
   it('should handle concurrent tool registrations', () => {
     const tools = Array.from({ length: 10 }, (_, i) => new MockTool());
 
-    const startTime = Date.now();
+    const startTime = performance.now();
 
     // Register multiple tools concurrently
     tools.forEach((tool) => {
       tool.registerWith(toolRegistry);
     });
 
-    const duration = Date.now() - startTime;
+    const duration = performance.now() - startTime;
 
     // Should register all tools efficiently
     assertEquals(toolRegistry.getToolCount(), 2); // Each MockTool registers 2 tools, but same names overwrite
@@ -334,9 +334,9 @@ describe('ToolBase Performance Integration', () => {
       (_, i) => tool.handler({ message: `Message ${i}` }),
     );
 
-    const startTime = Date.now();
+    const startTime = performance.now();
     const results = await Promise.all(executions);
-    const duration = Date.now() - startTime;
+    const duration = performance.now() - startTime;
 
     assertEquals(results.length, 10);
     results.forEach((result, i) => {
@@ -437,9 +437,9 @@ describe('ToolBase Error Recovery Integration', () => {
     const slowOperation = toolRegistry.getTool('slow_failing_operation');
     assertExists(slowOperation);
 
-    const startTime = Date.now();
+    const startTime = performance.now();
     const result = await slowOperation.handler({ delay: 50 });
-    const duration = Date.now() - startTime;
+    const duration = performance.now() - startTime;
 
     assertEquals(result.isError, true);
     const slowText = getTextContent(result);

@@ -33,7 +33,7 @@ export class StdioTransport implements Transport {
   private stdioServerTransport: StdioServerTransport;
 
   // Metrics tracking
-  private startTime = Date.now();
+  private startTime = performance.now();
   private messagesReceived = 0;
   private messagesSent = 0;
   private bytesReceived = 0;
@@ -256,7 +256,7 @@ export class StdioTransport implements Transport {
   }
 
   getMetrics(): StdioTransportMetrics {
-    const uptime = Date.now() - this.startTime;
+    const uptime = performance.now() - this.startTime;
     const totalMessages = this.messagesReceived + this.messagesSent;
     const averageMessageSize = totalMessages > 0
       ? (this.bytesReceived + this.bytesSent) / totalMessages
@@ -291,7 +291,7 @@ export class StdioTransport implements Transport {
   } {
     return {
       connected: this.connected,
-      uptime: Date.now() - this.startTime,
+      uptime: performance.now() - this.startTime,
       lastActivity: Date.now(), // Would need actual last activity tracking
       messagesProcessed: this.messagesReceived + this.messagesSent,
     };

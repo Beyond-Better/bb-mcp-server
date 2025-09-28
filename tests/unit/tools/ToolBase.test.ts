@@ -1027,9 +1027,9 @@ describe('ToolBase Edge Cases and Performance', () => {
       })),
     };
 
-    const startTime = Date.now();
+    const startTime = performance.now();
     const result = await mockTool.testValidateParameters(schema, largeParams);
-    const duration = Date.now() - startTime;
+    const duration = performance.now() - startTime;
 
     assertEquals(result.success, true);
     assert(duration < 1000, `Validation took ${duration}ms, should be under 1000ms`);

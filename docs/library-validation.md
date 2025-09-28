@@ -60,7 +60,7 @@ import {
   WorkflowBase,        // Workflow system - replaces 300+ lines
   OAuthConsumer,       // OAuth consumer - replaces 400+ lines
   // ... 15+ other components
-} from '@bb/mcp-server'
+} from '@beyondbetter/bb-mcp-server'
 ```
 
 ### Consumer Implementation Patterns

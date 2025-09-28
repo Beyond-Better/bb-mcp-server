@@ -41,7 +41,7 @@ export class TransportManager {
 
   // Manager state
   private initialized = false;
-  private startTime = Date.now();
+  private startTime = performance.now();
 
   constructor(config: TransportConfig, dependencies: TransportDependencies) {
     this.config = config;
@@ -382,7 +382,7 @@ export class TransportManager {
     return {
       ...baseMetrics,
       manager: {
-        uptime: Date.now() - this.startTime,
+        uptime: performance.now() - this.startTime,
         initialized: this.initialized,
         connected: this.isConnected(),
         transportType: this.config.type,
@@ -428,7 +428,7 @@ export class TransportManager {
       transportType: this.config.type,
       initialized: this.initialized,
       connected: this.isConnected(),
-      uptime: Date.now() - this.startTime,
+      uptime: performance.now() - this.startTime,
       issues,
     };
   }

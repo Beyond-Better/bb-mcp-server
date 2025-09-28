@@ -75,7 +75,7 @@ export abstract class WorkflowBase {
    */
   async executeWithValidation(params: unknown, context: WorkflowContext): Promise<WorkflowResult> {
     this.context = context;
-    this.startTime = Date.now();
+    this.startTime = performance.now();
     this.resources = [];
 
     try {
@@ -111,8 +111,9 @@ export abstract class WorkflowBase {
       await this.onAfterExecute?.(result, context);
 
       // Enhanced logging with performance data
-      const duration = Date.now() - this.startTime;
-      this.logInfo('Workflow completed', {
+      const duration = performance.now() - this.startTime;
+
+     this.logInfo('Workflow completed', {
         workflow: this.name,
         success: result.success,
         duration_ms: duration,
@@ -214,7 +215,7 @@ export abstract class WorkflowBase {
       metadata: {
         validation_errors: errors,
       },
-      duration: this.startTime ? Date.now() - this.startTime : 0,
+      duration: this.startTime ? performance.now() - this.startTime : 0,
       resources: this.resources,
     };
   }
@@ -223,7 +224,7 @@ export abstract class WorkflowBase {
    * Create execution error result
    */
   protected createExecutionErrorResult(error: Error): WorkflowResult {
-    const duration = this.startTime ? Date.now() - this.startTime : 0;
+    const duration = this.startTime ? performance.now() - this.startTime : 0;
 
     const workflowError: WorkflowError = {
       type: this.classifyError(error),
@@ -270,7 +271,7 @@ export abstract class WorkflowBase {
       operation,
       success,
       data,
-      duration_ms: startTime ? Date.now() - startTime : 0,
+      duration_ms: startTime ? performance.now() - startTime : 0,
       timestamp: new Date().toISOString(),
     };
   }
@@ -288,7 +289,7 @@ export abstract class WorkflowBase {
     this.resources.push({
       type,
       name,
-      duration_ms: Date.now() - startTime,
+      duration_ms: performance.now() - startTime,
       status,
       metadata,
     });
@@ -302,7 +303,7 @@ export abstract class WorkflowBase {
     operation: () => Promise<T>,
     resourceType: WorkflowResource['type'] = 'api_call',
   ): Promise<{ success: boolean; data?: T; error?: FailedStep }> {
-    const startTime = Date.now();
+    const startTime = performance.now();
 
     try {
       const data = await operation();
@@ -446,7 +447,7 @@ export abstract class WorkflowBase {
     }
 
     try {
-      const duration = this.startTime ? Date.now() - this.startTime : 0;
+      const duration = this.startTime ? performance.now() - this.startTime : 0;
 
       await context.auditLogger.logWorkflowOperation({
         timestamp: new Date().toISOString(),

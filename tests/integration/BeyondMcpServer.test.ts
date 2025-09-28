@@ -311,15 +311,15 @@ describe('MCP Server Complete Integration', () => {
       assertExists(echoTool);
 
       // Execute tools and track timing manually since we're not going through MCP server
-      const startTime = Date.now();
+      const startTime = performance.now();
       await echoTool.handler({ message: 'stats test 1' }, {});
-      const executionTime1 = Date.now() - startTime;
+      const executionTime1 = performance.now() - startTime;
 
       await delay(5); // Small delay
 
-      const startTime2 = Date.now();
+      const startTime2 = performance.now();
       await echoTool.handler({ message: 'stats test 2' }, {});
-      const executionTime2 = Date.now() - startTime2;
+      const executionTime2 = performance.now() - startTime2;
 
       // Update stats manually (in real usage, this would be done by the tool execution wrapper)
       toolRegistry.updateToolStats('echo', executionTime1);
@@ -438,7 +438,7 @@ describe('MCP Server Complete Integration', () => {
         clientId: 'test-client',
         scopes: ['read'],
         requestId: 'test-request',
-        startTime: Date.now(),
+        startTime: performance.now(),
         metadata: {},
       } as BeyondMcpRequestContext;
 
@@ -473,7 +473,7 @@ describe('MCP Server Complete Integration', () => {
             return {
               userId: beyondMcpServer.getAuthenticatedUserId(),
               index,
-              timestamp: Date.now(),
+              timestamp: performance.now(),
             };
           })
         ),
@@ -519,13 +519,13 @@ describe('MCP Server Complete Integration', () => {
 describe('MCP Server Library API Integration', () => {
   it('should export all MCP Server components for consumers', async () => {
     // This test verifies that all components can be imported as expected by consumers
-    const { BeyondMcpServer: ImportedBeyondMcpServer } = await import('../../src/index.ts');
-    const { ToolRegistry: ImportedToolRegistry } = await import('../../src/index.ts');
+    const { BeyondMcpServer: ImportedBeyondMcpServer } = await import('../../src/mod.ts');
+    const { ToolRegistry: ImportedToolRegistry } = await import('../../src/mod.ts');
     const { RequestContextManager: ImportedRequestContextManager } = await import(
-      '../../src/index.ts'
+      '../../src/mod.ts'
     );
-    const { CoreTools: ImportedCoreTools } = await import('../../src/index.ts');
-    const { BeyondMcpSDKHelpers: ImportedBeyondMcpSDKHelpers } = await import('../../src/index.ts');
+    const { CoreTools: ImportedCoreTools } = await import('../../src/mod.ts');
+    const { BeyondMcpSDKHelpers: ImportedBeyondMcpSDKHelpers } = await import('../../src/mod.ts');
 
     // Verify components are available
     assertExists(ImportedBeyondMcpServer);
@@ -557,7 +557,7 @@ describe('MCP Server Library API Integration', () => {
       clientId: 'test',
       scopes: [] as string[],
       requestId: 'test',
-      startTime: Date.now(),
+      startTime: performance.now(),
       metadata: {},
     };
 

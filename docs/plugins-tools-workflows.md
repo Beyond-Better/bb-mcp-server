@@ -153,7 +153,7 @@ export class ProcessOrderWorkflow extends WorkflowBase {
 ```
 your-plugin/
 ├── plugin.json          # Plugin manifest
-├── index.ts            # Main plugin export
+├── main.ts            # Main plugin export
 ├── workflows/          # Workflow implementations
 │   ├── QueryWorkflow.ts
 │   └── OperationWorkflow.ts
@@ -171,7 +171,7 @@ your-plugin/
   "name": "my-business-plugin",
   "version": "1.0.0",
   "description": "Business workflows and tools for MyCompany",
-  "main": "index.ts",
+  "main": "main.ts",
   "author": "MyCompany Team",
   "license": "MIT",
   "mcpServer": {
@@ -205,7 +205,7 @@ your-plugin/
 
 ```typescript
 // tools/MyTools.ts
-import { ToolRegistry, z } from '@bb/mcp-server'
+import { ToolRegistry, z } from '@beyondbetter/bb-mcp-server'
 
 export class MyTools {
   constructor(private apiClient: MyApiClient, private logger: Logger) {}
@@ -274,7 +274,7 @@ pluginManager.registerPlugin(plugin) // → calls toolRegistry.registerTool() in
 
 ```typescript
 // workflows/MyWorkflow.ts
-import { WorkflowBase } from '@bb/mcp-server'
+import { WorkflowBase } from '@beyondbetter/bb-mcp-server'
 import { z } from 'zod'
 
 export class MyBusinessWorkflow extends WorkflowBase {
@@ -303,7 +303,7 @@ export class MyBusinessWorkflow extends WorkflowBase {
   }
   
   async execute(params: z.infer<typeof this.parameterSchema>): Promise<WorkflowResult> {
-    const startTime = Date.now()
+    const startTime = performance.now()
     const steps = []
     const failedSteps = []
     
@@ -314,7 +314,7 @@ export class MyBusinessWorkflow extends WorkflowBase {
       steps.push({
         operation: 'validate_data',
         success: true,
-        duration_ms: Date.now() - startTime,
+        duration_ms: performance.now() - startTime,
         timestamp: new Date().toISOString()
       })
       
@@ -324,7 +324,7 @@ export class MyBusinessWorkflow extends WorkflowBase {
           data: { validation, mode: 'validate-only' },
           completed_steps: steps,
           failed_steps: [],
-          metadata: { executionTime: Date.now() - startTime }
+          metadata: { executionTime: performance.now() - startTime }
         }
       }
       
@@ -343,7 +343,7 @@ export class MyBusinessWorkflow extends WorkflowBase {
         operation: 'execute_operation',
         success: true,
         data: { operationType: params.businessData.type },
-        duration_ms: Date.now() - startTime,
+        duration_ms: performance.now() - startTime,
         timestamp: new Date().toISOString()
       })
       
@@ -353,7 +353,7 @@ export class MyBusinessWorkflow extends WorkflowBase {
         steps.push({
           operation: 'send_notifications',
           success: true,
-          duration_ms: Date.now() - startTime,
+          duration_ms: performance.now() - startTime,
           timestamp: new Date().toISOString()
         })
       }
@@ -364,7 +364,7 @@ export class MyBusinessWorkflow extends WorkflowBase {
         completed_steps: steps,
         failed_steps: [],
         metadata: {
-          executionTime: Date.now() - startTime,
+          executionTime: performance.now() - startTime,
           operationType: params.businessData.type
         }
       }
@@ -390,7 +390,7 @@ export class MyBusinessWorkflow extends WorkflowBase {
         },
         completed_steps: steps,
         failed_steps: failedSteps,
-        metadata: { executionTime: Date.now() - startTime }
+        metadata: { executionTime: performance.now() - startTime }
       }
     }
   }
@@ -427,8 +427,8 @@ export class MyBusinessWorkflow extends WorkflowBase {
 ### Complete Plugin Implementation
 
 ```typescript
-// index.ts - Main plugin export
-import type { AppPlugin } from '@bb/mcp-server'
+// main.ts - Main plugin export
+import type { AppPlugin } from '@beyondbetter/bb-mcp-server'
 import { MyBusinessWorkflow } from './workflows/MyWorkflow.ts'
 import { MyTools } from './tools/MyTools.ts'
 
@@ -454,7 +454,7 @@ export function createMyPlugin(dependencies: MyPluginDependencies): AppPlugin {
     author: 'MyCompany Team',
     license: 'MIT',
     workflows,
-    dependencies: ['@bb/mcp-server'],
+    dependencies: ['@beyondbetter/bb-mcp-server'],
     tags: ['business', 'mycompany'],
     
     // ✅ CORRECT signature for initialize method (when needed):
@@ -632,7 +632,7 @@ class ProcessOrderWorkflow extends WorkflowBase {
 // Plugin structure
 crm-plugin/
 ├── plugin.json
-├── index.ts
+├── main.ts
 ├── workflows/
 │   ├── LeadNurturingWorkflow.ts
 │   └── SalesProcessWorkflow.ts

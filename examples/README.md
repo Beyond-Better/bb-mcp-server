@@ -105,25 +105,54 @@ Each example follows a consistent structure to aid learning:
 
 ```
 {N}-example-name/
-├── README.md              # Example-specific documentation
+├── README.md             # Example-specific documentation
 ├── main.ts               # Entry point with AppServer setup
 ├── .env.example          # Environment configuration template
 ├── .env                  # Local environment (gitignored)
-├── deno.jsonc           # Deno configuration
+├── deno.jsonc            # Deno configuration
 ├── instructions.md       # Step-by-step setup instructions
-└── src/
-    ├── plugins/          # Self-contained plugin implementations
-    │   ├── {Plugin}.ts   # Plugin definition and exports
-    │   ├── tools/        # Tool implementations (when applicable)
-    │   ├── workflows/    # Workflow implementations (when applicable)
-    │   └── types/        # Plugin-specific types
-    ├── config/           # Configuration and dependencies (3+ only)
-    ├── auth/            # Authentication components (3+ only)
-    ├── api/             # API clients (3+ only)
-    └── tests/           # Example-specific demonstration tests
-        ├── tools/       # Tool testing demonstrations
-        └── workflows/   # Workflow testing demonstrations
+│── src/
+│   ├── plugins/          # Self-contained plugin implementations
+│   │   ├── {Plugin}.ts   # Plugin definition and exports
+│   │   ├── tools/        # Tool implementations (when applicable)
+│   │   ├── workflows/    # Workflow implementations (when applicable)
+│   │   └── types/        # Plugin-specific types
+│   ├── config/           # Configuration and dependencies (3+ only)
+│   ├── auth/             # Authentication components (3+ only)
+│   └── api/              # API clients (3+ only)
+└── tests/                # Example-specific demonstration tests
+	├── tools/            # Tool testing demonstrations
+	└── workflows/        # Workflow testing demonstrations
 ```
+
+## ⚠️ Critical Implementation Patterns
+
+### inputSchema Configuration (IMPORTANT)
+
+When defining tool `inputSchema`, use a **plain JavaScript object** with Zod schemas as values:
+
+```typescript
+// ✅ CORRECT: Plain object with Zod schema values
+inputSchema: {
+  json_string: z.string().describe('JSON string to validate'),
+  format: z.boolean().default(true).describe('Whether to format the JSON'),
+  indent: z.number().int().min(0).max(8).default(2).describe('Indentation spaces'),
+}
+
+// ❌ INCORRECT: Do NOT wrap with z.object()
+inputSchema: z.object({
+  json_string: z.string().describe('JSON string to validate'),
+  // ... causes type and runtime errors
+})
+```
+
+**Why This Matters:**
+- The MCP library expects plain object structure for `inputSchema`
+- Using `z.object()` wrapper causes type and runtime errors
+- All examples follow the correct pattern shown above
+- Always include `.describe()` calls for MCP protocol documentation
+
+---
 
 ## 🧪 Testing Demonstration
 
@@ -175,7 +204,7 @@ For each example:
 cd examples/{N}-example-name
 
 # Copy environment template
-cp .env.example .env
+cp ../.env.example .env
 
 # Edit configuration
 vim .env
@@ -184,7 +213,7 @@ vim .env
 deno run --allow-all main.ts
 
 # Run tests (demonstration purposes)
-deno test --allow-all src/tests/
+deno test --allow-all tests/
 ```
 
 ## 🎯 Success Metrics

@@ -126,7 +126,7 @@ export class RequestContextManager {
       clientId: data.clientId,
       scopes: data.scopes || [],
       requestId: data.requestId || crypto.randomUUID(),
-      startTime: Date.now(),
+      startTime: performance.now(),
       metadata: data.metadata || {},
     };
 
@@ -204,7 +204,7 @@ export class RequestContextManager {
     const context = this.getCurrentContext();
     if (!context || !context.startTime) return null;
 
-    return Date.now() - context.startTime;
+    return performance.now() - context.startTime;
   }
 
   /**

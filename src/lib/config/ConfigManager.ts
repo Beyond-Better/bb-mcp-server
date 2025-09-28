@@ -248,6 +248,7 @@ export class ConfigManager {
         enableCORS: this.getEnvBoolean('HTTP_CORS_ENABLED', true),
         corsOrigins: this.getEnvArray('HTTP_CORS_ORIGINS', ['*']),
         preserveCompatibilityMode: this.getEnvBoolean('PRESERVE_COMPATIBILITY_MODE', true),
+        allowInsecure: this.getEnvBoolean('HTTP_ALLOW_INSECURE', false),
         // Optional transport persistence settings (for compatibility)
         enableTransportPersistence: this.getEnvBoolean('MCP_ENABLE_TRANSPORT_PERSISTENCE', false),
         sessionRestoreEnabled: this.getEnvBoolean('MCP_SESSION_RESTORE_ENABLED', false),

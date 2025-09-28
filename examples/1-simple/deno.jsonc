@@ -2,9 +2,24 @@
   // Simple MCP Server - Deno Configuration
   // Updated for Deno v2+ compatibility
   
+  "name": "@beyondbetter/bb-mcp-server-example-plugin-workflows",
+  "version": "1.0.0",
+  "description": "Plugin-Workflows example - Multi-step workflow demonstrations with state management",
+  "author": "Beyond MCP Server Examples",
+  "license": "MIT",
+  "exports": {
+    ".": "./main.ts"
+  },
+
   "compilerOptions": {
-    "lib": ["deno.window"],
-    "strict": true
+    "lib": ["deno.window", "deno.unstable"],
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false
   },
   
   "fmt": {
@@ -18,28 +33,36 @@
   },
   
   "test": {
-    "include": ["src/tests/"]
+      "include": ["tests/**/*.test.ts"],
+      "exclude": []
   },
   
   "tasks": {
-    "start": "deno run --allow-all main.ts",
-    "start:http": "MCP_TRANSPORT=http deno run --allow-all main.ts",
-    "start:debug": "LOG_LEVEL=debug deno run --allow-all main.ts",
-    "dev": "deno run --allow-all --watch main.ts",
-    "test": "deno test --allow-all src/tests/",
-    "test:watch": "deno test --allow-all --watch src/tests/",
-    "test:no-check": "deno test --allow-all --no-check src/tests/",
+    "start": "deno run --allow-all --unstable-kv main.ts",
+    "start:http": "MCP_TRANSPORT=http deno run --allow-all --unstable-kv main.ts",
+    "start:debug": "LOG_LEVEL=debug deno run --allow-all --unstable-kv main.ts",
+    "dev": "deno run --allow-all --unstable-kv --watch main.ts",
+    "test": "deno test --allow-all --unstable-kv tests/",
+    "test:tools": "deno test --allow-all tests/tools/",
+    "test:integration": "deno test --allow-all tests/integration/",
+    "test:watch": "deno test --allow-all --unstable-kv --watch tests/",
+    "test:no-check": "deno test --allow-all --unstable-kv --no-check tests/",
+    "tool:test": "deno test --allow-all --unstable-kv --coverage=coverage tests/",
+    "tool:test:file": "deno test --allow-all --unstable-kv --coverage=coverage ",
     "fmt": "deno fmt",
     "lint": "deno lint",
     "check": "deno check main.ts src/**/*.ts"
   },
   
-  "imports": {
-    "@bb/mcp-server": "../../src/index.ts",
-    "@std/assert": "jsr:@std/assert@^1.0.0",
-    "@std/testing": "jsr:@std/testing@^1.0.0",
-    "zod": "npm:zod@^3.22.4"
-  },
+  // use `importMap` for local testing
+  "importMap": "../import_map.json",
+  // use `imports` in real app
+  // "imports": {
+  //   "@beyondbetter/bb-mcp-server": "jsr:@beyondbetter/bb-mcp-server",
+  //   "@std/assert": "jsr:@std/assert@^1.0.0",
+  //   "@std/testing": "jsr:@std/testing@^1.0.0",
+  //   "zod": "npm:zod@^3.22.4"
+  // },
   
   "exclude": [
     "data/",

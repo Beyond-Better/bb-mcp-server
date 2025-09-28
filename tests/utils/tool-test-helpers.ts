@@ -283,9 +283,9 @@ export const PerformanceTestUtils = {
    * Measure execution time of an async function
    */
   measureAsync: async <T>(fn: () => Promise<T>): Promise<{ result: T; duration: number }> => {
-    const startTime = Date.now();
+    const startTime = performance.now();
     const result = await fn();
-    const duration = Date.now() - startTime;
+    const duration = performance.now() - startTime;
     return { result, duration };
   },
 
@@ -299,17 +299,17 @@ export const PerformanceTestUtils = {
     maxDuration: number;
     minDuration: number;
   }> => {
-    const startTime = Date.now();
+    const startTime = performance.now();
 
     const promises = Array.from({ length: count }, async () => {
-      const execStart = Date.now();
+      const execStart = performance.now();
       const result = await fn();
-      const execDuration = Date.now() - execStart;
+      const execDuration = performance.now() - execStart;
       return { result, duration: execDuration };
     });
 
     const executions = await Promise.all(promises);
-    const totalDuration = Date.now() - startTime;
+    const totalDuration = performance.now() - startTime;
 
     const durations = executions.map((e) => e.duration);
     const averageDuration = durations.reduce((a, b) => a + b, 0) / durations.length;

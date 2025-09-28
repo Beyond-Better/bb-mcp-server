@@ -640,11 +640,11 @@ describe('MCPSDKHelpers', () => {
       assertEquals((context.extra as any)?._meta?.sessionId, 'test-session');
       assertExists(context.requestId);
       assert(typeof context.startTime === 'number');
-      assert(context.startTime <= Date.now());
+      assert(context.startTime <= performance.now());
     });
 
     it('should calculate execution time', () => {
-      const startTime = Date.now() - 100; // 100ms ago
+      const startTime = performance.now() - 100; // 100ms ago
 
       const executionTime = mcpSDKHelpers.calculateExecutionTime(startTime);
 

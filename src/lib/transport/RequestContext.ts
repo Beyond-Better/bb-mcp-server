@@ -49,7 +49,7 @@ export class RequestContext {
     this.requestId = data.requestId ?? crypto.randomUUID();
     this.sessionId = data.sessionId ?? undefined;
     this.transport = data.transport;
-    this.startTime = Date.now();
+    this.startTime = performance.now();
     this.mcpRequest = data.mcpRequest;
 
     // Set authentication context if provided
@@ -147,7 +147,7 @@ export class RequestContext {
    * Performance timing helpers
    */
   mark(name: string): void {
-    this.performanceMarks.set(name, Date.now());
+    this.performanceMarks.set(name, performance.now());
   }
 
   /**
@@ -157,7 +157,7 @@ export class RequestContext {
     const startTime = this.performanceMarks.get(startMark);
     if (!startTime) return null;
 
-    const endTime = endMark ? this.performanceMarks.get(endMark) : Date.now();
+    const endTime = endMark ? this.performanceMarks.get(endMark) : performance.now();
 
     if (!endTime) return null;
 
@@ -168,7 +168,7 @@ export class RequestContext {
    * Get total elapsed time since request start
    */
   getElapsedMs(): number {
-    return Date.now() - this.startTime;
+    return performance.now() - this.startTime;
   }
 
   /**

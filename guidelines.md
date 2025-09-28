@@ -1,5 +1,5 @@
 ---
-title: bb-mcp-server Library Guidelines
+title: Beyond MCP Server (bb-mcp-server) Library Guidelines
 project_type: Deno TypeScript Library
 technology: Deno TypeScript, MCP Protocol
 version: 1.0.0
@@ -10,7 +10,7 @@ publication: JSR Registry
 target_deno: ">=2.5.0"
 ---
 
-# bb-mcp-server Library Guidelines
+# Beyond MCP Server Library Guidelines
 
 ## Project Purpose and Scope
 
@@ -37,20 +37,22 @@ Develop a comprehensive, reusable TypeScript library for building MCP (Model Con
 ### Core Library Structure
 ```
 src/
-├── index.ts                           # Main library export
+├── mod.ts                           # Main library export
 ├── lib/
 │   ├── server/
-│   │   ├── MCPServer.ts              # Generic MCP server (from ActionStepMCPServer)
+│   │   ├── BeyondMcpServer.ts        # Beyond MCP server
 │   │   ├── HttpServer.ts             # HTTP transport server
 │   │   ├── MCPRequestHandler.ts      # Protocol request handling
 │   │   └── TransportManager.ts       # Transport abstraction
+│   ├── plugins/
+│   │   └── PluginManager.ts          # Plugin discovery system
+│   ├── tools/
+│   │   ├── CoreTools.ts              # Core tools class
+│   │   ├── ToolBase.ts               # Base tool class for extension
+│   │   └── ToolRegistry.ts           # Registration system
 │   ├── workflows/
-│   │   ├── base/
-│   │   │   ├── WorkflowBase.ts       # Base workflow class for extension
-│   │   │   ├── WorkflowRegistry.ts   # Registration and discovery system
-│   │   │   └── WorkflowTypes.ts      # Common workflow interfaces
-│   │   └── discovery/
-│   │       └── PluginManager.ts      # Future: Plugin discovery system
+│   │   ├── WorkflowBase.ts           # Base workflow class for extension
+│   │   └── WorkflowRegistry.ts       # Registration system
 │   ├── auth/
 │   │   ├── OAuthProvider.ts          # OAuth provider service (from OAuthClientService)
 │   │   ├── OAuthConsumer.ts          # Configurable OAuth consumer (from AuthenticationService)
@@ -60,11 +62,19 @@ src/
 │   │   ├── TransportEventStore.ts    # Transport events persistence
 │   │   ├── TransportSessions.ts      # Transport session persistence
 │   │   └── CredentialStore.ts        # Secure credential storage
+│   ├── types/
+│   │   ├── AppServerTypes.ts         # Common app interfaces
+│   │   ├── BeyondMcpTypes.ts         # Common BeyondMcpServer interfaces
+│   │   ├── PluginTypes.ts            # Common plugin interfaces
+│   │   ├── ToolTypes.ts              # Common tool interfaces
+│   │   └── WorkflowTypes.ts          # Common workflow interfaces
 │   ├── config/
 │   │   ├── ConfigManager.ts          # Environment configuration management
 │   │   └── ConfigTypes.ts            # Configuration type definitions
 │   └── utils/
+│       ├── AuditLogger.ts            # Audit logging
 │       ├── Logger.ts                 # Standardized logging (from ConsoleLogger)
+│       ├── Error.ts                  # Helper functions for errors
 │       ├── ErrorHandler.ts           # Centralized error handling
 │       └── ValidationHelpers.ts      # Input validation utilities
 ├── types/
@@ -80,10 +90,12 @@ src/
 
 #### Main Library Export
 ```typescript
-// index.ts - Main library entry point
-export { MCPServer } from './lib/server/MCPServer.ts';
-export { WorkflowBase } from './lib/workflows/base/WorkflowBase.ts';
-export { WorkflowRegistry } from './lib/workflows/base/WorkflowRegistry.ts';
+// mod.ts - Main library entry point
+export { BeyondMcpServer } from './lib/server/BeyondMcpServer.ts';
+export { ToolBase } from './lib/tools/ToolBase.ts';
+export { ToolRegistry } from './lib/tools/ToolRegistry.ts';
+export { WorkflowBase } from './lib/workflows/WorkflowBase.ts';
+export { WorkflowRegistry } from './lib/workflows/WorkflowRegistry.ts';
 export { OAuthProvider } from './lib/auth/OAuthProvider.ts';
 export { OAuthConsumer } from './lib/auth/OAuthConsumer.ts';
 export { ConfigManager } from './lib/config/ConfigManager.ts';
@@ -96,12 +108,12 @@ export type * from './types/consumer.types.ts';
 #### Consumer Usage Pattern
 ```typescript
 // Consumer's main.ts
-import { MCPServer, WorkflowBase, ConfigManager } from 'jsr:@bb/mcp-server';
+import { BeyondMcpServer, WorkflowBase, ConfigManager } from 'jsr:@beyondbetter/bb-mcp-server';
 import { MyCustomWorkflow } from './workflows/MyCustomWorkflow.ts';
 import { MyOAuthConsumer } from './auth/MyOAuthConsumer.ts';
 
 const config = new ConfigManager();
-const server = new MCPServer({
+const server = new BeyondMcpServer({
   transport: config.get('MCP_TRANSPORT') || 'stdio',
   oauth: {
     provider: config.getOAuthProviderConfig(),
@@ -279,20 +291,20 @@ class OAuthConsumer {
 ### Consumer Customization Pattern
 ```typescript
 // Consumer can override OAuth consumer for specific provider behavior
-export class ActionStepOAuthConsumer extends OAuthConsumer {
+export class ExampleOAuthConsumer extends OAuthConsumer {
   constructor() {
     super({
       authUrl: 'https://api.actionstep.com/oauth/authorize',
       tokenUrl: 'https://api.actionstep.com/oauth/token',
-      // ... other ActionStep-specific config
+      // ... other Example-specific config
     });
   }
   
-  // Override for ActionStep-specific token handling
+  // Override for Example-specific token handling
   protected async exchangeCodeForTokens(code: string): Promise<TokenResult> {
-    // ActionStep-specific logic
+    // Example-specific logic
     const result = await super.exchangeCodeForTokens(code);
-    // Additional ActionStep processing
+    // Additional Example processing
     return result;
   }
 }
@@ -359,10 +371,10 @@ class TransportManager {
 }
 ```
 
-### Generic MCP Server (from ActionStepMCPServer)
+### Beyond MCP Server
 ```typescript
-class MCPServer {
-  constructor(config: MCPServerConfig) {
+class BeyondMcpServer {
+  constructor(config: BeyondMcpConfig) {
     this.transport = new TransportManager(config.transport);
     this.oauthProvider = new OAuthProvider(config.oauth.provider);
     this.oauthConsumer = config.oauth.consumer || new OAuthConsumer(config.oauth.consumer);
@@ -456,7 +468,7 @@ export class TestWorkflowRunner {
   static createTestKVManager(): KVManager;
 }
 
-export class MockMCPServer extends MCPServer {
+export class MockBeyondMcpServer extends BeyondMcpServer {
   // Simplified server for testing consumer workflows
 }
 ```
@@ -496,13 +508,13 @@ export class MockMCPServer extends MCPServer {
 ```json
 // deno.json
 {
-  "name": "@bb/mcp-server",
+  "name": "@beyondbetter/bb-mcp-server",
   "version": "1.0.0",
   "description": "Comprehensive library for building Deno-based MCP servers",
   "license": "MIT",
   "repository": "https://github.com/beyond-better/bb-mcp-server",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/mod.ts"
   },
   "publish": {
     "include": [
@@ -558,9 +570,9 @@ export class MockMCPServer extends MCPServer {
 - STDIO and HTTP transport
 - Deno KV storage
 - Configuration management
+- Plugin discovery system
 
 ### Phase 2 Features (v1.5)
-- Plugin discovery system
 - Advanced workflow features (scheduling, dependencies)
 - Enhanced error recovery
 - Performance optimizations

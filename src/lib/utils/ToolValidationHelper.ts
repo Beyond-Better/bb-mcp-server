@@ -194,13 +194,13 @@ export class ToolValidationHelper {
     userId?: string,
     requestId?: string,
   ): Promise<{ result: T; executionTimeMs: number }> {
-    const startTime = Date.now();
+    const startTime = performance.now();
 
     try {
       ToolValidationHelper.logToolExecutionStart(logger, toolName, args, userId, requestId);
 
       const result = await execution();
-      const executionTimeMs = Date.now() - startTime;
+      const executionTimeMs = performance.now() - startTime;
 
       ToolValidationHelper.logToolExecutionSuccess(
         logger,
@@ -212,7 +212,7 @@ export class ToolValidationHelper {
 
       return { result, executionTimeMs };
     } catch (error) {
-      const executionTimeMs = Date.now() - startTime;
+      const executionTimeMs = performance.now() - startTime;
       const toolError = error instanceof Error ? error : new Error(String(error));
 
       ToolValidationHelper.logToolExecutionError(

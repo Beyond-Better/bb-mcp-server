@@ -18,7 +18,7 @@ deno task test
 ### Basic Usage
 
 ```typescript
-import { KVManager, ConfigManager, Logger } from 'jsr:@bb/mcp-server';
+import { KVManager, ConfigManager, Logger } from 'jsr:@beyondbetter/bb-mcp-server';
 
 // Create logger
 const logger = new Logger({ level: 'info' });
@@ -75,6 +75,8 @@ The library supports comprehensive configuration via environment variables:
 MCP_TRANSPORT=stdio|http       # Default: stdio
 HTTP_PORT=3000                 # Default: 3001
 HTTP_HOST=localhost            # Default: localhost
+# Allow HTTP transport without OAuth provider (development/testing only)
+HTTP_ALLOW_INSECURE=false      # Default: false (⚠️ security risk if enabled)
 ```
 
 ### **Session Management (Production Critical)**

@@ -34,7 +34,7 @@
  */
 
 import { z } from 'zod';
-import type { AppPlugin, ToolRegistration } from '@bb/mcp-server';
+import type { AppPlugin, ToolRegistration } from '@beyondbetter/bb-mcp-server';
 
 /**
  * Simple Plugin Implementation
@@ -69,13 +69,13 @@ const SimplePlugin: AppPlugin = {
         description: 'Get current date and time in various formats and timezones',
         category: 'utility',
         tags: ['datetime', 'utility', 'formatting'],
-        inputSchema: z.object({
+        inputSchema: {
           timezone: z.string().optional().describe('Timezone (e.g., "UTC", "America/New_York")'),
           format: z.enum(['iso', 'human', 'unix', 'custom']).default('iso').describe('Output format'),
           customFormat: z.string().optional().describe('Custom format string (when format=custom)'),
-        }),
+        },
       },
-      handler: async (args) => {
+      handler: async (args: any) => {
         try {
           const params = z.object({
             timezone: z.string().optional(),
@@ -173,11 +173,11 @@ const SimplePlugin: AppPlugin = {
         description: 'Retrieve system information including OS, runtime, and resource usage',
         category: 'utility',
         tags: ['system', 'monitoring', 'diagnostics'],
-        inputSchema: z.object({
+        inputSchema: {
           detail: z.enum(['basic', 'detailed']).default('basic').describe('Level of detail to include'),
           includeMemory: z.boolean().default(true).describe('Include memory usage information'),
           includeEnvironment: z.boolean().default(false).describe('Include environment variables (filtered)'),
-        }),
+        },
       },
       handler: async (args) => {
         try {
@@ -297,12 +297,12 @@ const SimplePlugin: AppPlugin = {
         description: 'Validate and format JSON strings, providing detailed error information',
         category: 'utility',
         tags: ['validation', 'json', 'formatting'],
-        inputSchema: z.object({
+        inputSchema: {
           json_string: z.string().describe('JSON string to validate and format'),
           format: z.boolean().default(true).describe('Whether to format (prettify) the JSON'),
           validate_only: z.boolean().default(false).describe('Only validate, do not return formatted JSON'),
           indent: z.number().int().min(0).max(8).default(2).describe('Number of spaces for indentation'),
-        }),
+        },
       },
       handler: async (args) => {
         try {
@@ -471,26 +471,6 @@ function calculateNestingDepth(obj: unknown, currentDepth = 0): number {
  *    - Imports plugin and reads tools/workflows arrays
  *    - Registers each tool/workflow automatically
  *    - No plugin code needed for registration!
- * 
- * COMPARISON WITH INCORRECT PATTERNS:
- * ==================================
- * 
- * ❌ WRONG (what I initially did):
- * ```typescript
- * async initialize(registry: ToolRegistry): Promise<void> {
- *   registerCurrentDatetimeTool(registry);  // Manual registration
- *   registry.registerTool('name', def, handler);  // Direct calls
- * }
- * ```
- * 
- * ✅ CORRECT (this implementation):
- * ```typescript
- * const SimplePlugin: AppPlugin = {
- *   tools: [  // Just populate the array!
- *     { name: 'tool_name', definition: {...}, handler: async (args) => {...} }
- *   ]
- * }
- * ```
  * 
  * WHY THIS PATTERN IS BETTER:
  * ==========================

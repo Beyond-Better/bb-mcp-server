@@ -191,7 +191,7 @@ export function createTestRequestContext(
     clientId: 'test-client',
     scopes: ['read', 'write'],
     requestId: 'test-request',
-    startTime: Date.now(),
+    startTime: performance.now(),
     metadata: {},
     ...overrides,
   };
@@ -467,9 +467,9 @@ export async function waitFor(
   timeout = 1000,
   interval = 10,
 ): Promise<void> {
-  const startTime = Date.now();
+  const startTime = performance.now();
 
-  while (!condition() && Date.now() - startTime < timeout) {
+  while (!condition() && performance.now() - startTime < timeout) {
     await new Promise((resolve) => setTimeout(resolve, interval));
   }
 
@@ -557,7 +557,7 @@ export const TestData = {
     clientId: 'test-client-' + Math.random().toString(36).substr(2, 8),
     scopes: ['read', 'write'],
     requestId: 'test-request-' + Math.random().toString(36).substr(2, 8),
-    startTime: Date.now(),
+    startTime: performance.now(),
     metadata: {},
     ...overrides,
   }),

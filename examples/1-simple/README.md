@@ -52,7 +52,7 @@ Simple MCP Server
 ## 🚀 Quick Start
 
 ### Prerequisites
-- [Deno](https://deno.land/) 1.37+ installed
+- [Deno](https://deno.land/) 2.0+ installed (tested with v2.5.x)
 - Basic understanding of TypeScript/JavaScript
 
 ### Setup Steps
@@ -263,10 +263,10 @@ Run the demonstration tests to see testing patterns:
 
 ```bash
 # Run all tests
-deno test --allow-all src/tests/
+deno test --allow-all tests/
 
 # Run specific test file
-deno test --allow-all src/tests/tools/CurrentDatetimeTool.test.ts
+deno test --allow-all tests/tools/CurrentDatetimeTool.test.ts
 
 # Run tests in watch mode
 deno task test:watch
@@ -274,7 +274,7 @@ deno task test:watch
 
 ### Test Structure
 ```
-src/tests/
+tests/
 ├── tools/                     # Tool-specific tests
 │   ├── CurrentDatetimeTool.test.ts
 │   ├── GetSystemInfoTool.test.ts
@@ -295,6 +295,7 @@ All configuration is done via `.env` file:
 # Transport
 MCP_TRANSPORT=stdio           # or 'http'
 HTTP_PORT=3000               # HTTP port (when transport=http)
+HTTP_ALLOW_INSECURE=true     # Allow HTTP without OAuth (development only)
 
 # Logging
 LOG_LEVEL=info               # debug, info, warn, error

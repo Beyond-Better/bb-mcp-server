@@ -1,0 +1,35 @@
+{
+  "name": "example-corp-plugin",
+  "version": "1.0.0",
+  "description": "ExampleCorp business workflows and tools plugin for bb-mcp-server",
+  "main": "ExamplePlugin.ts",
+  "author": "ExampleCorp Integration Team",
+  "license": "MIT",
+  "mcpServer": {
+    "minVersion": "1.0.0",
+    "maxVersion": "2.0.0"
+  },
+  "dependencies": {
+    "@beyondbetter/bb-mcp-server": "^1.0.0"
+  },
+  "workflows": [
+    {
+      "name": "example_query",
+      "description": "Query ExampleCorp data with advanced filtering and pagination",
+      "category": "query"
+    },
+    {
+      "name": "example_operation",
+      "description": "Execute complex ExampleCorp business operations with multi-step processing",
+      "category": "operation"
+    }
+  ],
+  "tools": [
+    "execute_workflow_example",
+    "query_customers_example",
+    "create_order_example",
+    "get_order_status_example",
+    "get_api_info_example"
+  ],
+  "tags": ["examplecorp", "business", "query", "operation", "api"]
+}

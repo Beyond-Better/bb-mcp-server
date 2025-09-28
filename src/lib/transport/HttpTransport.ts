@@ -50,7 +50,7 @@ export class HttpTransport implements Transport {
   private readonly KEEPALIVE_INTERVAL_MS = 25000; // 25 seconds - safe margin before 60s timeout
 
   // Metrics tracking
-  private startTime = Date.now();
+  private startTime = performance.now();
   private requestCount = 0;
   private successfulRequests = 0;
   private failedRequests = 0;
@@ -133,7 +133,7 @@ export class HttpTransport implements Transport {
     authContext?: BeyondMcpAuthContext,
   ): Promise<Response> {
     const requestId = Math.random().toString(36).substring(2, 15);
-    const startTime = Date.now();
+    const startTime = performance.now();
     const method = request.method;
 
     this.requestCount++;
@@ -170,7 +170,7 @@ export class HttpTransport implements Transport {
 
       // Update metrics
       this.successfulRequests++;
-      this.totalResponseTime += Date.now() - startTime;
+      this.totalResponseTime += performance.now() - startTime;
 
       this.logger.info(
         `HttpTransport: HTTP request completed successfully [${requestId}] ${method} ${response.status}`,
@@ -184,7 +184,7 @@ export class HttpTransport implements Transport {
         {
           requestId,
           method,
-          duration: Date.now() - startTime,
+          duration: performance.now() - startTime,
         },
       );
 
@@ -729,7 +729,7 @@ export class HttpTransport implements Transport {
 
     return {
       transport: 'http',
-      uptime: Date.now() - this.startTime,
+      uptime: performance.now() - this.startTime,
       requests: {
         total: this.requestCount,
         successful: this.successfulRequests,
@@ -744,7 +744,7 @@ export class HttpTransport implements Transport {
       },
       http: {
         connectionsOpen: this.activeSSEStreams.size,
-        requestsPerSecond: this.requestCount / ((Date.now() - this.startTime) / 1000),
+        requestsPerSecond: this.requestCount / ((performance.now() - this.startTime) / 1000),
         averageRequestSize: 0, // Would need request size tracking
       },
     };

@@ -289,7 +289,7 @@ Deno.test('WorkflowBase - resource tracking', async () => {
   (workflow as any).resources = [];
 
   // Track a resource
-  const startTime = Date.now();
+  const startTime = performance.now();
   await new Promise((resolve) => setTimeout(resolve, 10)) // Small delay
   ;
   (workflow as any).trackResource(

@@ -92,8 +92,10 @@ export class AppServer {
     // DEPENDENCY VALIDATION AND HEALTH CHECKS
     // =============================================================================
 
-    // Validate required configuration
-    await validateConfiguration(resolvedDependencies.configManager, resolvedDependencies.logger);
+    // Validate required configuration (only validates OAuth consumer config if OAuth consumer is actually used)
+    await validateConfiguration(resolvedDependencies.configManager, resolvedDependencies.logger, {
+      oAuthConsumer: resolvedDependencies.oAuthConsumer,
+    });
 
     // Perform health checks on external dependencies
     await performHealthChecks(
