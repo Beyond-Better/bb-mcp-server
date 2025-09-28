@@ -3,7 +3,7 @@
  * Comprehensive testing of the abstract ToolBase class using concrete implementations
  */
 
-import { assertEquals, assertExists, assert } from '@std/assert';
+import { assert, assertEquals, assertExists } from '@std/assert';
 import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
 import { assertSpyCalls, spy } from '@std/testing/mock';
 import { z } from 'zod';
@@ -16,11 +16,11 @@ import type { AuditLogger } from '../../../src/lib/utils/AuditLogger.ts';
 
 // Import test helpers and mocks
 import {
-  createMockLogger,
   createMockAuditLogger,
+  createMockLogger,
   createMockToolRegistry,
-  SpyLogger,
   SpyAuditLogger,
+  SpyLogger,
 } from '../../utils/test-helpers.ts';
 
 // Import test implementations
@@ -55,7 +55,7 @@ describe('ToolBase Abstract Methods', () => {
   it('should implement getTools() returning valid ToolRegistration array', () => {
     const tools = mockTool.getTools();
     assertEquals(tools.length, 2);
-    
+
     // Check first tool (echo)
     const firstTool = tools[0];
     assertExists(firstTool);
@@ -65,7 +65,7 @@ describe('ToolBase Abstract Methods', () => {
     assertEquals(firstTool.definition.title, 'Mock Echo Tool');
     assertEquals(firstTool.definition.category, 'testing');
     assert(Array.isArray(firstTool.definition.tags));
-    
+
     // Check second tool (process)
     const secondTool = tools[1];
     assertExists(secondTool);
@@ -81,11 +81,11 @@ describe('ToolBase Abstract Methods', () => {
       registerTool: () => {}, // Mock MCP server registration
     };
     (toolRegistry as any).sdkMcpServer = mockMcpServer;
-    
+
     const registerSpy = spy(toolRegistry, 'registerTool');
-    
+
     mockTool.registerWith(toolRegistry);
-    
+
     // Should register both tools
     assertSpyCalls(registerSpy, 2);
     const firstCall = registerSpy.calls[0];
@@ -94,7 +94,7 @@ describe('ToolBase Abstract Methods', () => {
     assertExists(secondCall);
     assertEquals(firstCall.args[0], 'mock_echo');
     assertEquals(secondCall.args[0], 'mock_process');
-    
+
     registerSpy.restore();
   });
 
@@ -157,7 +157,7 @@ describe('ToolBase Context Management', () => {
       requestId: 'test-request',
       clientId: 'test-client',
       logger: mockLogger,
-      auditLogger: mockAuditLogger
+      auditLogger: mockAuditLogger,
     };
 
     let capturedContext: ToolContext | undefined;
@@ -169,7 +169,7 @@ describe('ToolBase Context Management', () => {
         capturedContext = context;
         return 'success';
       },
-      partialContext
+      partialContext,
     );
 
     assertExists(capturedContext);
@@ -191,7 +191,7 @@ describe('ToolBase Context Management', () => {
       async (args, context) => {
         capturedContext = context;
         return 'success';
-      }
+      },
     );
 
     assertExists(capturedContext);
@@ -210,7 +210,7 @@ describe('ToolBase Context Management', () => {
       async (args, context) => {
         capturedContext = context;
         return 'success';
-      }
+      },
     );
 
     assertExists(capturedContext);
@@ -224,7 +224,7 @@ describe('ToolBase Context Management', () => {
   it('should maintain context during tool execution', async () => {
     const testContext = {
       userId: 'context-user',
-      logger: mockLogger
+      logger: mockLogger,
     };
 
     await mockTool.testExecuteWithContext(
@@ -235,7 +235,7 @@ describe('ToolBase Context Management', () => {
         assertEquals(context.userId, 'context-user');
         return 'result';
       },
-      testContext
+      testContext,
     );
 
     // Verify context is accessible after execution
@@ -256,17 +256,17 @@ describe('ToolBase Parameter Validation', () => {
     const schema = z.object({
       name: z.string(),
       age: z.number().int().positive(),
-      email: z.string().email().optional()
+      email: z.string().email().optional(),
     });
 
     const params = {
       name: 'John Doe',
       age: 30,
-      email: 'john@example.com'
+      email: 'john@example.com',
     };
 
     const result = await mockTool.testValidateParameters(schema, params);
-    
+
     assertEquals(result.success, true);
     if (result.success) {
       assertEquals(result.data.name, 'John Doe');
@@ -278,17 +278,17 @@ describe('ToolBase Parameter Validation', () => {
   it('should return detailed error for invalid parameters', async () => {
     const schema = z.object({
       name: z.string().min(2),
-      age: z.number().int().positive()
+      age: z.number().int().positive(),
     });
 
     const params = {
       name: 'A', // Too short
-      age: -5,   // Negative
-      extra: 'ignored' // Extra property
+      age: -5, // Negative
+      extra: 'ignored', // Extra property
     };
 
     const result = await mockTool.testValidateParameters(schema, params);
-    
+
     assertEquals(result.success, false);
     if (!result.success) {
       assert(result.error.includes('name'));
@@ -300,13 +300,13 @@ describe('ToolBase Parameter Validation', () => {
   it('should handle default values in schema', async () => {
     const schema = z.object({
       message: z.string(),
-      priority: z.enum(['low', 'medium', 'high']).default('medium')
+      priority: z.enum(['low', 'medium', 'high']).default('medium'),
     });
 
     const params = { message: 'test' };
 
     const result = await mockTool.testValidateParameters(schema, params);
-    
+
     assertEquals(result.success, true);
     if (result.success) {
       assertEquals(result.data.priority, 'medium');
@@ -319,10 +319,10 @@ describe('ToolBase Parameter Validation', () => {
         id: z.string().uuid(),
         profile: z.object({
           name: z.string(),
-          settings: z.record(z.unknown()).optional()
-        })
+          settings: z.record(z.unknown()).optional(),
+        }),
       }),
-      metadata: z.array(z.string()).optional()
+      metadata: z.array(z.string()).optional(),
     });
 
     const params = {
@@ -330,14 +330,14 @@ describe('ToolBase Parameter Validation', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         profile: {
           name: 'Test User',
-          settings: { theme: 'dark' }
-        }
+          settings: { theme: 'dark' },
+        },
       },
-      metadata: ['tag1', 'tag2']
+      metadata: ['tag1', 'tag2'],
     };
 
     const result = await mockTool.testValidateParameters(schema, params);
-    
+
     assertEquals(result.success, true);
     if (result.success) {
       assertEquals(result.data.user.profile.name, 'Test User');
@@ -347,10 +347,10 @@ describe('ToolBase Parameter Validation', () => {
 
   it('should handle null and undefined parameters gracefully', async () => {
     const schema = z.object({ required: z.string() });
-    
+
     const nullResult = await mockTool.testValidateParameters(schema, null);
     assertEquals(nullResult.success, false);
-    
+
     const undefinedResult = await mockTool.testValidateParameters(schema, undefined);
     assertEquals(undefinedResult.success, false);
   });
@@ -372,7 +372,7 @@ describe('ToolBase Execution Wrapper', () => {
       'test-operation',
       { input: 'test' },
       async (args) => ({ output: 'processed', input: args.input }),
-      { logger: mockLogger, auditLogger: mockAuditLogger }
+      { logger: mockLogger, auditLogger: mockAuditLogger },
     );
 
     assertEquals(result.content.length, 1);
@@ -395,7 +395,7 @@ describe('ToolBase Execution Wrapper', () => {
       'string-operation',
       {},
       async () => 'Simple string result',
-      { logger: mockLogger }
+      { logger: mockLogger },
     );
 
     const textContent = getTextContent(result);
@@ -407,18 +407,22 @@ describe('ToolBase Execution Wrapper', () => {
       'logged-operation',
       { param: 'value' },
       async () => 'result',
-      { logger: mockLogger }
+      { logger: mockLogger },
     );
 
-    assert(mockLogger.infoCalls.some(call => 
-      call[0].includes('Tool execution started: logged-operation')
-    ));
-    assert(mockLogger.infoCalls.some(call => 
-      call[0].includes('Tool execution completed: logged-operation')
-    ));
-    
+    assert(
+      mockLogger.infoCalls.some((call) =>
+        call[0].includes('Tool execution started: logged-operation')
+      ),
+    );
+    assert(
+      mockLogger.infoCalls.some((call) =>
+        call[0].includes('Tool execution completed: logged-operation')
+      ),
+    );
+
     // Verify logging includes relevant context
-    const startLog = mockLogger.infoCalls.find(call => call[0].includes('started'));
+    const startLog = mockLogger.infoCalls.find((call) => call[0].includes('started'));
     assertExists(startLog);
     assertEquals(startLog[1].tool, 'logged-operation');
     assert(Array.isArray(startLog[1].argumentKeys));
@@ -429,7 +433,7 @@ describe('ToolBase Execution Wrapper', () => {
       'audited-operation',
       {},
       async () => 'success',
-      { logger: mockLogger, auditLogger: mockAuditLogger }
+      { logger: mockLogger, auditLogger: mockAuditLogger },
     );
 
     assertEquals(mockAuditLogger.systemEvents.length, 1);
@@ -450,7 +454,7 @@ describe('ToolBase Execution Wrapper', () => {
       async () => {
         throw new Error('Test execution failure');
       },
-      { logger: mockLogger, auditLogger: mockAuditLogger }
+      { logger: mockLogger, auditLogger: mockAuditLogger },
     );
 
     assertEquals(result.isError, true);
@@ -459,12 +463,14 @@ describe('ToolBase Execution Wrapper', () => {
     assert(textContent.includes('failing-operation'));
     assertExists(result.executionTime);
     assert(typeof result.executionTime === 'number');
-    
+
     // Should log error
-    assert(mockLogger.errorCalls.some(call => 
-      call[0].includes('Tool execution failed: failing-operation')
-    ));
-    
+    assert(
+      mockLogger.errorCalls.some((call) =>
+        call[0].includes('Tool execution failed: failing-operation')
+      ),
+    );
+
     // Should create failure audit entry
     assertEquals(mockAuditLogger.systemEvents.length, 1);
     const failureEvent = mockAuditLogger.systemEvents[0];
@@ -480,7 +486,7 @@ describe('ToolBase Execution Wrapper', () => {
       async () => {
         throw 'String error message';
       },
-      { logger: mockLogger }
+      { logger: mockLogger },
     );
 
     assertEquals(result.isError, true);
@@ -496,7 +502,7 @@ describe('ToolBase Execution Wrapper', () => {
       async () => {
         throw { message: 'Object error', code: 'OBJ_ERROR' };
       },
-      { logger: mockLogger }
+      { logger: mockLogger },
     );
 
     assertEquals(result.isError, true);
@@ -514,7 +520,7 @@ describe('ToolBase Response Formatting', () => {
 
   it('should create success response for string data', () => {
     const result = mockTool.testCreateSuccessResponse('Simple string response');
-    
+
     assertEquals(result.content.length, 1);
     const firstContent = getFirstContent(result);
     assertEquals(firstContent.type, 'text');
@@ -526,7 +532,7 @@ describe('ToolBase Response Formatting', () => {
   it('should create success response for object data', () => {
     const data = { status: 'ok', count: 42, nested: { value: 'test' } };
     const result = mockTool.testCreateSuccessResponse(data);
-    
+
     const firstContent = getFirstContent(result);
     assertEquals(firstContent.type, 'text');
     const textContent = getTextContent(result);
@@ -540,7 +546,7 @@ describe('ToolBase Response Formatting', () => {
   it('should include metadata in success response', () => {
     const metadata = { timestamp: '2024-01-01', version: '1.0', source: 'test' };
     const result = mockTool.testCreateSuccessResponse('data', metadata);
-    
+
     assertEquals(result._meta, metadata);
     assertExists(result._meta);
     assertEquals(result._meta.timestamp, '2024-01-01');
@@ -550,7 +556,7 @@ describe('ToolBase Response Formatting', () => {
   it('should create error response from Error object', () => {
     const error = new Error('Something went wrong');
     const result = mockTool.testCreateErrorResponse(error, 'test-tool');
-    
+
     assertEquals(result.isError, true);
     const textContent = getTextContent(result);
     assert(textContent.includes('Tool execution error in test-tool'));
@@ -559,7 +565,7 @@ describe('ToolBase Response Formatting', () => {
 
   it('should create error response from string', () => {
     const result = mockTool.testCreateErrorResponse('String error message');
-    
+
     assertEquals(result.isError, true);
     const textContent = getTextContent(result);
     assert(textContent.includes('Tool error: String error message'));
@@ -568,7 +574,7 @@ describe('ToolBase Response Formatting', () => {
   it('should handle complex objects with circular references gracefully', () => {
     const circular: any = { name: 'test', value: 42 };
     circular.self = circular;
-    
+
     // Should not throw, should handle gracefully
     const result = mockTool.testCreateSuccessResponse(circular);
     const textContent = getTextContent(result);
@@ -581,7 +587,7 @@ describe('ToolBase Response Formatting', () => {
     const nullContent = getFirstContent(nullResult);
     assertEquals(nullContent.type, 'text');
     assertEquals(nullContent.text, 'null');
-    
+
     const undefinedResult = mockTool.testCreateSuccessResponse(undefined);
     assertEquals(undefinedResult.content.length, 1);
     const undefinedContent = getFirstContent(undefinedResult);
@@ -593,9 +599,9 @@ describe('ToolBase Response Formatting', () => {
     const complexData = {
       items: [1, 2, 3],
       metadata: { count: 3 },
-      flags: [true, false, true]
+      flags: [true, false, true],
     };
-    
+
     const result = mockTool.testCreateSuccessResponse(complexData);
     const textContent = getTextContent(result);
     assert(textContent.includes('items'));
@@ -617,11 +623,11 @@ describe('ToolBase User Context Extraction', () => {
       userId: 'user-123',
       requestId: 'req-456',
       clientId: 'client-789',
-      otherData: 'value'
+      otherData: 'value',
     };
 
     const context = mockTool.testExtractUserContext(args);
-    
+
     assertEquals(context.userId, 'user-123');
     assertEquals(context.requestId, 'req-456');
     assertEquals(context.clientId, 'client-789');
@@ -630,11 +636,11 @@ describe('ToolBase User Context Extraction', () => {
   it('should extract user context from args with snake_case keys', () => {
     const args = {
       user_id: 'user-123',
-      request_id: 'req-456'
+      request_id: 'req-456',
     };
 
     const context = mockTool.testExtractUserContext(args);
-    
+
     assertEquals(context.userId, 'user-123');
     assertEquals(context.requestId, 'req-456');
   });
@@ -644,11 +650,11 @@ describe('ToolBase User Context Extraction', () => {
     const extra = {
       userId: 'extra-user',
       requestId: 'extra-req',
-      clientId: 'extra-client'
+      clientId: 'extra-client',
     };
 
     const context = mockTool.testExtractUserContext(args, extra);
-    
+
     assertEquals(context.userId, 'extra-user');
     assertEquals(context.requestId, 'extra-req');
     assertEquals(context.clientId, 'extra-client');
@@ -659,7 +665,7 @@ describe('ToolBase User Context Extraction', () => {
     const extra = { userId: 'extra-user', requestId: 'extra-req', clientId: 'extra-client' };
 
     const context = mockTool.testExtractUserContext(args, extra);
-    
+
     assertEquals(context.userId, 'args-user');
     assertEquals(context.requestId, 'args-req');
     assertEquals(context.clientId, 'extra-client'); // Only from extra
@@ -667,18 +673,18 @@ describe('ToolBase User Context Extraction', () => {
 
   it('should return empty object when no context available', () => {
     const context = mockTool.testExtractUserContext({});
-    
+
     assertEquals(Object.keys(context).length, 0);
   });
 
   it('should handle mixed key formats', () => {
     const args = {
       userId: 'user-camel',
-      request_id: 'req-snake'
+      request_id: 'req-snake',
     };
 
     const context = mockTool.testExtractUserContext(args);
-    
+
     assertEquals(context.userId, 'user-camel');
     assertEquals(context.requestId, 'req-snake');
   });
@@ -687,11 +693,11 @@ describe('ToolBase User Context Extraction', () => {
     const args = {
       userId: 123, // Number instead of string
       requestId: null, // Null value
-      clientId: undefined // Undefined value
+      clientId: undefined, // Undefined value
     };
 
     const context = mockTool.testExtractUserContext(args);
-    
+
     // Should only return defined string values (the current implementation may convert numbers to strings)
     // Let's check what we actually get and adjust our expectation accordingly
     console.log('Actual context:', context, 'Keys:', Object.keys(context));
@@ -711,11 +717,11 @@ describe('ToolBase Security and Sanitization', () => {
     const args = {
       username: 'john',
       password: 'secret123',
-      data: 'public'
+      data: 'public',
     };
 
     const sanitized = mockTool.testSanitizeArgsForLogging(args);
-    
+
     assertEquals(sanitized.username, 'john');
     assertEquals(sanitized.password, '[REDACTED]');
     assertEquals(sanitized.data, 'public');
@@ -728,11 +734,11 @@ describe('ToolBase Security and Sanitization', () => {
       secretValue: 'secret789',
       authorizationHeader: 'Bearer xyz',
       credential: 'cred123',
-      ACCESS_TOKEN: 'access123'
+      ACCESS_TOKEN: 'access123',
     };
 
     const sanitized = mockTool.testSanitizeArgsForLogging(args);
-    
+
     assertEquals(sanitized.apiKey, '[REDACTED]');
     assertEquals(sanitized.auth_token, '[REDACTED]');
     assertEquals(sanitized.secretValue, '[REDACTED]');
@@ -746,11 +752,11 @@ describe('ToolBase Security and Sanitization', () => {
       name: 'John',
       email: 'john@example.com',
       publicData: { visible: true },
-      settings: { theme: 'dark' }
+      settings: { theme: 'dark' },
     };
 
     const sanitized = mockTool.testSanitizeArgsForLogging(args);
-    
+
     assertEquals(sanitized.name, 'John');
     assertEquals(sanitized.email, 'john@example.com');
     assertEquals(sanitized.publicData, { visible: true });
@@ -761,13 +767,13 @@ describe('ToolBase Security and Sanitization', () => {
     const args = {
       config: {
         apiKey: 'nested-secret', // This won't be sanitized (only top-level)
-        setting: 'value'
+        setting: 'value',
       },
-      password: 'top-level-secret' // This will be sanitized
+      password: 'top-level-secret', // This will be sanitized
     };
 
     const sanitized = mockTool.testSanitizeArgsForLogging(args);
-    
+
     assertEquals(sanitized.password, '[REDACTED]');
     // Config object should remain unchanged (shallow sanitization)
     const config = sanitized.config as any;
@@ -779,11 +785,11 @@ describe('ToolBase Security and Sanitization', () => {
     const args = {
       PASSWORD: 'upper123',
       Token: 'mixed123',
-      secret: 'lower123'
+      secret: 'lower123',
     };
 
     const sanitized = mockTool.testSanitizeArgsForLogging(args);
-    
+
     assertEquals(sanitized.PASSWORD, '[REDACTED]');
     assertEquals(sanitized.Token, '[REDACTED]');
     assertEquals(sanitized.secret, '[REDACTED]');
@@ -792,11 +798,11 @@ describe('ToolBase Security and Sanitization', () => {
   it('should preserve original object structure', () => {
     const originalArgs = {
       username: 'test',
-      password: 'secret'
+      password: 'secret',
     };
 
     const sanitized = mockTool.testSanitizeArgsForLogging(originalArgs);
-    
+
     // Original should not be modified
     assertEquals(originalArgs.password, 'secret');
     // Sanitized should be modified
@@ -811,19 +817,19 @@ describe('ToolBase Logging Integration', () => {
   beforeEach(() => {
     mockTool = new MockTool();
     mockLogger = new SpyLogger();
-    
+
     // Set up context for logging tests
     mockTool['context'] = {
       userId: 'log-user',
       requestId: 'log-request',
       startTime: new Date(),
-      logger: mockLogger
+      logger: mockLogger,
     };
   });
 
   it('should log info with proper context', () => {
     mockTool.testLogInfo('Test info message', { extra: 'data' });
-    
+
     assertEquals(mockLogger.infoCalls.length, 1);
     const infoCall = mockLogger.infoCalls[0];
     assertExists(infoCall);
@@ -837,7 +843,7 @@ describe('ToolBase Logging Integration', () => {
 
   it('should log warnings with proper context', () => {
     mockTool.testLogWarn('Test warning', { level: 'high' });
-    
+
     assertEquals(mockLogger.warnCalls.length, 1);
     const warnCall = mockLogger.warnCalls[0];
     assertExists(warnCall);
@@ -850,7 +856,7 @@ describe('ToolBase Logging Integration', () => {
   it('should log errors with Error objects', () => {
     const error = new Error('Test error');
     mockTool.testLogError('Error occurred', error, { context: 'test' });
-    
+
     assertEquals(mockLogger.errorCalls.length, 1);
     const errorCall = mockLogger.errorCalls[0];
     assertExists(errorCall);
@@ -863,7 +869,7 @@ describe('ToolBase Logging Integration', () => {
 
   it('should log debug messages', () => {
     mockTool.testLogDebug('Debug info', { debug: true });
-    
+
     assertEquals(mockLogger.debugCalls.length, 1);
     const debugCall = mockLogger.debugCalls[0];
     assertExists(debugCall);
@@ -876,10 +882,10 @@ describe('ToolBase Logging Integration', () => {
   it('should handle logging without context gracefully', () => {
     // Clear context
     (mockTool as any)['context'] = undefined;
-    
+
     // Should not throw
     mockTool.testLogInfo('No context message');
-    
+
     // Logger should not be called if no context
     assertEquals(mockLogger.infoCalls.length, 0);
   });
@@ -889,7 +895,7 @@ describe('ToolBase Logging Integration', () => {
     mockTool.testLogWarn('Warn message');
     mockTool.testLogError('Error message');
     mockTool.testLogDebug('Debug message');
-    
+
     // All log calls should include [mock_tool] prefix
     const infoCall = mockLogger.infoCalls[0];
     const warnCall = mockLogger.warnCalls[0];
@@ -951,16 +957,20 @@ describe('ToolBase Utility Methods', () => {
       readonly tags = ['test'];
       override readonly requiresAuth = false;
       // No estimatedDuration property - should be undefined by default
-      
-      getTools() { return []; }
+
+      getTools() {
+        return [];
+      }
       registerWith() {}
-      getOverview() { return 'No estimation tool'; }
-      
+      getOverview() {
+        return 'No estimation tool';
+      }
+
       public testGetEstimatedDuration() {
         return this.getEstimatedDuration();
       }
     }
-    
+
     const tool = new NoEstimationTool();
     assertEquals(tool.testGetEstimatedDuration(), undefined);
   });
@@ -984,10 +994,10 @@ describe('ToolBase Edge Cases and Performance', () => {
 
   it('should handle null/undefined parameters gracefully', async () => {
     const schema = z.object({ required: z.string() });
-    
+
     const nullResult = await mockTool.testValidateParameters(schema, null);
     assertEquals(nullResult.success, false);
-    
+
     const undefinedResult = await mockTool.testValidateParameters(schema, undefined);
     assertEquals(undefinedResult.success, false);
   });
@@ -995,7 +1005,7 @@ describe('ToolBase Edge Cases and Performance', () => {
   it('should handle circular objects in responses', () => {
     const circular: any = { name: 'test' };
     circular.self = circular;
-    
+
     // Should not throw, should handle gracefully
     const result = mockTool.testCreateSuccessResponse(circular);
     const textContent = getTextContent(result);
@@ -1006,15 +1016,15 @@ describe('ToolBase Edge Cases and Performance', () => {
     const schema = z.object({
       items: z.array(z.object({
         id: z.string(),
-        data: z.string()
-      })).max(1000)
+        data: z.string(),
+      })).max(1000),
     });
 
     const largeParams = {
       items: Array.from({ length: 100 }, (_, i) => ({
         id: `item-${i}`,
-        data: `data-${i}`.repeat(100)
-      }))
+        data: `data-${i}`.repeat(100),
+      })),
     };
 
     const startTime = Date.now();
@@ -1026,17 +1036,16 @@ describe('ToolBase Edge Cases and Performance', () => {
   });
 
   it('should handle concurrent executions', async () => {
-    const executions = Array.from({ length: 10 }, (_, i) => 
+    const executions = Array.from({ length: 10 }, (_, i) =>
       mockTool.testExecuteWithContext(
         `concurrent-${i}`,
         { index: i },
         async (args) => `Result ${args.index}`,
-        { userId: `user-${i}` }
-      )
-    );
+        { userId: `user-${i}` },
+      ));
 
     const results = await Promise.all(executions);
-    
+
     assertEquals(results.length, 10);
     results.forEach((result, i) => {
       const textContent = getTextContent(result);

@@ -1,6 +1,6 @@
 /**
  * MockTool - Concrete ToolBase implementation for testing
- * 
+ *
  * Provides a full implementation of ToolBase for comprehensive testing
  * of the abstract base class functionality.
  */
@@ -9,10 +9,7 @@ import { z, type ZodSchema } from 'zod';
 import type { CallToolResult } from 'mcp/types.js';
 
 import { ToolBase, type ToolContext } from '../../../../src/lib/tools/ToolBase.ts';
-import type { 
-  ToolDefinition,
-  ToolRegistration
-} from '../../../../src/lib/types/BeyondMcpTypes.ts';
+import type { ToolDefinition, ToolRegistration } from '../../../../src/lib/types/BeyondMcpTypes.ts';
 import type { PluginCategory } from '../../../../src/lib/types/PluginTypes.ts';
 import type { ToolRegistry } from '../../../../src/lib/tools/ToolRegistry.ts';
 
@@ -51,7 +48,9 @@ export class MockTool extends ToolBase {
             data: z.any().describe('Data to process'),
             operation: z.enum(['upper', 'lower', 'reverse']).describe('Operation to perform'),
           },
-        } as ToolDefinition<{ data: z.ZodAny; operation: z.ZodEnum<['upper', 'lower', 'reverse']> }>,
+        } as ToolDefinition<
+          { data: z.ZodAny; operation: z.ZodEnum<['upper', 'lower', 'reverse']> }
+        >,
         handler: this.handleProcess.bind(this),
       },
     ];
@@ -59,7 +58,7 @@ export class MockTool extends ToolBase {
 
   registerWith(toolRegistry: ToolRegistry): void {
     const tools = this.getTools();
-    tools.forEach(tool => {
+    tools.forEach((tool) => {
       toolRegistry.registerTool(tool.name, tool.definition, tool.handler);
     });
   }
@@ -73,7 +72,7 @@ export class MockTool extends ToolBase {
     toolName: string,
     args: Record<string, unknown>,
     execution: (args: Record<string, unknown>, context: ToolContext) => Promise<T>,
-    context?: Partial<ToolContext>
+    context?: Partial<ToolContext>,
   ) {
     return this.executeWithContext(toolName, args, execution, context);
   }
@@ -150,7 +149,7 @@ export class MockTool extends ToolBase {
   private async handleEcho(args: any): Promise<CallToolResult> {
     // Extract user context from arguments
     const userContext = this.extractUserContext(args);
-    
+
     // Use executeWithContext for consistent behavior
     return this.executeWithContext(
       'mock_echo',
@@ -158,21 +157,24 @@ export class MockTool extends ToolBase {
       async (validatedArgs) => {
         return { echo: validatedArgs.message };
       },
-      userContext
+      userContext,
     );
   }
 
   private async handleProcess(args: any): Promise<CallToolResult> {
     // Extract user context from arguments
     const userContext = this.extractUserContext(args);
-    
+
     return this.executeWithContext(
       'mock_process',
       args,
       async (validatedArgs) => {
-        const { data, operation } = validatedArgs as { data: any; operation: 'upper' | 'lower' | 'reverse' };
+        const { data, operation } = validatedArgs as {
+          data: any;
+          operation: 'upper' | 'lower' | 'reverse';
+        };
         const stringData = String(data);
-        
+
         let result: string;
         switch (operation) {
           case 'upper':
@@ -187,10 +189,10 @@ export class MockTool extends ToolBase {
           default:
             throw new Error(`Unknown operation: ${operation}`);
         }
-        
+
         return { original: stringData, operation, result };
       },
-      userContext
+      userContext,
     );
   }
 }

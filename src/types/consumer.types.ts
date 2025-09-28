@@ -1,30 +1,23 @@
 /**
  * Consumer type definitions for bb-mcp-server library
- * 
+ *
  * Types and interfaces that library consumers need when building MCP servers.
  */
 
 import type {
   AppConfig,
-  ServerConfig,
-  TransportConfig,
-  StorageConfig,
-  LoggingConfig,
   AuditConfig,
-  OAuthProviderConfig,
+  LoggingConfig,
   OAuthConsumerConfig,
+  OAuthProviderConfig,
+  ServerConfig,
+  StorageConfig,
+  TransportConfig,
 } from '../lib/config/ConfigTypes.ts';
 
-import type {
-  SessionData,
-  OAuthCredentials,
-  KVStats,
-} from '../lib/storage/StorageTypes.ts';
+import type { KVStats, OAuthCredentials, SessionData } from '../lib/storage/StorageTypes.ts';
 
-import type {
-  Logger,
-  LibraryConfig,
-} from './library.types.ts';
+import type { LibraryConfig, Logger } from './library.types.ts';
 
 /**
  * Configuration options for initializing the bb-mcp-server library
@@ -34,17 +27,17 @@ export interface MCPServerLibraryConfig extends LibraryConfig {
    * Application configuration
    */
   config: AppConfig;
-  
+
   /**
    * Custom storage path override
    */
   storagePath?: string;
-  
+
   /**
    * Enable automatic cleanup of expired data
    */
   enableAutoCleanup?: boolean;
-  
+
   /**
    * Custom cleanup interval in milliseconds
    */
@@ -59,22 +52,22 @@ export interface CreateServerOptions {
    * Server configuration
    */
   config: AppConfig;
-  
+
   /**
    * Logger instance
    */
   logger?: Logger;
-  
+
   /**
    * Custom workflows to register
    */
   workflows?: WorkflowRegistration[];
-  
+
   /**
    * OAuth provider configuration
    */
   oauthProvider?: OAuthProviderConfig;
-  
+
   /**
    * OAuth consumer configuration for third-party APIs
    */
@@ -89,12 +82,12 @@ export interface WorkflowRegistration {
    * Workflow name/identifier
    */
   name: string;
-  
+
   /**
    * Workflow implementation class
    */
   implementation: WorkflowClass;
-  
+
   /**
    * Workflow configuration options
    */
@@ -116,22 +109,22 @@ export interface WorkflowInstance {
    * Workflow name
    */
   readonly name: string;
-  
+
   /**
    * Workflow version
    */
   readonly version: string;
-  
+
   /**
    * Workflow description
    */
   readonly description: string;
-  
+
   /**
    * Execute the workflow
    */
   execute(params: unknown, context?: WorkflowContext): Promise<WorkflowResult>;
-  
+
   /**
    * Validate workflow parameters (optional)
    */
@@ -146,17 +139,17 @@ export interface WorkflowContext {
    * User ID if available
    */
   userId?: string;
-  
+
   /**
    * Request ID for tracking
    */
   requestId?: string;
-  
+
   /**
    * Logger instance
    */
   logger: Logger;
-  
+
   /**
    * Additional context data
    */
@@ -171,17 +164,17 @@ export interface WorkflowResult {
    * Whether the workflow succeeded
    */
   success: boolean;
-  
+
   /**
    * Result data if successful
    */
   data?: unknown;
-  
+
   /**
    * Error information if failed
    */
   error?: string;
-  
+
   /**
    * Additional metadata
    */
@@ -196,17 +189,17 @@ export interface WorkflowOptions {
    * Maximum execution timeout in milliseconds
    */
   timeout?: number;
-  
+
   /**
    * Whether to enable audit logging for this workflow
    */
   enableAuditLogging?: boolean;
-  
+
   /**
    * Custom validation schema
    */
   validationSchema?: Record<string, unknown>;
-  
+
   /**
    * Required permissions/scopes
    */
@@ -221,12 +214,12 @@ export interface ValidationResult {
    * Whether validation passed
    */
   isValid: boolean;
-  
+
   /**
    * Validation errors if any
    */
   errors: ValidationError[];
-  
+
   /**
    * Validation warnings if any
    */
@@ -241,17 +234,17 @@ export interface ValidationError {
    * Field that failed validation
    */
   field: string;
-  
+
   /**
    * Error message
    */
   message: string;
-  
+
   /**
    * Error code
    */
   code: string;
-  
+
   /**
    * The invalid value
    */
@@ -266,22 +259,22 @@ export interface MCPToolOptions {
    * Tool name
    */
   name: string;
-  
+
   /**
    * Tool description
    */
   description: string;
-  
+
   /**
    * Input schema for parameter validation
    */
   inputSchema: Record<string, unknown>;
-  
+
   /**
    * Tool handler function
    */
   handler: MCPToolHandler;
-  
+
   /**
    * Required authentication scopes
    */
@@ -293,7 +286,7 @@ export interface MCPToolOptions {
  */
 export type MCPToolHandler = (
   params: unknown,
-  context: WorkflowContext
+  context: WorkflowContext,
 ) => Promise<unknown>;
 
 /**
@@ -304,22 +297,22 @@ export interface ServerStats {
    * Server uptime in milliseconds
    */
   uptime: number;
-  
+
   /**
    * Active sessions count
    */
   activeSessions: number;
-  
+
   /**
    * Total requests processed
    */
   totalRequests: number;
-  
+
   /**
    * Storage statistics
    */
   storage: KVStats;
-  
+
   /**
    * Memory usage information
    */
@@ -328,7 +321,7 @@ export interface ServerStats {
     total: number;
     percentage: number;
   };
-  
+
   /**
    * Health status
    */
@@ -343,32 +336,32 @@ export interface MCPServerEvents {
    * Server started successfully
    */
   'server:started': [];
-  
+
   /**
    * Server stopped
    */
   'server:stopped': [];
-  
+
   /**
    * New client connected
    */
   'client:connected': [sessionId: string];
-  
+
   /**
    * Client disconnected
    */
   'client:disconnected': [sessionId: string];
-  
+
   /**
    * Workflow executed
    */
   'workflow:executed': [workflowName: string, success: boolean, durationMs: number];
-  
+
   /**
    * Error occurred
    */
   'error': [error: Error];
-  
+
   /**
    * Authentication event
    */
@@ -380,15 +373,15 @@ export interface MCPServerEvents {
  */
 export type {
   AppConfig,
-  ServerConfig,
-  TransportConfig,
-  StorageConfig,
-  LoggingConfig,
   AuditConfig,
-  OAuthProviderConfig,
-  OAuthConsumerConfig,
-  SessionData,
-  OAuthCredentials,
   KVStats,
   Logger,
+  LoggingConfig,
+  OAuthConsumerConfig,
+  OAuthCredentials,
+  OAuthProviderConfig,
+  ServerConfig,
+  SessionData,
+  StorageConfig,
+  TransportConfig,
 };

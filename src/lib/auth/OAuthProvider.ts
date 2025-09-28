@@ -303,14 +303,14 @@ export class OAuthProvider {
         } = {
           valid: false,
         };
-        
+
         if (tokenValidation.error) {
           result.error = tokenValidation.error;
         }
         if (tokenValidation.errorCode) {
           result.errorCode = tokenValidation.errorCode;
         }
-        
+
         return result;
       }
 
@@ -413,7 +413,7 @@ export class OAuthProvider {
       } = {
         valid: true,
       };
-      
+
       if (tokenValidation.clientId) {
         result.clientId = tokenValidation.clientId;
       }
@@ -423,7 +423,7 @@ export class OAuthProvider {
       if (tokenValidation.scopes) {
         result.scope = tokenValidation.scopes.join(' ');
       }
-      
+
       return result;
     } catch (error) {
       this.logger?.error(

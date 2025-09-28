@@ -158,7 +158,12 @@ export type {
 //export { DEFAULT_WORKFLOW_CATEGORIES } from './lib/types/WorkflowTypes.ts';
 
 // Plugin types
-export type { AppPlugin, LoadedPlugin, PluginDiscoveryOptions, PluginCategory } from './lib/types/PluginTypes.ts';
+export type {
+  AppPlugin,
+  LoadedPlugin,
+  PluginCategory,
+  PluginDiscoveryOptions,
+} from './lib/types/PluginTypes.ts';
 export { DEFAULT_PLUGIN_CATEGORIES } from './lib/types/PluginTypes.ts';
 
 // Transport types (Phase 3)
@@ -217,10 +222,7 @@ export type {
 } from './lib/server/ServerTypes.ts';
 
 // Beyond MCP Server types
-export {
-  ToolHandlerMode,
-  WorkflowToolNaming,
-} from './lib/types/BeyondMcpTypes.ts';
+export { ToolHandlerMode, WorkflowToolNaming } from './lib/types/BeyondMcpTypes.ts';
 
 export type {
   AuditEvent,

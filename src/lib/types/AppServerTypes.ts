@@ -20,7 +20,6 @@ import type { WorkflowBase } from '../workflows/WorkflowBase.ts';
 import type { ToolRegistration } from '../types/BeyondMcpTypes.ts';
 import type { TransportConfig } from '../transport/TransportTypes.ts';
 
-
 /**
  * Configuration interface for AppServer
  */
@@ -55,17 +54,17 @@ export interface AppServerDependencies {
   toolRegistry: ToolRegistry;
   oauthProvider: OAuthProvider;
   transportManager: TransportManager;
-  
+
   // Beyond MCP Server (must be created with all dependencies)
   beyondMcpServer: BeyondMcpServer;
-  
+
   // HTTP Server configuration (optional)
   httpServerConfig?: HttpServerConfig;
-  
+
   // Consumer-specific dependencies (pre-built instances - Option A pattern)
   thirdpartyApiClient?: any;
   oAuthConsumer?: any;
-  
+
   // Server configuration for generic fallback
   serverConfig?: {
     name: string;
@@ -73,16 +72,16 @@ export interface AppServerDependencies {
     title?: string;
     description: string;
   };
-  
+
   additionalHealthChecks?: DependenciesHealthCheck[];
-  
+
   // Custom workflows and tools
   customWorkflows?: WorkflowBase[];
   customTools?: ToolRegistration[];
 }
 type AppOnlyKeys = 'sessionStore' | 'eventStore' | 'credentialStore' | 'beyondMcpServer';
 
-export type  AppServerDependenciesPartial = Omit<AppServerDependencies, AppOnlyKeys>;
+export type AppServerDependenciesPartial = Omit<AppServerDependencies, AppOnlyKeys>;
 
 export interface CreateCustomAppServerDependencies {
   configManager: ConfigManager;
@@ -147,7 +146,7 @@ export interface ThirdPartyApiInfo {
 
 /**
  * Consumer API client interface (for type safety)
- * 
+ *
  * @deprecated Use BaseApiClient abstract class instead for stronger type safety
  */
 export interface ConsumerApiClient {

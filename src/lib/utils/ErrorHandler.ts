@@ -1,6 +1,6 @@
 /**
  * Error Handler - Standardized error handling for bb-mcp-server library
- * 
+ *
  * Provides error classification, formatting, recovery suggestions, and
  * structured error responses for consistent error handling across MCP servers.
  */
@@ -104,11 +104,13 @@ export class MCPError extends Error {
       message: this.message,
       info: this.info,
       stack: this.stack,
-      cause: this.cause ? {
-        name: this.cause.name,
-        message: this.cause.message,
-        stack: this.cause.stack,
-      } : undefined,
+      cause: this.cause
+        ? {
+          name: this.cause.name,
+          message: this.cause.message,
+          stack: this.cause.stack,
+        }
+        : undefined,
     };
   }
 
@@ -163,7 +165,7 @@ export class ErrorHandler {
    */
   static handleError(
     error: Error | MCPError,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): MCPError {
     // If it's already an MCPError, just add context and log
     if (error instanceof MCPError) {
@@ -176,7 +178,7 @@ export class ErrorHandler {
 
     // Classify the error
     const errorInfo = this.classifyError(error);
-    
+
     // Add context
     if (context) {
       errorInfo.context = { ...errorInfo.context, ...context };
@@ -328,8 +330,8 @@ export class ErrorHandler {
       'socket',
       'dns',
     ];
-    
-    return networkKeywords.some(keyword => message.includes(keyword));
+
+    return networkKeywords.some((keyword) => message.includes(keyword));
   }
 
   /**
@@ -470,11 +472,11 @@ export class ErrorHandler {
   static wrapError(
     error: unknown,
     code: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ): MCPError {
     // Convert unknown error to Error using the toError utility
     const errorObj = error instanceof Error ? error : new Error(String(error));
-    
+
     // Create error info based on the code
     const errorInfo: Omit<ErrorInfo, 'timestamp'> = {
       code,
@@ -483,26 +485,30 @@ export class ErrorHandler {
       severity: this.getSeverityFromCode(code),
       recoveryAction: this.getRecoveryActionFromCode(code),
     };
-    
+
     if (context) {
       errorInfo.context = context;
     }
-    
+
     return new MCPError(errorInfo, errorObj);
   }
-  
+
   /**
    * Get error category from error code
    */
   private static getCategoryFromCode(code: string): ErrorCategory {
     if (code.includes('VALIDATION')) return ErrorCategory.VALIDATION;
     if (code.includes('AUTH')) return ErrorCategory.AUTHENTICATION;
-    if (code.includes('PERMISSION') || code.includes('FORBIDDEN')) return ErrorCategory.AUTHORIZATION;
+    if (code.includes('PERMISSION') || code.includes('FORBIDDEN')) {
+      return ErrorCategory.AUTHORIZATION;
+    }
     if (code.includes('NOT_FOUND')) return ErrorCategory.NOT_FOUND;
     if (code.includes('CONFLICT')) return ErrorCategory.CONFLICT;
     if (code.includes('RATE_LIMIT')) return ErrorCategory.RATE_LIMIT;
     if (code.includes('EXTERNAL') || code.includes('API')) return ErrorCategory.EXTERNAL_API;
-    if (code.includes('STORAGE') || code.includes('KV') || code.includes('DATABASE')) return ErrorCategory.STORAGE;
+    if (code.includes('STORAGE') || code.includes('KV') || code.includes('DATABASE')) {
+      return ErrorCategory.STORAGE;
+    }
     if (code.includes('TRANSPORT') || code.includes('CONNECTION')) return ErrorCategory.TRANSPORT;
     if (code.includes('WORKFLOW')) return ErrorCategory.WORKFLOW;
     if (code.includes('CONFIG')) return ErrorCategory.CONFIGURATION;
@@ -510,7 +516,7 @@ export class ErrorHandler {
     if (code.includes('TIMEOUT')) return ErrorCategory.TIMEOUT;
     return ErrorCategory.INTERNAL;
   }
-  
+
   /**
    * Get error severity from error code
    */
@@ -520,7 +526,7 @@ export class ErrorHandler {
     if (code.includes('WARNING') || code.includes('TIMEOUT')) return ErrorSeverity.MEDIUM;
     return ErrorSeverity.MEDIUM;
   }
-  
+
   /**
    * Get recovery action from error code
    */
@@ -530,7 +536,9 @@ export class ErrorHandler {
     if (code.includes('NOT_FOUND')) return RecoveryAction.IGNORE;
     if (code.includes('VALIDATION')) return RecoveryAction.USER_ACTION_REQUIRED;
     if (code.includes('RATE_LIMIT')) return RecoveryAction.RETRY_WITH_BACKOFF;
-    if (code.includes('NETWORK') || code.includes('TIMEOUT')) return RecoveryAction.RETRY_WITH_BACKOFF;
+    if (code.includes('NETWORK') || code.includes('TIMEOUT')) {
+      return RecoveryAction.RETRY_WITH_BACKOFF;
+    }
     if (code.includes('FAILED')) return RecoveryAction.RETRY;
     return RecoveryAction.CONTACT_SUPPORT;
   }
@@ -546,11 +554,11 @@ export class ErrorHandler {
       severity: ErrorSeverity.LOW,
       recoveryAction: RecoveryAction.USER_ACTION_REQUIRED,
     };
-    
+
     if (field) {
       errorInfo.details = { field };
     }
-    
+
     return new MCPError(errorInfo);
   }
 

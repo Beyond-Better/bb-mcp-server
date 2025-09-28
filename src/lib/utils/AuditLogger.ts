@@ -1,6 +1,6 @@
 /**
  * Audit Logger - Generic audit logging system for MCP servers
- * 
+ *
  * Provides comprehensive logging for API interactions, workflow operations,
  * authentication events, and system events for compliance and debugging.
  * Extracted and generalized from ActionStep MCP Server's AuditLogger.

@@ -1,13 +1,19 @@
 /**
  * STDIO Transport Implementation for MCP
- * 
+ *
  * Simpler than HTTP transport - delegates most work to MCP SDK
  * Handles standard input/output communication for traditional MCP clients
  */
 
 import { McpServer } from 'mcp/server/mcp.js';
 import { StdioServerTransport } from 'mcp/server/stdio.js';
-import type { Transport, TransportType, StdioTransportConfig, TransportDependencies, StdioTransportMetrics } from './TransportTypes.ts';
+import type {
+  StdioTransportConfig,
+  StdioTransportMetrics,
+  Transport,
+  TransportDependencies,
+  TransportType,
+} from './TransportTypes.ts';
 import type { Logger } from '../utils/Logger.ts';
 import { toError } from '../utils/Error.ts';
 
@@ -17,15 +23,15 @@ import { toError } from '../utils/Error.ts';
  */
 export class StdioTransport implements Transport {
   readonly type: TransportType = 'stdio';
-  
+
   private config: StdioTransportConfig;
   private dependencies: TransportDependencies;
   private logger: Logger;
-  
+
   // MCP SDK components
   private mcpServer?: McpServer;
   private stdioServerTransport: StdioServerTransport;
-  
+
   // Metrics tracking
   private startTime = Date.now();
   private messagesReceived = 0;
@@ -33,7 +39,7 @@ export class StdioTransport implements Transport {
   private bytesReceived = 0;
   private bytesSent = 0;
   private connected = false;
-  
+
   constructor(config: StdioTransportConfig, dependencies: TransportDependencies) {
     this.config = {
       ...config,
@@ -43,11 +49,11 @@ export class StdioTransport implements Transport {
     };
     this.dependencies = dependencies;
     this.logger = dependencies.logger;
-    
+
     // Initialize STDIO transport from MCP SDK
     this.stdioServerTransport = new StdioServerTransport();
   }
-  
+
   async start(): Promise<void> {
     this.logger.info('StdioTransport: Starting STDIO transport', {
       enableLogging: this.config.enableLogging,
@@ -55,17 +61,17 @@ export class StdioTransport implements Transport {
       encoding: this.config.encoding,
     });
   }
-  
+
   async stop(): Promise<void> {
     this.logger.info('StdioTransport: Stopping STDIO transport');
     await this.disconnect();
   }
-  
+
   async cleanup(): Promise<void> {
     this.logger.info('StdioTransport: Cleaning up STDIO transport');
     await this.disconnect();
   }
-  
+
   /**
    * Connect MCP server to STDIO transport
    */
@@ -74,16 +80,16 @@ export class StdioTransport implements Transport {
       this.logger.warn('StdioTransport: Already connected');
       return;
     }
-    
+
     this.mcpServer = mcpServer;
-    
+
     try {
       // Connect using official MCP SDK
       await mcpServer.connect(this.stdioServerTransport);
       this.connected = true;
-      
+
       this.logger.info('StdioTransport: STDIO transport connected successfully');
-      
+
       // Log transport event
       await this.dependencies.eventStore.logEvent({
         type: 'connection_established',
@@ -95,11 +101,10 @@ export class StdioTransport implements Transport {
           transportType: 'stdio',
         },
       });
-      
     } catch (error) {
       this.connected = false;
       this.logger.error('StdioTransport: Failed to connect STDIO transport', toError(error));
-      
+
       // Log error event
       await this.dependencies.eventStore.logEvent({
         type: 'connection_lost',
@@ -108,11 +113,11 @@ export class StdioTransport implements Transport {
         message: 'Failed to connect STDIO transport',
         error: error instanceof Error ? error : new Error(String(error)),
       });
-      
+
       throw error;
     }
   }
-  
+
   /**
    * Disconnect STDIO transport
    */
@@ -120,14 +125,14 @@ export class StdioTransport implements Transport {
     if (!this.connected || !this.mcpServer) {
       return;
     }
-    
+
     try {
       await this.mcpServer.close();
       this.connected = false;
       delete this.mcpServer;
-      
+
       this.logger.info('StdioTransport: STDIO transport disconnected successfully');
-      
+
       // Log transport event
       await this.dependencies.eventStore.logEvent({
         type: 'connection_lost',
@@ -138,39 +143,38 @@ export class StdioTransport implements Transport {
           cleanShutdown: true,
         },
       });
-      
     } catch (error) {
       this.logger.error('StdioTransport: Error during STDIO disconnect', toError(error));
-      
+
       // Force cleanup even on error
       this.connected = false;
       delete this.mcpServer;
-      
+
       throw error;
     }
   }
-  
+
   /**
    * Check if transport is connected
    */
   isConnected(): boolean {
     return this.connected && !!this.mcpServer;
   }
-  
+
   /**
    * Get MCP server instance (if connected)
    */
   getMcpServer(): McpServer | undefined {
     return this.mcpServer;
   }
-  
+
   /**
    * Get STDIO server transport instance
    */
   getStdioServerTransport(): StdioServerTransport {
     return this.stdioServerTransport;
   }
-  
+
   /**
    * Log transport activity (for debugging)
    */
@@ -182,7 +186,7 @@ export class StdioTransport implements Transport {
     if (!this.config.enableLogging) {
       return;
     }
-    
+
     // Update metrics
     if (activity === 'message_received') {
       this.messagesReceived++;
@@ -195,7 +199,7 @@ export class StdioTransport implements Transport {
         this.bytesSent += data.messageSize;
       }
     }
-    
+
     // Log detailed activity
     this.logger.debug(`StdioTransport: ${activity}`, {
       activity,
@@ -205,7 +209,7 @@ export class StdioTransport implements Transport {
       totalReceived: this.messagesReceived,
       totalSent: this.messagesSent,
     });
-    
+
     // Log transport event for major activities
     if (data.messageType && ['tools/list', 'tools/call', 'initialize'].includes(data.messageType)) {
       await this.dependencies.eventStore.logEvent({
@@ -221,7 +225,7 @@ export class StdioTransport implements Transport {
       });
     }
   }
-  
+
   /**
    * Handle transport errors
    */
@@ -233,7 +237,7 @@ export class StdioTransport implements Transport {
       context,
       connected: this.connected,
     });
-    
+
     // Log transport error event
     await this.dependencies.eventStore.logEvent({
       type: 'request_error',
@@ -243,21 +247,21 @@ export class StdioTransport implements Transport {
       error,
       data: context,
     });
-    
+
     // Consider disconnecting on critical errors
     if (error.name === 'ConnectionError' || error.message.includes('EPIPE')) {
       this.logger.warn('StdioTransport: Critical error detected, disconnecting');
       await this.disconnect();
     }
   }
-  
+
   getMetrics(): StdioTransportMetrics {
     const uptime = Date.now() - this.startTime;
     const totalMessages = this.messagesReceived + this.messagesSent;
-    const averageMessageSize = totalMessages > 0 
-      ? (this.bytesReceived + this.bytesSent) / totalMessages 
+    const averageMessageSize = totalMessages > 0
+      ? (this.bytesReceived + this.bytesSent) / totalMessages
       : 0;
-    
+
     return {
       transport: 'stdio',
       uptime,
@@ -275,7 +279,7 @@ export class StdioTransport implements Transport {
       },
     };
   }
-  
+
   /**
    * Get connection status and health information
    */
@@ -292,7 +296,7 @@ export class StdioTransport implements Transport {
       messagesProcessed: this.messagesReceived + this.messagesSent,
     };
   }
-  
+
   /**
    * Validate STDIO environment
    */
@@ -301,12 +305,12 @@ export class StdioTransport implements Transport {
     issues: string[];
   } {
     const issues: string[] = [];
-    
+
     // Check if running in appropriate environment for STDIO
     if (typeof process === 'undefined') {
       issues.push('process global not available - may not be Node.js compatible environment');
     }
-    
+
     if (typeof process !== 'undefined') {
       if (!process.stdin) {
         issues.push('process.stdin not available');
@@ -318,7 +322,7 @@ export class StdioTransport implements Transport {
         issues.push('process.stderr not available');
       }
     }
-    
+
     return {
       valid: issues.length === 0,
       issues,

@@ -1,6 +1,6 @@
 /**
  * Tool Types - Re-export from ToolBase class
- * 
+ *
  * The ToolBase interface has been replaced with an abstract ToolBase class.
  * This file now re-exports the class and related types for backward compatibility.
  */

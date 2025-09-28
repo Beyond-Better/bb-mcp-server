@@ -10,11 +10,11 @@
 import type { Logger } from '../../types/library.types.ts';
 import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
 import type { TransportManager } from '../transport/TransportManager.ts';
-import type { HttpServerDependencies, HttpServerConfig } from './HttpServer.ts';
+import type { HttpServerConfig, HttpServerDependencies } from './HttpServer.ts';
 
 /**
  * Status and monitoring endpoints implementation
- * 
+ *
  * Provides comprehensive server monitoring and observability endpoints
  * with health checks, metrics, and status information.
  */
@@ -25,7 +25,7 @@ export class StatusEndpoints {
   private httpServerConfig: HttpServerConfig;
   private workflowRegistry: WorkflowRegistry;
   private transportManager: TransportManager;
-  
+
   constructor(dependencies: HttpServerDependencies, startTime: Date) {
     this.dependencies = dependencies;
     this.startTime = startTime;
@@ -33,14 +33,14 @@ export class StatusEndpoints {
     this.httpServerConfig = dependencies.httpServerConfig;
     this.workflowRegistry = dependencies.workflowRegistry;
     this.transportManager = dependencies.transportManager;
-    
+
     this.logger.info('StatusEndpoints: Initialized', {
       serverName: this.httpServerConfig.name,
       serverVersion: this.httpServerConfig.version,
       startTime: this.startTime.toISOString(),
     });
   }
-  
+
   /**
    * Handle status endpoint requests
    */
@@ -49,46 +49,46 @@ export class StatusEndpoints {
       return this.jsonResponse({
         error: {
           message: 'Only GET method allowed for status endpoints',
-          status: 405
-        }
+          status: 405,
+        },
       }, 405);
     }
-    
+
     this.logger.debug(`StatusEndpoints: Handling request for /${segments.join('/')}`);
-    
+
     if (segments.length === 0) {
       return await this.handleServerStatus();
     }
-    
+
     const [statusType] = segments;
-    
+
     switch (statusType) {
       case 'health':
         return await this.handleHealthCheck();
-        
+
       case 'ready':
         return await this.handleReadinessCheck();
-        
+
       case 'live':
         return await this.handleLivenessCheck();
-        
+
       default:
         return this.jsonResponse({
           error: {
             message: `Status type '${statusType}' not found`,
-            status: 404
-          }
+            status: 404,
+          },
         }, 404);
     }
   }
-  
+
   /**
    * Handle main server status endpoint
    */
   private async handleServerStatus(): Promise<Response> {
     try {
       const uptime = Date.now() - this.startTime.getTime();
-      
+
       const status = {
         server: {
           name: this.httpServerConfig.name,
@@ -125,19 +125,22 @@ export class StatusEndpoints {
         mcp: this.getMCPSessionMetrics(),
         timestamp: new Date().toISOString(),
       };
-      
+
       return this.jsonResponse(status);
     } catch (error) {
-      this.logger.error('StatusEndpoints: Error getting server status:', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'StatusEndpoints: Error getting server status:',
+        error instanceof Error ? error : new Error(String(error)),
+      );
       return this.jsonResponse({
         error: {
           message: 'Failed to retrieve server status',
-          status: 500
-        }
+          status: 500,
+        },
       }, 500);
     }
   }
-  
+
   /**
    * Handle health check endpoint
    */
@@ -154,10 +157,13 @@ export class StatusEndpoints {
           transport_manager: 'ok',
         },
       };
-      
+
       return this.jsonResponse(health);
     } catch (error) {
-      this.logger.error('StatusEndpoints: Health check error:', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'StatusEndpoints: Health check error:',
+        error instanceof Error ? error : new Error(String(error)),
+      );
       return this.jsonResponse({
         status: 'unhealthy',
         timestamp: new Date().toISOString(),
@@ -165,7 +171,7 @@ export class StatusEndpoints {
       }, 503);
     }
   }
-  
+
   /**
    * Handle readiness check endpoint
    */
@@ -178,18 +184,21 @@ export class StatusEndpoints {
         transport_manager: true, // Transport manager is always ready after initialization
         http_server: true, // If we can respond, HTTP server is ready
       };
-      
+
       const allReady = Object.values(checks).every((check) => check === true);
-      
+
       const readiness = {
         status: allReady ? 'ready' : 'not_ready',
         timestamp: new Date().toISOString(),
         checks,
       };
-      
+
       return this.jsonResponse(readiness, allReady ? 200 : 503);
     } catch (error) {
-      this.logger.error('StatusEndpoints: Readiness check error:', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'StatusEndpoints: Readiness check error:',
+        error instanceof Error ? error : new Error(String(error)),
+      );
       return this.jsonResponse({
         status: 'not_ready',
         timestamp: new Date().toISOString(),
@@ -197,14 +206,14 @@ export class StatusEndpoints {
       }, 503);
     }
   }
-  
+
   /**
    * Handle liveness check endpoint
    */
   private async handleLivenessCheck(): Promise<Response> {
     try {
       const uptime = Date.now() - this.startTime.getTime();
-      
+
       const liveness = {
         status: 'alive',
         timestamp: new Date().toISOString(),
@@ -214,10 +223,13 @@ export class StatusEndpoints {
         },
         memory: this.getMemoryUsage(),
       };
-      
+
       return this.jsonResponse(liveness);
     } catch (error) {
-      this.logger.error('StatusEndpoints: Liveness check error:', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'StatusEndpoints: Liveness check error:',
+        error instanceof Error ? error : new Error(String(error)),
+      );
       return this.jsonResponse({
         status: 'dead',
         timestamp: new Date().toISOString(),
@@ -225,11 +237,11 @@ export class StatusEndpoints {
       }, 503);
     }
   }
-  
+
   // ============================================================================
   // Utility Methods
   // ============================================================================
-  
+
   /**
    * Get MCP session metrics from transport manager
    */
@@ -237,7 +249,7 @@ export class StatusEndpoints {
     try {
       // Get metrics from transport manager if available
       const metrics = this.transportManager.getMetrics?.();
-      
+
       if (metrics) {
         return {
           active_sessions: metrics.sessions?.active || 0,
@@ -245,7 +257,7 @@ export class StatusEndpoints {
           transport_type: metrics.transport || 'unknown',
         };
       }
-      
+
       // Fallback metrics
       return {
         active_sessions: 0,
@@ -262,7 +274,7 @@ export class StatusEndpoints {
       };
     }
   }
-  
+
   /**
    * Get memory usage information
    */
@@ -278,7 +290,7 @@ export class StatusEndpoints {
           available: true,
         };
       }
-      
+
       return { available: false, reason: 'Deno.memoryUsage not available' };
     } catch (error) {
       return {
@@ -287,7 +299,7 @@ export class StatusEndpoints {
       };
     }
   }
-  
+
   /**
    * Format uptime in human-readable format
    */
@@ -296,13 +308,13 @@ export class StatusEndpoints {
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    
+
     if (days > 0) return `${days}d ${hours % 24}h ${minutes % 60}m`;
     if (hours > 0) return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
     if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
     return `${seconds}s`;
   }
-  
+
   /**
    * Create JSON response
    */
@@ -312,13 +324,13 @@ export class StatusEndpoints {
       headers: { 'Content-Type': 'application/json' },
     });
   }
-  
+
   /**
    * Get detailed server statistics
    */
   getServerStats() {
     const uptime = Date.now() - this.startTime.getTime();
-    
+
     return {
       server: {
         name: this.httpServerConfig.name,

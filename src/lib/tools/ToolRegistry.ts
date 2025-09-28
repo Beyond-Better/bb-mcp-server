@@ -20,12 +20,12 @@ import { toError } from '../utils/Error.ts';
 
 // Import types
 import {
-  ToolHandlerMode,
   type RegisteredTool,
   type ToolDefinition,
   type ToolHandler,
-  type ToolRegistryDependencies,
+  ToolHandlerMode,
   type ToolRegistrationOptions,
+  type ToolRegistryDependencies,
   type ValidationResult,
 } from '../types/BeyondMcpTypes.ts';
 
@@ -94,9 +94,13 @@ export class ToolRegistry {
     });
 
     if (!this._sdkMcpServer) {
-      throw ErrorHandler.wrapError('SDK MCP server has not been set - create a new BeyondMcpServer first to set sdkMcpServer in ToolRegistry', 'TOOL_REGISTRATION_FAILED', {
-        toolName: name,
-      });
+      throw ErrorHandler.wrapError(
+        'SDK MCP server has not been set - create a new BeyondMcpServer first to set sdkMcpServer in ToolRegistry',
+        'TOOL_REGISTRATION_FAILED',
+        {
+          toolName: name,
+        },
+      );
     }
 
     try {
@@ -104,10 +108,14 @@ export class ToolRegistry {
       const validationErrors = this.validateToolRegistration(name, definition, handler);
       if (validationErrors.length > 0) {
         const errorMessage = `Tool registration has errors:\n${validationErrors.join('\n')}`;
-        this.logger.error('ToolRegistry: Tool registration validation failed', toError(errorMessage), {
-          toolName: name,
-          errors: validationErrors,
-        });
+        this.logger.error(
+          'ToolRegistry: Tool registration validation failed',
+          toError(errorMessage),
+          {
+            toolName: name,
+            errors: validationErrors,
+          },
+        );
         throw new Error(errorMessage);
       }
 
@@ -124,7 +132,7 @@ export class ToolRegistry {
             description: definition.description,
             inputSchema: definition.inputSchema as any, // Cast Zod schema for MCP SDK
           },
-          handler as any // Direct handler, no wrapper
+          handler as any, // Direct handler, no wrapper
         );
       } else {
         // MANAGED MODE: Complex validation and error handling (default)
@@ -349,7 +357,7 @@ export class ToolRegistry {
   private validateToolRegistration<T extends Record<string, ZodSchema>>(
     name: string,
     definition: ToolDefinition<T>,
-    handler: ToolHandler<T>
+    handler: ToolHandler<T>,
   ): string[] {
     const errors: string[] = [];
 

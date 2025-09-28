@@ -1,6 +1,6 @@
 /**
  * Configuration Manager - Generic configuration loading for bb-mcp-server library
- * 
+ *
  * Provides flexible configuration loading from environment variables, files, and
  * programmatic sources. Extracted and generalized from ActionStep MCP Server's
  * ConfigLoader with enhanced validation and extensibility.
@@ -10,14 +10,14 @@ import '@std/dotenv/load';
 import { toError } from '../utils/Error.ts';
 import type {
   AppConfig,
+  AuditConfig,
   ConfigLoaderOptions,
   ConfigValidationResult,
   EnvironmentMapping,
+  LoggingConfig,
+  RateLimitConfig,
   ServerConfig,
   StorageConfig,
-  LoggingConfig,
-  AuditConfig,
-  RateLimitConfig,
   TransportConfig,
 } from './ConfigTypes.ts';
 
@@ -99,7 +99,7 @@ export class ConfigManager {
 
   /**
    * Get a configuration value by path with environment variable fallback
-   * 
+   *
    * Resolution order:
    * 1. Internal predefined config (server, transport, storage, etc.)
    * 2. Environment variable with custom prefix
@@ -112,23 +112,23 @@ export class ConfigManager {
     if (internalValue !== undefined) {
       return internalValue;
     }
-    
+
     // 2. Try environment variable with custom prefix
     const mcpEnvValue = Deno.env.get(`${this.options.envPrefix}${path}`);
     if (mcpEnvValue !== undefined) {
       return this.parseEnvValue<T>(mcpEnvValue);
     }
-    
+
     // 3. Try direct environment variable (for consumer-specific config)
     const directEnvValue = Deno.env.get(path);
     if (directEnvValue !== undefined) {
       return this.parseEnvValue<T>(directEnvValue);
     }
-    
+
     // 4. Return default value
     return defaultValue as T;
   }
-  
+
   /**
    * Get value from internal predefined config structure
    */
@@ -146,7 +146,7 @@ export class ConfigManager {
 
     return current as T;
   }
-  
+
   /**
    * Parse environment variable value with type coercion
    */
@@ -154,18 +154,18 @@ export class ConfigManager {
     // Handle boolean values
     if (value.toLowerCase() === 'true') return true as T;
     if (value.toLowerCase() === 'false') return false as T;
-    
+
     // Handle numeric values
     const numValue = Number(value);
     if (!isNaN(numValue) && value !== '') {
       return numValue as T;
     }
-    
+
     // Handle array values (comma-separated)
     if (value.includes(',')) {
-      return value.split(',').map(item => item.trim()) as T;
+      return value.split(',').map((item) => item.trim()) as T;
     }
-    
+
     // Return as string
     return value as T;
   }
@@ -226,7 +226,7 @@ export class ConfigManager {
    */
   private loadTransportConfig(): TransportConfig {
     const transport = this.getEnvOptional('MCP_TRANSPORT', 'stdio') as 'stdio' | 'http';
-	this.logger?.debug('Transport Config loaded:', transport);
+    this.logger?.debug('Transport Config loaded:', transport);
 
     const config: TransportConfig = {
       type: transport,
@@ -238,7 +238,9 @@ export class ConfigManager {
         port: parseInt(this.getEnvOptional('HTTP_PORT', '3001')),
         // Session configuration for HTTP transport (primary environment variables)
         sessionTimeout: parseInt(this.getEnvOptional('MCP_SESSION_TIMEOUT', '1800000')), // 30 minutes default
-        sessionCleanupInterval: parseInt(this.getEnvOptional('MCP_SESSION_CLEANUP_INTERVAL', '300000')), // 5 minutes default
+        sessionCleanupInterval: parseInt(
+          this.getEnvOptional('MCP_SESSION_CLEANUP_INTERVAL', '300000'),
+        ), // 5 minutes default
         maxConcurrentSessions: parseInt(this.getEnvOptional('MCP_MAX_CONCURRENT_SESSIONS', '1000')),
         enableSessionPersistence: this.getEnvBoolean('MCP_ENABLE_SESSION_PERSISTENCE', true),
         requestTimeout: parseInt(this.getEnvOptional('MCP_REQUEST_TIMEOUT', '30000')), // 30 seconds default
@@ -257,7 +259,7 @@ export class ConfigManager {
         encoding: this.getEnvOptional('STDIO_ENCODING', 'utf8'),
       };
     }
-    
+
     // Add session configuration (applies to both HTTP and STDIO if needed)
     config.session = {
       maxAge: parseInt(this.getEnvOptional('SESSION_MAX_AGE', '1800000')), // 30 minutes default
@@ -336,8 +338,12 @@ export class ConfigManager {
       issuer: this.getEnvOptional('OAUTH_PROVIDER_ISSUER', 'http://localhost:3001'),
       enablePKCE: this.getEnvBoolean('OAUTH_PROVIDER_PKCE', true),
       enableDynamicRegistration: this.getEnvBoolean('OAUTH_PROVIDER_DYNAMIC_REGISTRATION', false),
-      tokenExpirationMs: parseInt(this.getEnvOptional('OAUTH_PROVIDER_TOKEN_EXPIRATION', '3600000')), // 1 hour
-      refreshTokenExpirationMs: parseInt(this.getEnvOptional('OAUTH_PROVIDER_REFRESH_TOKEN_EXPIRATION', '2592000000')), // 30 days
+      tokenExpirationMs: parseInt(
+        this.getEnvOptional('OAUTH_PROVIDER_TOKEN_EXPIRATION', '3600000'),
+      ), // 1 hour
+      refreshTokenExpirationMs: parseInt(
+        this.getEnvOptional('OAUTH_PROVIDER_REFRESH_TOKEN_EXPIRATION', '2592000000'),
+      ), // 30 days
     };
   }
 
@@ -355,7 +361,10 @@ export class ConfigManager {
       paths: this.getEnvArray('PLUGINS_DISCOVERY_PATHS', ['./plugins', './workflows']),
       autoload: this.getEnvBoolean('PLUGINS_AUTOLOAD', true),
       watchForChanges: this.getEnvBoolean('PLUGINS_WATCH_CHANGES', false),
-      allowedPlugins: this.getEnvOptional('PLUGINS_ALLOWED_LIST', '')?.split(',').map(p => p.trim()).filter(p => p.length > 0) || undefined,
+      allowedPlugins:
+        this.getEnvOptional('PLUGINS_ALLOWED_LIST', '')?.split(',').map((p) => p.trim()).filter(
+          (p) => p.length > 0,
+        ) || undefined,
       blockedPlugins: this.getEnvArray('PLUGINS_BLOCKED_LIST', []),
     };
   }
@@ -421,7 +430,10 @@ export class ConfigManager {
 
     // Create data directory if it doesn't exist
     try {
-      const kvDir = config.storage.denoKvPath.substring(0, config.storage.denoKvPath.lastIndexOf('/'));
+      const kvDir = config.storage.denoKvPath.substring(
+        0,
+        config.storage.denoKvPath.lastIndexOf('/'),
+      );
       if (kvDir) {
         await Deno.mkdir(kvDir, { recursive: true });
       }
@@ -493,6 +505,6 @@ export class ConfigManager {
   private getEnvArray(key: string, defaultValue: string[]): string[] {
     const value = Deno.env.get(`${this.options.envPrefix}${key}`);
     if (!value) return defaultValue;
-    return value.split(',').map(item => item.trim()).filter(item => item.length > 0);
+    return value.split(',').map((item) => item.trim()).filter((item) => item.length > 0);
   }
 }

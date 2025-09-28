@@ -1,6 +1,6 @@
 /**
  * FailingMockTool - Tool that fails for error testing
- * 
+ *
  * Provides various failure scenarios to test error handling
  * in ToolBase abstract class.
  */
@@ -9,10 +9,7 @@ import { z } from 'zod';
 import type { CallToolResult } from 'mcp/types.js';
 
 import { ToolBase } from '../../../../src/lib/tools/ToolBase.ts';
-import type { 
-  ToolDefinition,
-  ToolRegistration
-} from '../../../../src/lib/types/BeyondMcpTypes.ts';
+import type { ToolDefinition, ToolRegistration } from '../../../../src/lib/types/BeyondMcpTypes.ts';
 import type { PluginCategory } from '../../../../src/lib/types/PluginTypes.ts';
 import type { ToolRegistry } from '../../../../src/lib/tools/ToolRegistry.ts';
 
@@ -45,10 +42,14 @@ export class FailingMockTool extends ToolBase {
           tags: ['test', 'error'],
           inputSchema: {
             shouldFail: z.boolean().default(true).describe('Whether to fail'),
-            errorType: z.enum(['Error', 'string', 'object']).default('Error').describe('Type of error to throw'),
-            errorMessage: z.string().default('Intentional failure for testing').describe('Error message'),
+            errorType: z.enum(['Error', 'string', 'object']).default('Error').describe(
+              'Type of error to throw',
+            ),
+            errorMessage: z.string().default('Intentional failure for testing').describe(
+              'Error message',
+            ),
           },
-        } as ToolDefinition<{ 
+        } as ToolDefinition<{
           shouldFail: z.ZodDefault<z.ZodBoolean>;
           errorType: z.ZodDefault<z.ZodEnum<['Error', 'string', 'object']>>;
           errorMessage: z.ZodDefault<z.ZodString>;
@@ -84,18 +85,28 @@ export class FailingMockTool extends ToolBase {
     if (this.failOnGetOverview) {
       throw new Error('Intentional failure in getOverview()');
     }
-    
+
     return 'Tool designed to fail for error handling tests';
   }
 
   // Tool handler implementations that fail in various ways
-  private async handleFailure(args: { shouldFail?: boolean; errorType?: 'Error' | 'string' | 'object'; errorMessage?: string }): Promise<CallToolResult> {
+  private async handleFailure(
+    args: {
+      shouldFail?: boolean;
+      errorType?: 'Error' | 'string' | 'object';
+      errorMessage?: string;
+    },
+  ): Promise<CallToolResult> {
     // Use executeWithContext to ensure proper error handling
     return this.executeWithContext(
       'failing_operation',
       args,
       async (validatedArgs) => {
-        const { shouldFail = true, errorType = 'Error', errorMessage = 'Intentional failure for testing' } = validatedArgs as typeof args;
+        const {
+          shouldFail = true,
+          errorType = 'Error',
+          errorMessage = 'Intentional failure for testing',
+        } = validatedArgs as typeof args;
 
         if (!shouldFail) {
           return { success: true, message: 'Tool did not fail as requested' };
@@ -112,7 +123,7 @@ export class FailingMockTool extends ToolBase {
           default:
             throw new Error('Unknown error type');
         }
-      }
+      },
     );
   }
 
@@ -123,12 +134,12 @@ export class FailingMockTool extends ToolBase {
       args,
       async (validatedArgs) => {
         const { delay = 100 } = validatedArgs as typeof args;
-        
+
         // Wait for the specified delay
-        await new Promise(resolve => setTimeout(resolve, delay));
-        
+        await new Promise((resolve) => setTimeout(resolve, delay));
+
         throw new Error(`Slow failure after ${delay}ms delay`);
-      }
+      },
     );
   }
 
@@ -154,7 +165,7 @@ export class FailingMockTool extends ToolBase {
     toolName: string,
     args: Record<string, unknown>,
     execution: (args: Record<string, unknown>, context: any) => Promise<T>,
-    context?: any
+    context?: any,
   ) {
     return this.executeWithContext(toolName, args, execution, context);
   }

@@ -1,7 +1,7 @@
 /**
  * Beyond MCP Server Type Definitions
  * Comprehensive type system for bb-mcp-server library
- * 
+ *
  * Defines types for:
  * - Beyond MCP server configuration and dependencies
  * - Tool registration and validation
@@ -12,7 +12,7 @@
 
 import type { CallToolResult } from 'mcp/types.js';
 import type { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
-import { type ZodSchema, type ZodObject } from 'zod';
+import { type ZodObject, type ZodSchema } from 'zod';
 
 // Import component types
 import type { Logger, LogLevel } from '../utils/Logger.ts';
@@ -134,7 +134,7 @@ export interface ToolExample {
  */
 export type ToolHandler<T extends Record<string, ZodSchema>> = (
   args: InferZodSchema<T>,
-  extra?: ToolCallExtra
+  extra?: ToolCallExtra,
 ) => Promise<CallToolResult>;
 
 /**
@@ -175,7 +175,7 @@ export interface ToolRegistration {
   name: string;
   definition: ToolDefinition<any>;
   handler: ToolHandler<any>;
-  options?: ToolRegistrationOptions
+  options?: ToolRegistrationOptions;
 }
 
 /**
@@ -310,7 +310,15 @@ export interface ToolPlugin {
 /**
  * Server Lifecycle States
  */
-export type ServerState = 'uninitialized' | 'initializing' | 'initialized' | 'starting' | 'running' | 'stopping' | 'stopped' | 'error';
+export type ServerState =
+  | 'uninitialized'
+  | 'initializing'
+  | 'initialized'
+  | 'starting'
+  | 'running'
+  | 'stopping'
+  | 'stopped'
+  | 'error';
 
 /**
  * Server Metrics
@@ -445,17 +453,17 @@ export interface AuthenticationInfo {
  * Tool handler modes for registration
  */
 export enum ToolHandlerMode {
-  MANAGED = 'managed',    // Current complex validation/error handling (default)
-  NATIVE = 'native'       // Direct registration, tool handles own validation
+  MANAGED = 'managed', // Current complex validation/error handling (default)
+  NATIVE = 'native', // Direct registration, tool handles own validation
 }
 
 /**
  * Tool naming modes for workflow tools
  */
 export enum WorkflowToolNaming {
-  SIMPLE = 'simple',           // execute_workflow, get_schema_for_workflow
-  NAMESPACED = 'namespaced',   // execute_workflow_$name, get_schema_for_workflow_$name
-  CUSTOM = 'custom'            // Completely custom tool names
+  SIMPLE = 'simple', // execute_workflow, get_schema_for_workflow
+  NAMESPACED = 'namespaced', // execute_workflow_$name, get_schema_for_workflow_$name
+  CUSTOM = 'custom', // Completely custom tool names
 }
 
 /**

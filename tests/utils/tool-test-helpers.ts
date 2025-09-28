@@ -10,7 +10,7 @@ import type { CallToolResult } from 'mcp/types.js';
 // Import types
 import type { ToolDefinition } from '../../src/lib/types/BeyondMcpTypes.ts';
 import type { PluginCategory } from '../../src/lib/types/PluginTypes.ts';
-import { SpyLogger, SpyAuditLogger } from './test-helpers.ts';
+import { SpyAuditLogger, SpyLogger } from './test-helpers.ts';
 
 /**
  * Test data generators for ToolBase testing
@@ -23,7 +23,7 @@ export const ToolTestData = {
     userId: 'test-user-' + Math.random().toString(36).substr(2, 8),
     requestId: 'test-req-' + Math.random().toString(36).substr(2, 8),
     message: 'Test message',
-    ...overrides
+    ...overrides,
   }),
 
   /**
@@ -32,7 +32,7 @@ export const ToolTestData = {
   invalidToolArgs: () => ({
     // Missing required fields
     invalidField: 'should-not-exist',
-    malformedData: { incomplete: true }
+    malformedData: { incomplete: true },
   }),
 
   /**
@@ -45,25 +45,26 @@ export const ToolTestData = {
     auth_token: 'token-xyz789',
     secretValue: 'confidential',
     normalData: 'public-info',
-    settings: { theme: 'dark', publicSetting: 'value' }
+    settings: { theme: 'dark', publicSetting: 'value' },
   }),
 
   /**
    * Generate complex nested schema for validation testing
    */
-  complexSchema: () => z.object({
-    user: z.object({
-      id: z.string().uuid(),
-      name: z.string().min(2).max(50),
-      email: z.string().email(),
-      age: z.number().int().min(0).max(120).optional()
+  complexSchema: () =>
+    z.object({
+      user: z.object({
+        id: z.string().uuid(),
+        name: z.string().min(2).max(50),
+        email: z.string().email(),
+        age: z.number().int().min(0).max(120).optional(),
+      }),
+      action: z.enum(['create', 'update', 'delete']),
+      metadata: z.record(z.unknown()).optional(),
+      timestamp: z.string().datetime().default(() => new Date().toISOString()),
+      tags: z.array(z.string()).default([]),
+      priority: z.enum(['low', 'medium', 'high']).default('medium'),
     }),
-    action: z.enum(['create', 'update', 'delete']),
-    metadata: z.record(z.unknown()).optional(),
-    timestamp: z.string().datetime().default(() => new Date().toISOString()),
-    tags: z.array(z.string()).default([]),
-    priority: z.enum(['low', 'medium', 'high']).default('medium')
-  }),
 
   /**
    * Generate valid data for complex schema
@@ -73,14 +74,14 @@ export const ToolTestData = {
       id: '123e4567-e89b-12d3-a456-426614174000',
       name: 'Test User',
       email: 'test@example.com',
-      age: 30
+      age: 30,
     },
     action: 'create' as const,
     metadata: {
       source: 'test',
-      version: '1.0'
+      version: '1.0',
     },
-    tags: ['test', 'validation']
+    tags: ['test', 'validation'],
   }),
 
   /**
@@ -93,9 +94,9 @@ export const ToolTestData = {
     tags: ['test', 'mock'],
     inputSchema: {
       message: z.string().describe('Test message'),
-      ...overrides.inputSchema
+      ...overrides.inputSchema,
     },
-    ...overrides
+    ...overrides,
   } as ToolDefinition<any>),
 
   /**
@@ -107,9 +108,9 @@ export const ToolTestData = {
       data: `data-${i}`.repeat(10), // Moderate size to test performance
       nested: {
         value: i,
-        timestamp: new Date().toISOString()
-      }
-    }))
+        timestamp: new Date().toISOString(),
+      },
+    })),
   }),
 
   /**
@@ -127,8 +128,8 @@ export const ToolTestData = {
     // Empty context
     {},
     // Invalid types
-    { userId: 123, requestId: null, clientId: undefined }
-  ]
+    { userId: 123, requestId: null, clientId: undefined },
+  ],
 };
 
 /**
@@ -142,14 +143,16 @@ export const ToolAssertions = {
     if (!result.content || !Array.isArray(result.content) || result.content.length === 0) {
       throw new Error('Tool result must have content array with at least one item');
     }
-    
+
     const firstContent = result.content[0];
     if (!firstContent || firstContent.type !== 'text') {
       throw new Error('First content item must be of type "text"');
     }
-    
+
     if (expectedContent && !firstContent.text.includes(expectedContent)) {
-      throw new Error(`Expected content to include "${expectedContent}", got: ${firstContent.text}`);
+      throw new Error(
+        `Expected content to include "${expectedContent}", got: ${firstContent.text}`,
+      );
     }
   },
 
@@ -160,7 +163,7 @@ export const ToolAssertions = {
     if (!result.isError) {
       throw new Error('Expected result to have isError: true');
     }
-    
+
     if (expectedErrorText && !result.content[0].text.includes(expectedErrorText)) {
       throw new Error(`Expected error message to include "${expectedErrorText}"`);
     }
@@ -169,15 +172,18 @@ export const ToolAssertions = {
   /**
    * Assert that a validation result succeeded
    */
-  validationSucceeded: <T>(result: { success: boolean; data?: T; error?: string }, expectedData?: Partial<T>) => {
+  validationSucceeded: <T>(
+    result: { success: boolean; data?: T; error?: string },
+    expectedData?: Partial<T>,
+  ) => {
     if (!result.success) {
       throw new Error(`Validation failed: ${result.error}`);
     }
-    
+
     if (!result.data) {
       throw new Error('Validation result should have data when successful');
     }
-    
+
     if (expectedData) {
       for (const [key, value] of Object.entries(expectedData)) {
         if ((result.data as any)[key] !== value) {
@@ -190,15 +196,18 @@ export const ToolAssertions = {
   /**
    * Assert that a validation result failed
    */
-  validationFailed: (result: { success: boolean; data?: any; error?: string }, expectedErrorFragment?: string) => {
+  validationFailed: (
+    result: { success: boolean; data?: any; error?: string },
+    expectedErrorFragment?: string,
+  ) => {
     if (result.success) {
       throw new Error('Expected validation to fail, but it succeeded');
     }
-    
+
     if (!result.error) {
       throw new Error('Failed validation result should have error message');
     }
-    
+
     if (expectedErrorFragment && !result.error.includes(expectedErrorFragment)) {
       throw new Error(`Expected error to include "${expectedErrorFragment}", got: ${result.error}`);
     }
@@ -208,32 +217,47 @@ export const ToolAssertions = {
    * Assert that logging calls include expected context
    */
   hasLoggingContext: (logger: SpyLogger, expectedContext: Record<string, any>) => {
-    const allCalls = [...logger.infoCalls, ...logger.warnCalls, ...logger.errorCalls, ...logger.debugCalls];
-    
+    const allCalls = [
+      ...logger.infoCalls,
+      ...logger.warnCalls,
+      ...logger.errorCalls,
+      ...logger.debugCalls,
+    ];
+
     if (allCalls.length === 0) {
       throw new Error('Expected at least one logging call');
     }
-    
-    const hasContextCall = allCalls.some(call => {
+
+    const hasContextCall = allCalls.some((call) => {
       const data = call[1]; // Second argument is the data object
       if (!data) return false;
-      
+
       return Object.entries(expectedContext).every(([key, value]) => data[key] === value);
     });
-    
+
     if (!hasContextCall) {
-      throw new Error(`No logging call found with expected context: ${JSON.stringify(expectedContext)}`);
+      throw new Error(
+        `No logging call found with expected context: ${JSON.stringify(expectedContext)}`,
+      );
     }
   },
 
   /**
    * Assert that audit events were logged correctly
    */
-  hasAuditEvents: (auditLogger: SpyAuditLogger, expectedEventType: string, expectedCount: number = 1) => {
-    const matchingEvents = auditLogger.systemEvents.filter(event => event.event === expectedEventType);
-    
+  hasAuditEvents: (
+    auditLogger: SpyAuditLogger,
+    expectedEventType: string,
+    expectedCount: number = 1,
+  ) => {
+    const matchingEvents = auditLogger.systemEvents.filter((event) =>
+      event.event === expectedEventType
+    );
+
     if (matchingEvents.length !== expectedCount) {
-      throw new Error(`Expected ${expectedCount} audit events of type "${expectedEventType}", got ${matchingEvents.length}`);
+      throw new Error(
+        `Expected ${expectedCount} audit events of type "${expectedEventType}", got ${matchingEvents.length}`,
+      );
     }
   },
 
@@ -244,11 +268,11 @@ export const ToolAssertions = {
     if (!result.executionTime) {
       throw new Error('Result should include executionTime');
     }
-    
+
     if (result.executionTime > maxMs) {
       throw new Error(`Execution took ${result.executionTime}ms, expected under ${maxMs}ms`);
     }
-  }
+  },
 };
 
 /**
@@ -276,28 +300,28 @@ export const PerformanceTestUtils = {
     minDuration: number;
   }> => {
     const startTime = Date.now();
-    
+
     const promises = Array.from({ length: count }, async () => {
       const execStart = Date.now();
       const result = await fn();
       const execDuration = Date.now() - execStart;
       return { result, duration: execDuration };
     });
-    
+
     const executions = await Promise.all(promises);
     const totalDuration = Date.now() - startTime;
-    
-    const durations = executions.map(e => e.duration);
+
+    const durations = executions.map((e) => e.duration);
     const averageDuration = durations.reduce((a, b) => a + b, 0) / durations.length;
     const maxDuration = Math.max(...durations);
     const minDuration = Math.min(...durations);
-    
+
     return {
-      results: executions.map(e => e.result),
+      results: executions.map((e) => e.result),
       totalDuration,
       averageDuration,
       maxDuration,
-      minDuration
+      minDuration,
     };
   },
 
@@ -314,17 +338,25 @@ export const PerformanceTestUtils = {
     maxSingle?: number;
   }) => {
     if (limits.maxTotal && metrics.totalDuration && metrics.totalDuration > limits.maxTotal) {
-      throw new Error(`Total duration ${metrics.totalDuration}ms exceeded limit ${limits.maxTotal}ms`);
+      throw new Error(
+        `Total duration ${metrics.totalDuration}ms exceeded limit ${limits.maxTotal}ms`,
+      );
     }
-    
-    if (limits.maxAverage && metrics.averageDuration && metrics.averageDuration > limits.maxAverage) {
-      throw new Error(`Average duration ${metrics.averageDuration}ms exceeded limit ${limits.maxAverage}ms`);
+
+    if (
+      limits.maxAverage && metrics.averageDuration && metrics.averageDuration > limits.maxAverage
+    ) {
+      throw new Error(
+        `Average duration ${metrics.averageDuration}ms exceeded limit ${limits.maxAverage}ms`,
+      );
     }
-    
+
     if (limits.maxSingle && metrics.maxDuration && metrics.maxDuration > limits.maxSingle) {
-      throw new Error(`Max single duration ${metrics.maxDuration}ms exceeded limit ${limits.maxSingle}ms`);
+      throw new Error(
+        `Max single duration ${metrics.maxDuration}ms exceeded limit ${limits.maxSingle}ms`,
+      );
     }
-  }
+  },
 };
 
 /**
@@ -339,7 +371,7 @@ export const MockFactory = {
     description: `Mock tool for testing: ${name}`,
     category: 'testing',
     tags: ['mock', 'test'],
-    inputSchema: schema || { message: z.string() }
+    inputSchema: schema || { message: z.string() },
   }),
 
   /**
@@ -347,7 +379,7 @@ export const MockFactory = {
    */
   createToolHandler: (responseText: string = 'Mock response') => {
     return async (args: any): Promise<CallToolResult> => ({
-      content: [{ type: 'text', text: `${responseText}: ${JSON.stringify(args)}` }]
+      content: [{ type: 'text', text: `${responseText}: ${JSON.stringify(args)}` }],
     });
   },
 
@@ -358,7 +390,7 @@ export const MockFactory = {
     return async (): Promise<never> => {
       throw new Error(errorMessage);
     };
-  }
+  },
 };
 
 /**
@@ -373,7 +405,7 @@ export const ErrorTestUtils = {
     stringError: () => 'String error message',
     objectError: () => ({ message: 'Object error', code: 'TEST_ERROR' }),
     nullError: () => null,
-    undefinedError: () => undefined
+    undefinedError: () => undefined,
   },
 
   /**
@@ -381,14 +413,14 @@ export const ErrorTestUtils = {
    */
   testErrorHandling: async <T>(
     testFn: (error: any) => Promise<T>,
-    validator: (result: T, errorType: string) => void
+    validator: (result: T, errorType: string) => void,
   ) => {
     for (const [errorType, errorGenerator] of Object.entries(ErrorTestUtils.errorTypes)) {
       const error = errorGenerator();
       const result = await testFn(error);
       validator(result, errorType);
     }
-  }
+  },
 };
 
 /**
@@ -403,39 +435,39 @@ export const TestScenarios = {
       name: 'valid_simple_object',
       schema: z.object({ name: z.string(), value: z.number() }),
       input: { name: 'test', value: 42 },
-      shouldSucceed: true
+      shouldSucceed: true,
     },
     {
       name: 'invalid_missing_required',
       schema: z.object({ required: z.string() }),
       input: {},
-      shouldSucceed: false
+      shouldSucceed: false,
     },
     {
       name: 'valid_with_defaults',
       schema: z.object({ name: z.string(), priority: z.string().default('normal') }),
       input: { name: 'test' },
       shouldSucceed: true,
-      expectedDefaults: { priority: 'normal' }
+      expectedDefaults: { priority: 'normal' },
     },
     {
       name: 'invalid_wrong_type',
       schema: z.object({ count: z.number() }),
       input: { count: 'not-a-number' },
-      shouldSucceed: false
+      shouldSucceed: false,
     },
     {
       name: 'valid_nested_object',
       schema: z.object({
         user: z.object({ id: z.string(), name: z.string() }),
-        metadata: z.record(z.unknown()).optional()
+        metadata: z.record(z.unknown()).optional(),
       }),
       input: {
         user: { id: '123', name: 'Test User' },
-        metadata: { version: '1.0' }
+        metadata: { version: '1.0' },
       },
-      shouldSucceed: true
-    }
+      shouldSucceed: true,
+    },
   ],
 
   /**
@@ -445,28 +477,28 @@ export const TestScenarios = {
     {
       name: 'standard_format',
       input: { userId: 'user1', requestId: 'req1', clientId: 'client1' },
-      expected: { userId: 'user1', requestId: 'req1', clientId: 'client1' }
+      expected: { userId: 'user1', requestId: 'req1', clientId: 'client1' },
     },
     {
       name: 'snake_case_format',
       input: { user_id: 'user2', request_id: 'req2' },
-      expected: { userId: 'user2', requestId: 'req2' }
+      expected: { userId: 'user2', requestId: 'req2' },
     },
     {
       name: 'mixed_format',
       input: { userId: 'user3', request_id: 'req3' },
-      expected: { userId: 'user3', requestId: 'req3' }
+      expected: { userId: 'user3', requestId: 'req3' },
     },
     {
       name: 'partial_context',
       input: { userId: 'user4' },
-      expected: { userId: 'user4' }
+      expected: { userId: 'user4' },
     },
     {
       name: 'empty_context',
       input: {},
-      expected: {}
-    }
+      expected: {},
+    },
   ],
 
   /**
@@ -476,17 +508,17 @@ export const TestScenarios = {
     {
       name: 'common_secrets',
       input: { password: 'secret', apiKey: 'key123', token: 'token456' },
-      expected: { password: '[REDACTED]', apiKey: '[REDACTED]', token: '[REDACTED]' }
+      expected: { password: '[REDACTED]', apiKey: '[REDACTED]', token: '[REDACTED]' },
     },
     {
       name: 'mixed_case_secrets',
       input: { PASSWORD: 'secret', ApiKey: 'key123', Auth_Token: 'token456' },
-      expected: { PASSWORD: '[REDACTED]', ApiKey: '[REDACTED]', Auth_Token: '[REDACTED]' }
+      expected: { PASSWORD: '[REDACTED]', ApiKey: '[REDACTED]', Auth_Token: '[REDACTED]' },
     },
     {
       name: 'public_data_preserved',
       input: { name: 'John', email: 'john@example.com', settings: { theme: 'dark' } },
-      expected: { name: 'John', email: 'john@example.com', settings: { theme: 'dark' } }
-    }
-  ]
+      expected: { name: 'John', email: 'john@example.com', settings: { theme: 'dark' } },
+    },
+  ],
 };

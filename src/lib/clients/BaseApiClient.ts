@@ -1,6 +1,6 @@
 /**
  * Base API Client - Abstract base class for third-party API integrations
- * 
+ *
  * Provides a standardized contract for API clients used in MCP server workflows.
  * All API clients should extend this class to ensure consistent health checking
  * and API information retrieval capabilities.
@@ -29,54 +29,54 @@ export interface BaseApiClientConfig {
 
 /**
  * Abstract base class for API clients
- * 
+ *
  * Enforces the contract that all API clients must implement healthCheck and getApiInfo methods.
  * Provides common functionality and configuration management for third-party API integrations.
  */
 export abstract class BaseApiClient {
   protected config: BaseApiClientConfig;
   protected logger: Logger;
-  
+
   constructor(config: BaseApiClientConfig, logger: Logger) {
     this.config = config;
     this.logger = logger;
   }
-  
+
   /**
    * Check the health status of the third-party API
-   * 
+   *
    * @returns Promise resolving to detailed health status information
    */
   abstract healthCheck(): Promise<ThirdPartyApiHealthStatus>;
-  
+
   /**
    * Get API information and capabilities
-   * 
+   *
    * @returns Promise resolving to API information and feature details
    */
   abstract getApiInfo(): Promise<ThirdPartyApiInfo>;
-  
+
   /**
    * Disconnect from the API and clean up resources
-   * 
+   *
    * @returns Promise that resolves when cleanup is complete
    */
   abstract disconnect(): Promise<void>;
-  
+
   /**
    * Get the base configuration for this API client
    */
   protected getConfig(): Readonly<BaseApiClientConfig> {
     return Object.freeze({ ...this.config });
   }
-  
+
   /**
    * Get the logger instance
    */
   protected getLogger(): Logger {
     return this.logger;
   }
-  
+
   /**
    * Helper method to create standard API response wrapper
    */
@@ -102,31 +102,31 @@ export abstract class BaseApiClient {
     } = {
       success,
     };
-    
+
     if (data !== undefined) {
       response.data = data;
     }
-    
+
     if (error !== undefined) {
       response.error = error;
     }
-    
+
     response.metadata = {
       requestId: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
     };
-    
+
     return response;
   }
-  
+
   /**
    * Helper method for exponential backoff delay
    */
   protected async delay(attempt: number): Promise<void> {
     const delayMs = this.config.retryDelayMs * Math.pow(2, attempt - 1);
-    await new Promise(resolve => setTimeout(resolve, delayMs));
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
-  
+
   /**
    * Helper method to determine if an error should trigger a retry
    */
@@ -134,7 +134,7 @@ export abstract class BaseApiClient {
     if (attempt >= this.config.retryAttempts) {
       return false;
     }
-    
+
     // Retry on network errors, timeouts, or 5xx server errors
     return (
       error.name === 'TimeoutError' ||

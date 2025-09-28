@@ -1,9 +1,9 @@
 /**
  * ToolBase abstract class for bb-mcp-server
- * 
+ *
  * Provides a base implementation for tool classes, similar to WorkflowBase.
  * Tool classes can inherit from this to get common functionality and structure.
- * 
+ *
  * Features:
  * - Abstract methods for tool registration patterns
  * - Common logging and validation utilities
@@ -11,35 +11,32 @@
  * - Consistent tool metadata management
  */
 
-import { z, type ZodSchema } from 'zod'
-import type { CallToolResult } from 'mcp/types.js'
+import { z, type ZodSchema } from 'zod';
+import type { CallToolResult } from 'mcp/types.js';
 
 // Import library components
-import type { Logger } from '../utils/Logger.ts'
-import type { AuditLogger } from '../utils/AuditLogger.ts'
-import type { ToolRegistry } from './ToolRegistry.ts'
+import type { Logger } from '../utils/Logger.ts';
+import type { AuditLogger } from '../utils/AuditLogger.ts';
+import type { ToolRegistry } from './ToolRegistry.ts';
 import type {
   ToolDefinition,
   ToolHandler,
   ToolRegistration,
   ToolRegistrationOptions,
-} from '../types/BeyondMcpTypes.ts'
+} from '../types/BeyondMcpTypes.ts';
 
-import type {
-  PluginCategory,
-  RateLimitConfig,
-} from '../types/PluginTypes.ts'
+import type { PluginCategory, RateLimitConfig } from '../types/PluginTypes.ts';
 
 /**
  * Tool execution context for consistent logging and tracking
  */
 export interface ToolContext {
-  userId?: string
-  requestId?: string
-  clientId?: string
-  startTime: Date
-  logger: Logger
-  auditLogger?: AuditLogger
+  userId?: string;
+  requestId?: string;
+  clientId?: string;
+  startTime: Date;
+  logger: Logger;
+  auditLogger?: AuditLogger;
 }
 
 // ToolRegistration is imported from BeyondMcpTypes.ts
@@ -48,54 +45,54 @@ export interface ToolContext {
  * Tool execution result with enhanced metadata
  */
 export interface ToolResult extends CallToolResult {
-  executionTime?: number
-  metadata?: Record<string, unknown>
+  executionTime?: number;
+  metadata?: Record<string, unknown>;
 }
 
 /**
  * Abstract base class for all tool implementations
- * 
+ *
  * Provides common functionality and enforces consistent patterns
  * across different tool classes.
  */
 export abstract class ToolBase {
-  protected context?: ToolContext
-  protected startTime?: number
+  protected context?: ToolContext;
+  protected startTime?: number;
 
   // Required tool metadata (similar to WorkflowBase)
-  abstract readonly name: string
-  abstract readonly version: string
-  abstract readonly description: string
-  abstract readonly category: PluginCategory
-  abstract readonly tags: string[]
+  abstract readonly name: string;
+  abstract readonly version: string;
+  abstract readonly description: string;
+  abstract readonly category: PluginCategory;
+  abstract readonly tags: string[];
 
   // Optional metadata
-  readonly estimatedDuration?: number // seconds
-  readonly requiresAuth: boolean = true
-  readonly rateLimit?: RateLimitConfig
+  readonly estimatedDuration?: number; // seconds
+  readonly requiresAuth: boolean = true;
+  readonly rateLimit?: RateLimitConfig;
 
   /**
    * Abstract method: Get tool definitions for plugin registration
    * This is the key method that tool classes must implement
-   * 
+   *
    * @returns Array of tool registrations for PluginManager
    */
-  abstract getTools(): ToolRegistration[]
+  abstract getTools(): ToolRegistration[];
 
   /**
    * Abstract method: Register tools directly with ToolRegistry
    * This supports the direct registration pattern
-   * 
+   *
    * @param toolRegistry - The registry to register tools with
    */
-  abstract registerWith(toolRegistry: ToolRegistry): void
+  abstract registerWith(toolRegistry: ToolRegistry): void;
 
   /**
    * Abstract method: Get tool overview for documentation
-   * 
+   *
    * @returns Human-readable description of the tool set
    */
-  abstract getOverview(): string
+  abstract getOverview(): string;
 
   /**
    * Enhanced tool execution wrapper with consistent logging and error handling
@@ -107,21 +104,21 @@ export abstract class ToolBase {
     execution: (args: Record<string, unknown>, context: ToolContext) => Promise<T>,
     context?: Partial<ToolContext>,
   ): Promise<ToolResult> {
-    const startTime = Date.now()
+    const startTime = Date.now();
     const toolContext: ToolContext = {
       startTime: new Date(),
       logger: context?.logger || this.createFallbackLogger(),
-    }
-    
-    // Only add optional properties if they exist
-    if (context?.userId) toolContext.userId = context.userId
-    if (context?.requestId) toolContext.requestId = context.requestId
-    else toolContext.requestId = crypto.randomUUID()
-    if (context?.clientId) toolContext.clientId = context.clientId
-    if (context?.auditLogger) toolContext.auditLogger = context.auditLogger
+    };
 
-    this.context = toolContext
-    this.startTime = startTime
+    // Only add optional properties if they exist
+    if (context?.userId) toolContext.userId = context.userId;
+    if (context?.requestId) toolContext.requestId = context.requestId;
+    else toolContext.requestId = crypto.randomUUID();
+    if (context?.clientId) toolContext.clientId = context.clientId;
+    if (context?.auditLogger) toolContext.auditLogger = context.auditLogger;
+
+    this.context = toolContext;
+    this.startTime = startTime;
 
     try {
       this.logInfo(`Tool execution started: ${toolName}`, {
@@ -129,10 +126,10 @@ export abstract class ToolBase {
         userId: toolContext.userId,
         requestId: toolContext.requestId,
         argumentKeys: Object.keys(args),
-      })
+      });
 
-      const result = await execution(args, toolContext)
-      const executionTime = Date.now() - startTime
+      const result = await execution(args, toolContext);
+      const executionTime = Date.now() - startTime;
 
       this.logInfo(`Tool execution completed: ${toolName}`, {
         tool: toolName,
@@ -140,10 +137,10 @@ export abstract class ToolBase {
         executionTime,
         userId: toolContext.userId,
         requestId: toolContext.requestId,
-      })
+      });
 
       // Audit log if available
-      await this.logToolExecution(toolName, 'success', executionTime, toolContext)
+      await this.logToolExecution(toolName, 'success', executionTime, toolContext);
 
       return {
         content: Array.isArray(result) ? result : [{
@@ -156,11 +153,10 @@ export abstract class ToolBase {
           executionTime,
           timestamp: new Date().toISOString(),
         },
-      }
-
+      };
     } catch (error) {
-      const executionTime = Date.now() - startTime
-      const toolError = error instanceof Error ? error : new Error(String(error))
+      const executionTime = Date.now() - startTime;
+      const toolError = error instanceof Error ? error : new Error(String(error));
 
       this.logError(`Tool execution failed: ${toolName}`, toolError, {
         tool: toolName,
@@ -168,10 +164,10 @@ export abstract class ToolBase {
         executionTime,
         userId: toolContext.userId,
         requestId: toolContext.requestId,
-      })
+      });
 
       // Audit log failure
-      await this.logToolExecution(toolName, 'failure', executionTime, toolContext)
+      await this.logToolExecution(toolName, 'failure', executionTime, toolContext);
 
       return {
         content: [{
@@ -186,7 +182,7 @@ export abstract class ToolBase {
           executionTime,
           timestamp: new Date().toISOString(),
         },
-      }
+      };
     }
   }
 
@@ -198,17 +194,17 @@ export abstract class ToolBase {
     params: unknown,
   ): Promise<{ success: true; data: T } | { success: false; error: string }> {
     try {
-      const validatedParams = await schema.parseAsync(params)
-      return { success: true, data: validatedParams }
+      const validatedParams = await schema.parseAsync(params);
+      return { success: true, data: validatedParams };
     } catch (error) {
       if (error instanceof z.ZodError) {
         const errorDetails = error.errors.map((err) => {
-          const path = err.path.join('.')
-          return `${path ? path + ': ' : ''}${err.message}`
-        }).join(', ')
-        return { success: false, error: `Validation failed: ${errorDetails}` }
+          const path = err.path.join('.');
+          return `${path ? path + ': ' : ''}${err.message}`;
+        }).join(', ');
+        return { success: false, error: `Validation failed: ${errorDetails}` };
       }
-      return { success: false, error: 'Unknown validation error' }
+      return { success: false, error: 'Unknown validation error' };
     }
   }
 
@@ -220,7 +216,7 @@ export abstract class ToolBase {
     metadata?: Record<string, unknown>,
   ): CallToolResult {
     let textContent: string;
-    
+
     if (typeof data === 'string') {
       textContent = data;
     } else {
@@ -237,14 +233,14 @@ export abstract class ToolBase {
         }
       }
     }
-    
+
     return {
       content: [{
         type: 'text',
         text: textContent,
       }],
       _meta: metadata,
-    }
+    };
   }
 
   /**
@@ -254,10 +250,10 @@ export abstract class ToolBase {
     error: Error | string,
     toolName?: string,
   ): CallToolResult {
-    const errorMessage = error instanceof Error ? error.message : error
+    const errorMessage = error instanceof Error ? error.message : error;
     const displayMessage = toolName
       ? `Tool execution error in ${toolName}: ${errorMessage}`
-      : `Tool error: ${errorMessage}`
+      : `Tool error: ${errorMessage}`;
 
     return {
       content: [{
@@ -265,7 +261,7 @@ export abstract class ToolBase {
         text: displayMessage,
       }],
       isError: true,
-    }
+    };
   }
 
   /**
@@ -275,28 +271,28 @@ export abstract class ToolBase {
     args: Record<string, unknown>,
     extra?: Record<string, unknown>,
   ): { userId?: string; requestId?: string; clientId?: string } {
-    const userId = (args.userId || args.user_id || extra?.userId) as string | undefined
+    const userId = (args.userId || args.user_id || extra?.userId) as string | undefined;
     const requestId = (
       args.requestId ||
       args.request_id ||
       extra?.requestId ||
       extra?.request_id
-    ) as string | undefined
-    const clientId = (args.clientId || extra?.clientId) as string | undefined
+    ) as string | undefined;
+    const clientId = (args.clientId || extra?.clientId) as string | undefined;
 
-    const result: { userId?: string; requestId?: string; clientId?: string } = {}
-    if (userId) result.userId = userId
-    if (requestId) result.requestId = requestId
-    if (clientId) result.clientId = clientId
-    
-    return result
+    const result: { userId?: string; requestId?: string; clientId?: string } = {};
+    if (userId) result.userId = userId;
+    if (requestId) result.requestId = requestId;
+    if (clientId) result.clientId = clientId;
+
+    return result;
   }
 
   /**
    * Sanitize arguments for logging (remove sensitive data)
    */
   protected sanitizeArgsForLogging(args: Record<string, unknown>): Record<string, unknown> {
-    const sanitized = { ...args }
+    const sanitized = { ...args };
     const sensitiveKeys = [
       'password',
       'token',
@@ -306,16 +302,16 @@ export abstract class ToolBase {
       'credential',
       'auth',
       'authorization',
-    ]
+    ];
 
-    Object.keys(sanitized).forEach(key => {
-      const lowerKey = key.toLowerCase()
-      if (sensitiveKeys.some(sensitiveKey => lowerKey.includes(sensitiveKey))) {
-        sanitized[key] = '[REDACTED]'
+    Object.keys(sanitized).forEach((key) => {
+      const lowerKey = key.toLowerCase();
+      if (sensitiveKeys.some((sensitiveKey) => lowerKey.includes(sensitiveKey))) {
+        sanitized[key] = '[REDACTED]';
       }
-    })
+    });
 
-    return sanitized
+    return sanitized;
   }
 
   /**
@@ -327,7 +323,7 @@ export abstract class ToolBase {
       userId: this.context.userId,
       requestId: this.context.requestId,
       ...data,
-    })
+    });
   }
 
   protected logWarn(message: string, data?: Record<string, unknown>): void {
@@ -336,7 +332,7 @@ export abstract class ToolBase {
       userId: this.context.userId,
       requestId: this.context.requestId,
       ...data,
-    })
+    });
   }
 
   protected logError(message: string, error?: Error, data?: Record<string, unknown>): void {
@@ -345,7 +341,7 @@ export abstract class ToolBase {
       userId: this.context.userId,
       requestId: this.context.requestId,
       ...data,
-    })
+    });
   }
 
   protected logDebug(message: string, data?: Record<string, unknown>): void {
@@ -354,7 +350,7 @@ export abstract class ToolBase {
       userId: this.context.userId,
       requestId: this.context.requestId,
       ...data,
-    })
+    });
   }
 
   /**
@@ -367,7 +363,7 @@ export abstract class ToolBase {
     context: ToolContext,
   ): Promise<void> {
     if (!context.auditLogger) {
-      return
+      return;
     }
 
     try {
@@ -385,9 +381,9 @@ export abstract class ToolBase {
           result,
           executionTime,
         },
-      })
+      });
     } catch (error) {
-      this.logWarn('Failed to log tool execution to audit log', { error })
+      this.logWarn('Failed to log tool execution to audit log', { error });
     }
   }
 
@@ -400,29 +396,29 @@ export abstract class ToolBase {
       info: (message: string, data?: any) => console.info(message, data),
       warn: (message: string, data?: any) => console.warn(message, data),
       error: (message: string, error?: Error, data?: any) => console.error(message, error, data),
-    } as Logger
+    } as Logger;
   }
 
   /**
    * Utility methods for tool implementations
    */
   protected getToolCount(): number {
-    return this.getTools().length
+    return this.getTools().length;
   }
 
   protected getToolNames(): string[] {
-    return this.getTools().map(tool => tool.name)
+    return this.getTools().map((tool) => tool.name);
   }
 
   protected getCategory(): PluginCategory {
-    return this.category
+    return this.category;
   }
 
   protected supportsAuth(): boolean {
-    return this.requiresAuth
+    return this.requiresAuth;
   }
 
   protected getEstimatedDuration(): number | undefined {
-    return this.estimatedDuration
+    return this.estimatedDuration;
   }
 }

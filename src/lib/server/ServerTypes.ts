@@ -199,7 +199,7 @@ export interface AuthContext {
 export type ServerMiddleware = (
   request: Request,
   context: RequestContext,
-  next: () => Promise<Response>
+  next: () => Promise<Response>,
 ) => Promise<Response>;
 
 /**
@@ -208,7 +208,7 @@ export type ServerMiddleware = (
 export type RouteHandler = (
   request: Request,
   context: RequestContext,
-  params: Record<string, string>
+  params: Record<string, string>,
 ) => Promise<Response>;
 
 /**
@@ -295,19 +295,19 @@ export interface EndpointRegistry {
     path: string,
     methods: string[],
     handler: RouteHandler,
-    info?: Partial<EndpointInfo>
+    info?: Partial<EndpointInfo>,
   ): void;
-  
+
   /** Unregister endpoint */
   unregister(path: string, method?: string): boolean;
-  
+
   /** Get registered endpoints */
   getEndpoints(): EndpointInfo[];
-  
+
   /** Find handler for request */
   findHandler(
     path: string,
-    method: string
+    method: string,
   ): {
     handler: RouteHandler;
     params: Record<string, string>;
@@ -369,14 +369,14 @@ export interface CompleteServerConfig {
     version: string;
     environment: string;
   };
-  
+
   /** API configuration */
   api: {
     version: string;
     basePath: string;
     documentation?: string;
   };
-  
+
   /** CORS configuration */
   cors: {
     allowOrigin: string;
@@ -386,13 +386,13 @@ export interface CompleteServerConfig {
     maxAge?: number;
     allowCredentials?: boolean;
   };
-  
+
   /** Logging configuration */
   logging?: LoggingConfig;
-  
+
   /** Security configuration */
   security?: SecurityConfig;
-  
+
   /** Feature flags */
   features?: {
     oauth: boolean;
@@ -446,5 +446,3 @@ export interface ServerStatus {
     features: string[];
   };
 }
-
-
