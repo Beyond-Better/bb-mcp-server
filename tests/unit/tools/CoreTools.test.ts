@@ -593,7 +593,7 @@ describe('CoreTools', () => {
       const responseData = JSON.parse(result.content[0].text);
       assertEquals(responseData.status, 'accepted');
       assertEquals(responseData.result.action, 'accept');
-      assertEquals(responseData.result.content.userResponse, 'accepted');
+      assertEquals(responseData.result.content.message, 'accepted');
     });
   });
   

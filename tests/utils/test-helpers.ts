@@ -63,58 +63,32 @@ export function createMockErrorHandler(): ErrorHandler {
 }
 
 /**
- * Create mock workflow registry for testing
+ * Create real workflow registry for testing
  */
 export function createMockWorkflowRegistry(): WorkflowRegistry {
-  // Use type casting to create WorkflowRegistry since constructor is private
-  return {
-    getWorkflowNames: () => [],
-    register: () => {},
-    getWorkflow: () => undefined,
-    listWorkflows: () => [],
-    validateWorkflow: () => ({ valid: true }),
-    getWorkflowCount: () => 0,
-    clearWorkflows: () => {},
-    getWorkflowToolData: () => ({}), // Add missing method for registerWorkflowTools
-  } as unknown as WorkflowRegistry;
+  // Create real WorkflowRegistry instance for testing
+  return WorkflowRegistry.getInstance({
+    logger: createMockLogger(),
+    errorHandler: createMockErrorHandler(),
+  });
 }
 
 /**
- * Create mock tool registry for testing
+ * Create real tool registry for testing
  */
 export function createMockToolRegistry(): ToolRegistry {
-  // Use type casting to create ToolRegistry mock
-  return {
-    registerTool: () => {},
-    getTool: () => undefined,
-    getTools: () => [],
-    getToolNames: () => [],
-    getToolCount: () => 0,
-    getToolsByCategory: () => [],
-    getToolSchema: () => undefined,
-    getToolDefinition: () => undefined,
-    validateToolInput: async () => ({ success: true }),
-    updateToolStats: () => {},
-    testToolValidation: async () => ({ success: true }),
-    getToolStats: () => undefined,
-    getRegistryStats: () => ({
-      totalTools: 0,
-      totalCalls: 0,
-      averageExecutionTime: 0,
-      toolsByCategory: {},
-      mostUsedTools: [],
-    }),
-    clear: () => {},
-    removeTool: () => false,
-    sdkMcpServer: undefined,
-  } as unknown as ToolRegistry;
+  // Create real ToolRegistry instance for testing
+  return new ToolRegistry({
+    logger: createMockLogger(),
+    errorHandler: createMockErrorHandler(),
+  });
 }
 
 /**
  * Create mock transport manager for testing
  */
 export function createMockTransportManager(): TransportManager {
-  // Use type casting to create TransportManager mock
+  // Use type casting to create TransportManager mock for unit tests
   return {
     start: async () => {},
     cleanup: async () => {},

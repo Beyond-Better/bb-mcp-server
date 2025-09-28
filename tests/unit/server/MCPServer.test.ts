@@ -20,7 +20,7 @@ import { TransportManager } from '../../../src/lib/transport/TransportManager.ts
 import type { BeyondMcpServerConfig, BeyondMcpServerDependencies, BeyondMcpRequestContext } from '../../../src/lib/types/BeyondMcpTypes.ts';
 
 // Test helpers
-import { createMockLogger, createMockAuditLogger, createMockSdkMcpServer, MockSdkMcpServer, createMockToolRegistry } from '../../utils/test-helpers.ts';
+import { createMockLogger, createMockAuditLogger, createMockSdkMcpServer, MockSdkMcpServer, createMockToolRegistry, createMockWorkflowRegistry, createMockConfigManager, createMockErrorHandler, createMockTransportManager } from '../../utils/test-helpers.ts';
 
 describe('MCPServer', () => {
   let server: BeyondMcpServer;
@@ -38,19 +38,10 @@ describe('MCPServer', () => {
     // Create mock dependencies
     mockLogger = createMockLogger();
     mockAuditLogger = createMockAuditLogger();
-    mockConfigManager = {} as ConfigManager;
-    mockErrorHandler = {
-      wrapError: (error: any, code: string) => error,
-    } as ErrorHandler;
-    mockWorkflowRegistry = {
-      getWorkflowNames: () => ['test_workflow'],
-      register: () => {},
-    } as unknown as WorkflowRegistry;
-    mockTransportManager = {
-      start: async () => {},
-      cleanup: async () => {},
-      initialize: async () => {},
-    } as unknown as TransportManager;
+    mockConfigManager = createMockConfigManager();
+    mockErrorHandler = createMockErrorHandler();
+    mockWorkflowRegistry = createMockWorkflowRegistry();
+    mockTransportManager = createMockTransportManager();
     
     // Create test configuration
     config = {
@@ -425,18 +416,11 @@ describe('MCPServer Integration', () => {
     const dependencies: BeyondMcpServerDependencies = {
       logger: mockLogger,
       auditLogger: mockAuditLogger,
-      configManager: {} as ConfigManager,
-      errorHandler: { wrapError: (e: any) => e } as ErrorHandler,
+      configManager: createMockConfigManager(),
+      errorHandler: createMockErrorHandler(),
       toolRegistry: createMockToolRegistry(),
-      workflowRegistry: {
-        getWorkflowNames: () => ['test'],
-        register: () => {},
-      } as unknown as WorkflowRegistry,
-      transportManager: {
-        start: async () => {},
-        cleanup: async () => {},
-        initialize: async () => {},
-      } as unknown as TransportManager,
+      workflowRegistry: createMockWorkflowRegistry(),
+      transportManager: createMockTransportManager(),
     };
     
     const config: BeyondMcpServerConfig = {

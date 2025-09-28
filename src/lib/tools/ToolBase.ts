@@ -219,10 +219,29 @@ export abstract class ToolBase {
     data: unknown,
     metadata?: Record<string, unknown>,
   ): CallToolResult {
+    let textContent: string;
+    
+    if (typeof data === 'string') {
+      textContent = data;
+    } else {
+      try {
+        const jsonResult = JSON.stringify(data, null, 2);
+        // Handle cases where JSON.stringify returns undefined
+        textContent = jsonResult !== undefined ? jsonResult : String(data);
+      } catch (error) {
+        // Handle circular references and other JSON.stringify errors
+        if (error instanceof TypeError && error.message.includes('circular')) {
+          textContent = '[Circular Object]';
+        } else {
+          textContent = String(data);
+        }
+      }
+    }
+    
     return {
       content: [{
         type: 'text',
-        text: typeof data === 'string' ? data : JSON.stringify(data, null, 2),
+        text: textContent,
       }],
       _meta: metadata,
     }
