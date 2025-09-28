@@ -175,6 +175,7 @@ export interface ToolRegistration {
   name: string;
   definition: ToolDefinition<any>;
   handler: ToolHandler<any>;
+  options?: ToolRegistrationOptions
 }
 
 /**
@@ -305,48 +306,6 @@ export interface ToolPlugin {
   initialize?(server: any): Promise<void>; // BeyondMcpServer
   cleanup?(): Promise<void>;
 }
-
-/**
- * Tool Registry Interface
- * Defines the interface that ToolRegistry must implement
- */
-// export interface ToolRegistry {
-//   registerTool<T extends Record<string, ZodSchema>>(
-//     name: string,
-//     definition: ToolDefinition<T>,
-//     handler: ToolHandler<T>
-//   ): void;
-//   
-//   validateToolInput(
-//     toolName: string,
-//     input: unknown
-//   ): Promise<ValidationResult<any>>;
-//   
-//   getTool(name: string): RegisteredTool | undefined;
-//   getTools(): RegisteredTool[];
-//   getToolNames(): string[];
-//   getToolCount(): number;
-//   getToolsByCategory(category: string): RegisteredTool[];
-//   getToolSchema(name: string): ZodObject<any> | undefined;
-//   getToolDefinition(name: string): ToolDefinition<any> | undefined;
-//   getToolStats(name: string): {
-//     callCount: number;
-//     lastCalled?: Date;
-//     averageExecutionTime: number;
-//   } | undefined;
-//   getRegistryStats(): {
-//     totalTools: number;
-//     totalCalls: number;
-//     averageExecutionTime: number;
-//     toolsByCategory: Record<string, number>;
-//     mostUsedTools: Array<{ name: string; callCount: number }>;
-//   };
-//   
-//   updateToolStats(toolName: string, executionTimeMs: number): void;
-//   testToolValidation(name: string, input: unknown): Promise<ValidationResult<any>>;
-//   clear(): void;
-//   removeTool(name: string): boolean;
-// }
 
 /**
  * Server Lifecycle States

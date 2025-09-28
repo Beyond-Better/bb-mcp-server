@@ -11,7 +11,7 @@ tags
 tags.ignore
 
 docs/.obsidian
-example/.env
-example/data
+examples/**/.env
+examples/**/data
 playground/
 legacy/

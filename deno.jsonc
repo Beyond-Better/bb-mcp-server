@@ -37,6 +37,7 @@
     "mcp/types.js": "npm:@modelcontextprotocol/sdk@1.17.5/types.js",
     "json-schema": "https://esm.sh/v135/@types/json-schema@7.0.15/index.d.ts",
     "zod": "npm:zod@^3.22.4",
+    "zod-to-json-schema": "npm:zod-to-json-schema@^3.24.6",
 
     "@std/assert": "jsr:@std/assert@^1.0.12",
     "@std/async": "jsr:@std/async@^1.0.12",

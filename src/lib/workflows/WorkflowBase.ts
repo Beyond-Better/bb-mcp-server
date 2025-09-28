@@ -21,11 +21,14 @@ import type {
   WorkflowStep,
   FailedStep,
   WorkflowError,
-  WorkflowCategory,
-  RateLimitConfig,
   WorkflowResource,
   ValidationError,
-} from './WorkflowTypes.ts'
+} from '../types/WorkflowTypes.ts'
+
+import type {
+  PluginCategory,
+  RateLimitConfig,
+} from '../types/PluginTypes.ts'
 
 /**
  * Abstract base class for all workflows
@@ -41,7 +44,7 @@ export abstract class WorkflowBase {
   abstract readonly name: string
   abstract readonly version: string
   abstract readonly description: string
-  abstract readonly category: WorkflowCategory
+  abstract readonly category: PluginCategory
   
   // Enhanced metadata
   abstract readonly tags: string[]
@@ -477,7 +480,7 @@ export abstract class WorkflowBase {
     return this.estimatedDuration
   }
   
-  protected getCategory(): WorkflowCategory {
+  protected getCategory(): PluginCategory {
     return this.category
   }
   

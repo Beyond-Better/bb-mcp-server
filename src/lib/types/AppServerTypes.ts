@@ -11,6 +11,7 @@ import type { TransportEventStore } from '../storage/TransportEventStore.ts';
 import type { CredentialStore } from '../storage/CredentialStore.ts';
 import type { ErrorHandler } from '../utils/ErrorHandler.ts';
 import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
+import type { ToolRegistry } from '../tools/ToolRegistry.ts';
 import type { OAuthProvider } from '../auth/OAuthProvider.ts';
 import type { TransportManager } from '../transport/TransportManager.ts';
 import type { BeyondMcpServer } from '../server/BeyondMcpServer.ts';
@@ -51,6 +52,7 @@ export interface AppServerDependencies {
   credentialStore: CredentialStore;
   errorHandler: ErrorHandler;
   workflowRegistry: WorkflowRegistry;
+  toolRegistry: ToolRegistry;
   oauthProvider: OAuthProvider;
   transportManager: TransportManager;
   
@@ -110,7 +112,7 @@ export type DependencyFactory<T> = (config: ConfigManager, logger?: Logger) => T
 /**
  * Third-party API health status information
  */
-export interface ThirdPartyHealthStatus {
+export interface ThirdPartyApiHealthStatus {
   healthy: boolean;
   version: string;
   uptime: number;
@@ -120,7 +122,7 @@ export interface ThirdPartyHealthStatus {
 /**
  * API information and capabilities
  */
-export interface ApiInfo {
+export interface ThirdPartyApiInfo {
   /** API name */
   name: string;
   /** API version */

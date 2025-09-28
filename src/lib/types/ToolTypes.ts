@@ -9,10 +9,10 @@
 export {
   ToolBase,
   type ToolContext,
-  type ToolRegistration,
+  //type ToolRegistration,
   type ToolResult,
 } from '../tools/ToolBase.ts';
 
-// Legacy export for backward compatibility
-// If any code still references ToolBase as a type, this provides compatibility
-export type { ToolBase as IToolBase } from '../tools/ToolBase.ts';
+// // Legacy export for backward compatibility
+// // If any code still references ToolBase as a type, this provides compatibility
+// export type { ToolBase as IToolBase } from '../tools/ToolBase.ts';

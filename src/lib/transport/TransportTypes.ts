@@ -268,8 +268,8 @@ export interface TransportDependencies {
   sessionStore: SessionStore;
   eventStore: TransportEventStore;
   
-  // From Phase 2 (if needed)
-  workflowRegistry?: WorkflowRegistry;
+  // // From Phase 2 (if needed)
+  // workflowRegistry?: WorkflowRegistry;
 }
 
 // Authentication result (from OAuth integration)

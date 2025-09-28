@@ -71,8 +71,8 @@ export { BeyondMcpSDKHelpers } from './lib/server/MCPSDKHelpers.ts';
 export { CoreTools } from './lib/tools/CoreTools.ts';
 export { WorkflowTools } from './lib/tools/WorkflowTools.ts';
 export { ToolValidationHelper } from './lib/utils/ToolValidationHelper.ts';
-export { ZodToJsonSchema } from './lib/utils/ZodToJsonSchema.ts';
-export type { JsonSchema } from './lib/utils/ZodToJsonSchema.ts';
+//export { ZodToJsonSchema } from './lib/utils/ZodToJsonSchema.ts';
+//export type { JsonSchema } from './lib/utils/ZodToJsonSchema.ts';
 export { getAllDependencies, getAllDependenciesAsync } from './lib/server/DependencyHelpers.ts';
 
 // OAuth dependency types from individual components

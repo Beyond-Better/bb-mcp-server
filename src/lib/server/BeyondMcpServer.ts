@@ -33,8 +33,6 @@ import { BeyondMcpSDKHelpers } from './MCPSDKHelpers.ts';
 
 // Import types
 import {
-  ToolHandlerMode,
-  WorkflowToolNaming,
   type BeyondMcpRequestContext,
   type BeyondMcpServerConfig,
   type BeyondMcpServerDependencies,
@@ -44,8 +42,10 @@ import {
   type ElicitInputResult,
   type ToolDefinition,
   type ToolHandler,
+  ToolHandlerMode,
   type ToolRegistration,
   type ToolRegistrationConfig,
+  WorkflowToolNaming,
 } from '../types/BeyondMcpTypes.ts';
 
 /**
@@ -232,6 +232,9 @@ export class BeyondMcpServer {
       // Register core tools
       await this.registerCoreTools();
 
+      // Register workflow tools if enabled and workflows exist
+      await this.registerWorkflowTools();
+
       // Setup transport integration
       await this.setupTransport();
 
@@ -329,7 +332,7 @@ export class BeyondMcpServer {
    */
   registerTools(tools: ToolRegistration[]): void {
     for (const tool of tools) {
-      this.registerTool(tool.name, tool.definition, tool.handler);
+      this.registerTool(tool.name, tool.definition, tool.handler, tool.options);
     }
   }
 
@@ -360,9 +363,6 @@ export class BeyondMcpServer {
     // Register all core tools via CoreTools component
     this.coreTools.registerWith(this.toolRegistry);
 
-    // Register workflow tools if enabled and workflows exist
-    await this.registerWorkflowTools();
-
     this.logger.debug('BeyondMcpServer: Core tools registered', {
       toolCount: this.toolRegistry.getToolCount(),
       tools: this.toolRegistry.getToolNames(),
@@ -379,7 +379,7 @@ export class BeyondMcpServer {
     }
 
     const workflowData = this.workflowRegistry.getWorkflowToolData();
-    
+
     if (!workflowData.hasWorkflows) {
       this.logger.debug('BeyondMcpServer: No workflows registered, skipping workflow tools');
       return;

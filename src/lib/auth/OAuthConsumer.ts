@@ -1,10 +1,10 @@
 /**
  * OAuth Consumer - Generic OAuth 2.0 Consumer Base Class
- * 
+ *
  * 🔒 SECURITY-CRITICAL: This component provides a generic OAuth 2.0 consumer base class
  * for third-party OAuth integrations. All security patterns and token management logic
  * are preserved from the original AuthenticationService.ts implementation.
- * 
+ *
  * Extracted from: actionstep-mcp-server/src/api/AuthenticationService.ts
  * Security Requirements:
  * - RFC 6749 OAuth 2.0 client implementation
@@ -18,13 +18,13 @@ import type { Logger } from '../../types/library.types.ts';
 import type { CredentialStore } from '../storage/CredentialStore.ts';
 import { toError } from '../utils/Error.ts';
 import type {
-  OAuthConsumerConfig,
-  AuthFlowResult,
   AuthCallbackResult,
-  TokenResult,
-  OAuthCredentials,
-  UserCredentials,
+  AuthFlowResult,
   AuthorizationRequest,
+  OAuthConsumerConfig,
+  OAuthCredentials,
+  TokenResult,
+  UserCredentials,
 } from './OAuthTypes.ts';
 
 /**
@@ -39,11 +39,11 @@ export interface OAuthConsumerDependencies {
 
 /**
  * 🔒 SECURITY-CRITICAL: Generic OAuth 2.0 Consumer Base Class
- * 
+ *
  * Provides foundation for third-party OAuth integrations with exact security preservation
  * from the original AuthenticationService.ts implementation. This base class handles
  * the common OAuth flow patterns while allowing provider-specific customization.
- * 
+ *
  * Key Security Features:
  * - RFC 6749 compliant OAuth 2.0 client flows
  * - RFC 7636 PKCE support for authorization code flow security
@@ -56,7 +56,7 @@ export abstract class OAuthConsumer {
   protected config: OAuthConsumerConfig;
   protected kvManager: any;
   protected logger: Logger | undefined;
-  
+
   // 🔒 SECURITY-CRITICAL: KV key prefixes for secure storage
   protected readonly AUTH_REQUESTS_PREFIX = ['oauth', 'auth_requests'];
   protected readonly AUTH_STATE_PREFIX = ['oauth', 'auth_state'];
@@ -89,11 +89,13 @@ export abstract class OAuthConsumer {
 
   /**
    * Abstract methods for provider-specific implementation
-   * 
+   *
    * These methods must be implemented by concrete consumer classes
    * to handle provider-specific OAuth flow details.
    */
-  
+
+  async initialize(): Promise<void> {}
+
   /**
    * Build authorization URL for the specific OAuth provider
    * Default implementation - override in consumer for provider-specific logic
@@ -101,7 +103,7 @@ export abstract class OAuthConsumer {
   protected buildAuthorizationUrl(state: string, scopes?: string[]): string {
     return this.buildAuthUrl(state);
   }
-  
+
   /**
    * Exchange authorization code for tokens with the specific provider
    * Default implementation - override in consumer for provider-specific logic
@@ -151,7 +153,7 @@ export abstract class OAuthConsumer {
       };
     }
   }
-  
+
   /**
    * Refresh tokens with the specific provider
    * Default implementation - override in consumer for provider-specific logic
@@ -211,12 +213,12 @@ export abstract class OAuthConsumer {
     url.searchParams.set('redirect_uri', this.config.redirectUri);
     url.searchParams.set('scope', this.config.scopes.join(' '));
     url.searchParams.set('state', state);
-    
+
     if (codeChallenge) {
       url.searchParams.set('code_challenge', codeChallenge);
       url.searchParams.set('code_challenge_method', 'S256');
     }
-    
+
     return url.toString();
   }
 
@@ -229,7 +231,7 @@ export abstract class OAuthConsumer {
 
   /**
    * 🔒 SECURITY-CRITICAL: Start OAuth authorization flow
-   * 
+   *
    * Preserves exact authorization flow logic from AuthenticationService.generateAuthorizationUrl()
    * - Cryptographically secure state generation
    * - PKCE code challenge generation
@@ -237,11 +239,11 @@ export abstract class OAuthConsumer {
    * - Authorization URL generation with all security parameters
    */
   async startAuthorizationFlow(
-    userId: string, 
-    scopes?: string[]
+    userId: string,
+    scopes?: string[],
   ): Promise<AuthFlowResult> {
     const flowId = Math.random().toString(36).substring(2, 15);
-    
+
     this.logger?.info(`OAuthConsumer: Starting authorization flow [${flowId}]`, {
       flowId,
       userId,
@@ -252,10 +254,10 @@ export abstract class OAuthConsumer {
     try {
       // 🔒 SECURITY-CRITICAL: Generate cryptographically secure state
       const state = this.generateSecureState();
-      
+
       // Generate authorization URL
       const authorizationUrl = this.buildAuthorizationUrl(state, scopes);
-      
+
       // 🔒 SECURITY-CRITICAL: Store authorization request state with expiry
       const authRequest: AuthorizationRequest = {
         userId,
@@ -264,7 +266,7 @@ export abstract class OAuthConsumer {
         redirectUri: this.config.redirectUri,
         createdAt: Date.now(),
       };
-      
+
       await this.storeAuthState(state, authRequest);
 
       this.logger?.info(`OAuthConsumer: Authorization flow started successfully [${flowId}]`, {
@@ -279,17 +281,21 @@ export abstract class OAuthConsumer {
         state,
       };
     } catch (error) {
-      this.logger?.error(`OAuthConsumer: Failed to start authorization flow [${flowId}]:`, toError(error), {
-        flowId,
-        userId,
-      });
+      this.logger?.error(
+        `OAuthConsumer: Failed to start authorization flow [${flowId}]:`,
+        toError(error),
+        {
+          flowId,
+          userId,
+        },
+      );
       throw error;
     }
   }
 
   /**
    * 🔒 SECURITY-CRITICAL: Handle OAuth authorization callback
-   * 
+   *
    * Preserves exact callback handling logic from AuthenticationService.exchangeAuthorizationCode()
    * - State parameter validation for CSRF protection
    * - Authorization code exchange with error handling
@@ -297,11 +303,11 @@ export abstract class OAuthConsumer {
    * - Authorization state cleanup
    */
   async handleAuthorizationCallback(
-    code: string, 
-    state: string
+    code: string,
+    state: string,
   ): Promise<AuthCallbackResult> {
     const callbackId = Math.random().toString(36).substring(2, 15);
-    
+
     this.logger?.info(`OAuthConsumer: Handling authorization callback [${callbackId}]`, {
       callbackId,
       state,
@@ -317,14 +323,14 @@ export abstract class OAuthConsumer {
 
       // Exchange code for tokens
       const tokenResult = await this.exchangeCodeForTokens(code, state);
-      
+
       // Store user credentials
       if (tokenResult.success && tokenResult.credentials) {
         await this.storeUserCredentials(storedAuthRequest.userId, tokenResult.credentials);
       } else {
         throw new Error(tokenResult.error || 'Token exchange failed');
       }
-      
+
       // 🔒 SECURITY-CRITICAL: Clean up authorization state (one-time use)
       await this.deleteAuthState(state);
 
@@ -339,10 +345,14 @@ export abstract class OAuthConsumer {
         userId: storedAuthRequest.userId,
       };
     } catch (error) {
-      this.logger?.error(`OAuthConsumer: Authorization callback failed [${callbackId}]:`, toError(error), {
-        callbackId,
-        state,
-      });
+      this.logger?.error(
+        `OAuthConsumer: Authorization callback failed [${callbackId}]:`,
+        toError(error),
+        {
+          callbackId,
+          state,
+        },
+      );
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Authorization callback failed',
@@ -352,7 +362,7 @@ export abstract class OAuthConsumer {
 
   /**
    * 🔒 SECURITY-CRITICAL: Get valid access token with automatic refresh
-   * 
+   *
    * Preserves exact token validation and refresh logic from AuthenticationService.ts
    * - Token expiry validation with buffer
    * - Automatic token refresh when near expiry
@@ -361,10 +371,15 @@ export abstract class OAuthConsumer {
    */
   async getValidAccessToken(userId: string): Promise<string | null> {
     const tokenId = Math.random().toString(36).substring(2, 15);
-    
+
     try {
-      const credentials = await this.kvManager?.get?.(['oauth', 'credentials', userId, this.config.providerId]);
-      
+      const credentials = await this.kvManager?.get?.([
+        'oauth',
+        'credentials',
+        userId,
+        this.config.providerId,
+      ]);
+
       if (!credentials) {
         this.logger?.debug(`OAuthConsumer: No credentials found [${tokenId}]`, {
           tokenId,
@@ -377,7 +392,7 @@ export abstract class OAuthConsumer {
       // Check if token is expired or expiring soon (with buffer)
       const now = Date.now();
       const bufferMs = this.config.tokenRefreshBufferMinutes * 60 * 1000;
-      
+
       if (credentials.expiresAt > now + bufferMs) {
         // Token is still valid
         return credentials.accessToken;
@@ -395,49 +410,60 @@ export abstract class OAuthConsumer {
 
         try {
           const refreshResult = await this.refreshTokens(credentials.refreshToken);
-          
+
           // Update stored credentials
           if (refreshResult.credentials) {
             await this.updateUserCredentials(userId, refreshResult.credentials);
-            
+
             this.logger?.info(`OAuthConsumer: Token refresh successful [${tokenId}]`, {
               tokenId,
               userId,
               providerId: this.config.providerId,
               newExpiresAt: new Date(refreshResult.credentials.expiresAt).toISOString(),
             });
-            
+
             return refreshResult.credentials.accessToken;
           } else {
             throw new Error('Token refresh succeeded but no credentials returned');
           }
         } catch (refreshError) {
-          this.logger?.error(`OAuthConsumer: Token refresh failed [${tokenId}]:`, toError(refreshError), {
-            tokenId,
-            userId,
-            providerId: this.config.providerId,
-          });
-          
+          this.logger?.error(
+            `OAuthConsumer: Token refresh failed [${tokenId}]:`,
+            toError(refreshError),
+            {
+              tokenId,
+              userId,
+              providerId: this.config.providerId,
+            },
+          );
+
           // Clean up invalid credentials
           await this.kvManager?.delete?.(['oauth', 'credentials', userId, this.config.providerId]);
           return null;
         }
       }
 
-      this.logger?.warn(`OAuthConsumer: Token expired and no refresh token available [${tokenId}]`, {
-        tokenId,
-        userId,
-        providerId: this.config.providerId,
-      });
-      
+      this.logger?.warn(
+        `OAuthConsumer: Token expired and no refresh token available [${tokenId}]`,
+        {
+          tokenId,
+          userId,
+          providerId: this.config.providerId,
+        },
+      );
+
       // Clean up expired credentials
       await this.kvManager?.delete?.(['oauth', 'credentials', userId, this.config.providerId]);
       return null;
     } catch (error) {
-      this.logger?.error(`OAuthConsumer: Failed to get valid access token [${tokenId}]:`, toError(error), {
-        tokenId,
-        userId,
-      });
+      this.logger?.error(
+        `OAuthConsumer: Failed to get valid access token [${tokenId}]:`,
+        toError(error),
+        {
+          tokenId,
+          userId,
+        },
+      );
       return null;
     }
   }
@@ -450,7 +476,9 @@ export abstract class OAuthConsumer {
       const accessToken = await this.getValidAccessToken(userId);
       return accessToken !== null;
     } catch (error) {
-      this.logger?.error('OAuthConsumer: Failed to check user authentication:', toError(error), { userId });
+      this.logger?.error('OAuthConsumer: Failed to check user authentication:', toError(error), {
+        userId,
+      });
       return false;
     }
   }
@@ -460,8 +488,13 @@ export abstract class OAuthConsumer {
    */
   async getUserCredentials(userId: string): Promise<UserCredentials | null> {
     try {
-      const credentials = await this.kvManager?.get?.(['oauth', 'credentials', userId, this.config.providerId]);
-      
+      const credentials = await this.kvManager?.get?.([
+        'oauth',
+        'credentials',
+        userId,
+        this.config.providerId,
+      ]);
+
       if (!credentials) {
         return null;
       }
@@ -475,7 +508,9 @@ export abstract class OAuthConsumer {
         refreshCount: 0, // Would need to be tracked separately
       };
     } catch (error) {
-      this.logger?.error('OAuthConsumer: Failed to get user credentials:', toError(error), { userId });
+      this.logger?.error('OAuthConsumer: Failed to get user credentials:', toError(error), {
+        userId,
+      });
       return null;
     }
   }
@@ -485,15 +520,20 @@ export abstract class OAuthConsumer {
    */
   async storeUserCredentials(userId: string, credentials: OAuthCredentials): Promise<void> {
     try {
-      await this.kvManager?.set?.(['oauth', 'credentials', userId, this.config.providerId], credentials);
-      
+      await this.kvManager?.set?.(
+        ['oauth', 'credentials', userId, this.config.providerId],
+        credentials,
+      );
+
       this.logger?.info('OAuthConsumer: Stored user credentials', {
         userId,
         providerId: this.config.providerId,
         expiresAt: new Date(credentials.expiresAt).toISOString(),
       });
     } catch (error) {
-      this.logger?.error('OAuthConsumer: Failed to store user credentials:', toError(error), { userId });
+      this.logger?.error('OAuthConsumer: Failed to store user credentials:', toError(error), {
+        userId,
+      });
       throw error;
     }
   }
@@ -503,17 +543,22 @@ export abstract class OAuthConsumer {
    */
   async updateUserCredentials(userId: string, credentials: OAuthCredentials): Promise<boolean> {
     try {
-      await this.kvManager?.set?.(['oauth', 'credentials', userId, this.config.providerId], credentials);
-      
+      await this.kvManager?.set?.(
+        ['oauth', 'credentials', userId, this.config.providerId],
+        credentials,
+      );
+
       this.logger?.info('OAuthConsumer: Updated user credentials', {
         userId,
         providerId: this.config.providerId,
         expiresAt: new Date(credentials.expiresAt).toISOString(),
       });
-      
+
       return true;
     } catch (error) {
-      this.logger?.error('OAuthConsumer: Failed to update user credentials:', toError(error), { userId });
+      this.logger?.error('OAuthConsumer: Failed to update user credentials:', toError(error), {
+        userId,
+      });
       return false;
     }
   }
@@ -524,15 +569,17 @@ export abstract class OAuthConsumer {
   async revokeUserCredentials(userId: string): Promise<boolean> {
     try {
       await this.kvManager?.delete?.(['oauth', 'credentials', userId, this.config.providerId]);
-      
+
       this.logger?.info('OAuthConsumer: Revoked user credentials', {
         userId,
         providerId: this.config.providerId,
       });
-      
+
       return true;
     } catch (error) {
-      this.logger?.error('OAuthConsumer: Failed to revoke user credentials:', toError(error), { userId });
+      this.logger?.error('OAuthConsumer: Failed to revoke user credentials:', toError(error), {
+        userId,
+      });
       return false;
     }
   }
@@ -546,13 +593,13 @@ export abstract class OAuthConsumer {
       const credentialsPrefix = ['oauth', 'credentials'];
       const results = await this.kvManager?.list?.(credentialsPrefix) || [];
       const users = new Set<string>();
-      
+
       for (const item of results) {
         if (Array.isArray(item.key) && item.key.length >= 3) {
           users.add(item.key[2] as string); // userId is at index 2
         }
       }
-      
+
       return Array.from(users);
     } catch (error) {
       this.logger?.error('OAuthConsumer: Failed to get authenticated users:', toError(error));
@@ -562,7 +609,7 @@ export abstract class OAuthConsumer {
 
   /**
    * 🔒 SECURITY-CRITICAL: Generate cryptographically secure state parameter
-   * 
+   *
    * Preserves exact state generation from AuthenticationService.generateRandomString()
    * Uses Web Crypto API for cryptographically secure randomness.
    */

@@ -9,7 +9,7 @@ import { assertSpyCalls, spy, stub } from '@std/testing/mock';
 import { z } from 'zod';
 
 // Import components
-import { ToolRegistry } from '../../../src/lib/server/ToolRegistry.ts';
+import { ToolRegistry } from '../../../src/lib/tools/ToolRegistry.ts';
 import { Logger } from '../../../src/lib/utils/Logger.ts';
 import { ErrorHandler } from '../../../src/lib/utils/ErrorHandler.ts';
 
@@ -59,7 +59,9 @@ describe('ToolRegistry', () => {
       errorHandler: mockErrorHandler,
     };
     
-    toolRegistry = new ToolRegistry(mockMcpServer as any, dependencies);
+    toolRegistry = new ToolRegistry(dependencies);
+	toolRegistry.sdkMcpServer = mockMcpServer as any;
+
   });
   
   afterEach(() => {
@@ -155,7 +157,9 @@ describe('ToolRegistry', () => {
         },
       };
       
-      const faultyRegistry = new ToolRegistry(faultyMcpServer as any, dependencies);
+      const  faultyRegistry = new ToolRegistry(dependencies);
+	  faultyRegistry.sdkMcpServer = faultyMcpServer as any;
+
       const logSpy = spy(mockLogger, 'error');
       
       try {
@@ -544,7 +548,8 @@ describe('ToolRegistry Complex Zod Integration', () => {
       errorHandler: { wrapError: (e: any) => e } as ErrorHandler,
     };
     
-    toolRegistry = new ToolRegistry(mockMcpServer as any, dependencies);
+    toolRegistry = new ToolRegistry(dependencies);
+	toolRegistry.sdkMcpServer = mockMcpServer as any;
   });
   
   it('should handle complex nested Zod schema like ActionStep workflow registration', async () => {

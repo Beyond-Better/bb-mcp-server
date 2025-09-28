@@ -10,9 +10,9 @@ import { z } from 'zod';
 
 // Import all MCP Server components
 import { BeyondMcpServer } from '../../src/lib/server/BeyondMcpServer.ts';
-import { ToolRegistry } from '../../src/lib/server/ToolRegistry.ts';
-import { RequestContextManager } from '../../src/lib/server/RequestContextManager.ts';
+import { ToolRegistry } from '../../src/lib/tools/ToolRegistry.ts';
 import { CoreTools } from '../../src/lib/tools/CoreTools.ts';
+import { RequestContextManager } from '../../src/lib/server/RequestContextManager.ts';
 import { BeyondMcpSDKHelpers } from '../../src/lib/server/MCPSDKHelpers.ts';
 
 // Import types

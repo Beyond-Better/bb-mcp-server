@@ -207,9 +207,8 @@ export class PluginManager {
 
       // Register existing tools
       for (const tool of plugin.tools || []) {
-        // Note: Tools need proper registration pattern - this will need updating based on tool structure
-        // this.toolRegistry.registerTool(tool.name, tool.definition, tool.handler);
-        // pluginItems.tools.push(tool.name);
+        this.toolRegistry.registerTool(tool.name, tool.definition, tool.handler, tool.options);
+        pluginItems.tools.push(tool.name);
       }
 
       // Store loaded plugin with item tracking

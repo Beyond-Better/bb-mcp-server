@@ -1,0 +1,71 @@
+{
+  "name": "@example/mcp-server",
+  "version": "1.0.0",
+  "description": "ExampleCorp MCP Server using bb-mcp-server library",
+  "author": "ExampleCorp Dev Team",
+  "license": "MIT",
+
+  "tasks": {
+    "start": "deno run --allow-all --unstable-kv main.ts",
+    "dev": "deno run --allow-all --unstable-kv --watch main.ts",
+    "test": "deno test --allow-all",
+    "check": "deno check src/**/*.ts",
+    "lint": "deno lint",
+    "fmt": "deno fmt",
+    "fmt:check": "deno fmt --check",
+    "tool:check-types": "deno check --all **/*.ts"
+  },
+  // use importMap for local testing
+  "importMap": "../import_map.json",
+  // use imports in real app
+  //"imports": {
+  //  "@bb/mcp-server": "jsr:@bb/mcp-server@^0.1.0"
+  //},
+
+  "exports": {
+    ".": "./main.ts"
+  },
+
+  "compilerOptions": {
+    "strict": true,
+    "useUnknownInCatchVariables": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true
+  },
+
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    },
+    "exclude": [
+      "coverage/"
+    ]
+  },
+
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 100,
+    "indentWidth": 2,
+    "singleQuote": true,
+    "proseWrap": "preserve"
+  },
+
+  "test": {
+    "include": ["src/**/*test.ts", "tests/**/*test.ts"]
+  },
+
+  "exclude": [
+    "coverage/",
+    "dist/"
+  ]
+}
+
+// LIBRARY DEMONSTRATION:
+// This shows how a consumer project would depend on the bb-mcp-server library
+// Key points:
+// - Single library dependency: "@bb/mcp-server": "jsr:@bb/mcp-server@^1.0.0"
+// - No complex infrastructure dependencies (OAuth libs, transport libs, etc.)
+// - Standard Deno project structure
+// - Focus on business logic rather than MCP server infrastructure

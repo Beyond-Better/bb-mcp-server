@@ -11,7 +11,7 @@
 // 🎯 Library imports - API client base class, logging, and types
 import { BaseApiClient, type BaseApiClientConfig } from '@bb/mcp-server'
 import { Logger } from '@bb/mcp-server'
-import type { ThirdPartyHealthStatus, ApiInfo } from '@bb/mcp-server'
+import type { ThirdPartyApiHealthStatus, ThirdPartyApiInfo } from '@bb/mcp-server'
 
 // 🎯 Consumer-specific imports
 import { ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts'
@@ -116,7 +116,7 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Check API health status (using JSONPlaceholder /posts/1 as health check)
    */
-  async healthCheck(): Promise<ThirdPartyHealthStatus> {
+  async healthCheck(): Promise<ThirdPartyApiHealthStatus> {
     try {
       // Use JSONPlaceholder /posts/1 as a simple health check
       const response = await fetch(`${this.config.baseUrl}/posts/1`)
@@ -152,7 +152,7 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Get API information and capabilities
    */
-  async getApiInfo(): Promise<ApiInfo> {
+  async getApiInfo(): Promise<ThirdPartyApiInfo> {
     try {
       // For JSONPlaceholder demo, return static API info
       // In a real implementation, this would query the API's info endpoint
@@ -827,7 +827,7 @@ export class ExampleApiClient extends BaseApiClient {
  * This file demonstrates third-party API integration patterns:
  * 
  * ✅ Base Class Contract: Extends BaseApiClient for standardized health check and API info methods
- * ✅ Type Safety: Uses ThirdPartyHealthStatus and ApiInfo types from library
+ * ✅ Type Safety: Uses ThirdPartyApiHealthStatus and ThirdPartyApiInfo types from library
  * ✅ OAuth Integration: Uses library OAuthConsumer for authentication (~2 lines)
  * ✅ Error Handling: Comprehensive HTTP error handling and retry logic (~50 lines)
  * ✅ Logging: Uses library Logger through BaseApiClient protected methods
