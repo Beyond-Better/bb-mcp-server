@@ -2,8 +2,7 @@
  * Credential Store - Secure credential management for OAuth and API tokens
  *
  * Provides encrypted storage and management of OAuth credentials, API keys,
- * and other sensitive authentication data. Extracted patterns from ActionStep
- * MCP Server's OAuth and authentication services.
+ * and other sensitive authentication data. 
  */
 
 import type { OAuthCredentials } from './StorageTypes.ts';

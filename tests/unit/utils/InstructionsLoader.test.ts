@@ -116,14 +116,14 @@ Deno.test('validateInstructions', async (t) => {
   const logger = createMockLogger();
 
   await t.step('should validate valid workflow instructions', () => {
-    const validInstructions = 'This MCP Server provides comprehensive workflow automation capabilities with detailed instructions.';
+    const validInstructions = 'This MCP Server provides comprehensive LLM tool and workflow automation capabilities with detailed instructions.';
     
     const result = validateInstructions(validInstructions, logger);
     assertEquals(result, true);
   });
 
   await t.step('should validate valid MCP Server instructions', () => {
-    const validInstructions = 'Welcome to this MCP Server that provides various tools and capabilities for integration.';
+    const validInstructions = 'Welcome to this MCP Server that provides various tools and capabilities for integration with custom solutions.';
     
     const result = validateInstructions(validInstructions, logger);
     assertEquals(result, true);
@@ -144,7 +144,7 @@ Deno.test('validateInstructions', async (t) => {
   });
 
   await t.step('should work without logger', () => {
-    const validInstructions = 'This MCP Server provides workflow capabilities and comprehensive instructions.';
+    const validInstructions = 'This MCP Server provides workflow capabilities and comprehensive instructions for custom client solutions.';
     
     const result = validateInstructions(validInstructions);
     assertEquals(result, true);

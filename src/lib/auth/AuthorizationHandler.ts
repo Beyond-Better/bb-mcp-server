@@ -5,7 +5,6 @@
  * with PKCE support. All authorization request validation, code generation, and exchange
  * operations are preserved exactly from OAuthClientService.ts to maintain security.
  *
- * Extracted from: actionstep-mcp-server/src/api/OAuthClientService.ts
  * Security Requirements:
  * - RFC 6749 Authorization Code Grant flow compliance
  * - RFC 7636 PKCE integration for public clients
@@ -74,7 +73,7 @@ export interface AuthorizationState {
   /** MCP-specific binding */
   mcp_client_id: string;
   mcp_redirect_uri: string;
-  upstream_state: string; // ActionStep OAuth state
+  upstream_state: string; // OAuth state
 
   /** PKCE parameters */
   code_challenge?: string;
@@ -426,17 +425,17 @@ export class AuthorizationHandler {
    * 🔒 SECURITY-CRITICAL: Store MCP authorization request for session binding
    *
    * Preserves exact MCP auth request binding logic from OAuthClientService.storeMCPAuthRequest()
-   * Links MCP client authorization requests to ActionStep OAuth flows for secure session binding.
+   * Links MCP client authorization requests to external OAuth flows for secure session binding.
    */
   async storeMCPAuthRequest(
-    actionStepState: string,
+    externalState: string,
     request: MCPAuthorizationRequest,
   ): Promise<void> {
     const storeId = Math.random().toString(36).substring(2, 15);
 
     this.logger?.info(`AuthorizationHandler: Storing MCP auth request [${storeId}]`, {
       storeId,
-      actionStepState,
+      externalState,
       clientId: request.client_id,
       userId: request.user_id,
       expiresAt: new Date(request.expires_at).toISOString(),
@@ -444,7 +443,7 @@ export class AuthorizationHandler {
 
     try {
       await this.kvManager.set(
-        [...this.MCP_AUTH_REQUESTS_PREFIX, actionStepState],
+        [...this.MCP_AUTH_REQUESTS_PREFIX, externalState],
         request,
         { expireIn: 10 * 60 * 1000 }, // 10 minutes
       );
@@ -453,7 +452,7 @@ export class AuthorizationHandler {
         `AuthorizationHandler: Stored MCP auth request successfully [${storeId}]`,
         {
           storeId,
-          actionStepState,
+          externalState,
           clientId: request.client_id,
           ttl: '10 minutes',
         },
@@ -468,28 +467,28 @@ export class AuthorizationHandler {
   }
 
   /**
-   * 🔒 SECURITY-CRITICAL: Retrieve MCP authorization request by ActionStep state
+   * 🔒 SECURITY-CRITICAL: Retrieve MCP authorization request by External state
    *
    * Preserves exact MCP auth request retrieval logic from OAuthClientService.getMCPAuthRequest()
-   * Used for linking ActionStep OAuth callback to original MCP client request.
+   * Used for linking External OAuth callback to original MCP client request.
    */
-  async getMCPAuthRequest(actionStepState: string): Promise<MCPAuthorizationRequest | null> {
+  async getMCPAuthRequest(externalState: string): Promise<MCPAuthorizationRequest | null> {
     const lookupId = Math.random().toString(36).substring(2, 15);
 
     this.logger?.info(`AuthorizationHandler: Looking up MCP auth request [${lookupId}]`, {
       lookupId,
-      actionStepState,
+      externalState,
     });
 
     try {
       const result = await this.kvManager.get<MCPAuthorizationRequest>(
-        [...this.MCP_AUTH_REQUESTS_PREFIX, actionStepState],
+        [...this.MCP_AUTH_REQUESTS_PREFIX, externalState],
       );
 
       if (!result) {
         this.logger?.warn(`AuthorizationHandler: MCP auth request not found [${lookupId}]`, {
           lookupId,
-          actionStepState,
+          externalState,
         });
         return null;
       }
@@ -504,7 +503,7 @@ export class AuthorizationHandler {
           redirect_uri: request.redirect_uri,
           state: request.state,
           user_id: request.user_id,
-          actionstep_state: request.actionstep_state,
+          external_state: request.external_state,
           created_at: new Date(request.created_at).toISOString(),
           expires_at: new Date(request.expires_at).toISOString(),
           hasCodeChallenge: !!request.code_challenge,
@@ -518,13 +517,13 @@ export class AuthorizationHandler {
         const errorMsg = `MCP auth request expired [${lookupId}]`;
         this.logger?.error(`AuthorizationHandler: ${errorMsg}`, toError(errorMsg), {
           lookupId,
-          actionStepState,
+          externalState,
           expiresAt: new Date(request.expires_at).toISOString(),
           expiredBy: now - request.expires_at,
         });
 
         // Clean up expired request
-        await this.kvManager.delete([...this.MCP_AUTH_REQUESTS_PREFIX, actionStepState]);
+        await this.kvManager.delete([...this.MCP_AUTH_REQUESTS_PREFIX, externalState]);
         return null;
       }
 

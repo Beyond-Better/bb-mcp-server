@@ -1,7 +1,7 @@
 /**
  * Enhanced workflow types for bb-mcp-server
  *
- * Comprehensive type definitions with Phase 1 integration and plugin support
+ * Comprehensive type definitions with integration and plugin support
  */
 
 //import { z, type ZodSchema } from 'zod'

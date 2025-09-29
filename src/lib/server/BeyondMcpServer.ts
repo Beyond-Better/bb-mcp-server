@@ -111,12 +111,6 @@ export class BeyondMcpServer {
       );
     }
 
-    // Store provided SDK MCP server for testing or defer creation until initialize()
-    if (sdkMcpServer) {
-      this.sdkMcpServer = sdkMcpServer;
-    }
-    // SDK MCP server will be created in initialize() after instructions are loaded
-
     // Initialize tool registration configuration
     this.toolRegistrationConfig = config.toolRegistration || {
       workflowTools: {
@@ -137,6 +131,12 @@ export class BeyondMcpServer {
       auditLogger: this.auditLogger,
     });
 
+    // Store provided SDK MCP server for testing or defer creation until initialize()
+    if (sdkMcpServer) {
+      this.sdkMcpServer = sdkMcpServer;
+    }
+    // SDK MCP server will be created in initialize() after instructions are loaded
+
     // Components that depend on sdkMcpServer will be initialized in initialize() method
     // after instructions are loaded and sdkMcpServer is created
   }
@@ -153,7 +153,6 @@ export class BeyondMcpServer {
 
   /**
    * Execute an operation within the context of an authenticated user
-   * PRESERVED: Exact AsyncLocalStorage pattern from ActionStepMCPServer
    */
   async executeWithAuthContext<T>(
     context: BeyondMcpRequestContext,
@@ -196,15 +195,15 @@ export class BeyondMcpServer {
     try {
       // Load instructions using flexible loading system
       const instructions = await this.loadInstructions();
-      
+
       // Create SDK MCP server with loaded instructions (if not provided for testing)
       if (!this.sdkMcpServer) {
         await this.createSdkMcpServer(instructions);
       }
-      
+
       // Initialize components that depend on sdkMcpServer
       await this.initializeDependentComponents();
-      
+
       // Register core tools
       await this.registerCoreTools();
 
@@ -253,7 +252,9 @@ export class BeyondMcpServer {
 
       // Validate the loaded instructions
       if (!validateInstructions(instructions, this.logger)) {
-        this.logger.warn('BeyondMcpServer: Loaded instructions failed validation but will be used anyway');
+        this.logger.warn(
+          'BeyondMcpServer: Loaded instructions failed validation but will be used anyway',
+        );
       }
 
       this.logger.info('BeyondMcpServer: Instructions loaded successfully', {
@@ -264,10 +265,13 @@ export class BeyondMcpServer {
 
       // Store instructions in config for future reference
       this.config.instructions = instructions;
-      
+
       return instructions;
     } catch (error) {
-      this.logger.error('BeyondMcpServer: Failed to load instructions:', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'BeyondMcpServer: Failed to load instructions:',
+        error instanceof Error ? error : new Error(String(error)),
+      );
       throw ErrorHandler.wrapError(error, 'INSTRUCTIONS_LOADING_FAILED');
     }
   }
@@ -336,9 +340,11 @@ export class BeyondMcpServer {
    * Get the source of instructions for logging purposes
    */
   private getInstructionsSource(): string {
-    const configInstructions = this.configManager.get('MCP_SERVER_INSTRUCTIONS') as string | undefined;
+    const configInstructions = this.configManager.get('MCP_SERVER_INSTRUCTIONS') as
+      | string
+      | undefined;
     const filePath = this.configManager.get('MCP_INSTRUCTIONS_FILE') as string | undefined;
-    
+
     if (configInstructions && typeof configInstructions === 'string' && configInstructions.trim()) {
       return 'configuration';
     } else if (filePath && typeof filePath === 'string') {
@@ -364,7 +370,9 @@ export class BeyondMcpServer {
     }
 
     if (!this.sdkMcpServer) {
-      throw new Error('BeyondMcpServer: SDK MCP server not initialized. This should not happen after initialize().');
+      throw new Error(
+        'BeyondMcpServer: SDK MCP server not initialized. This should not happen after initialize().',
+      );
     }
 
     this.logger.info('BeyondMcpServer: Starting Beyond MCP server...');
@@ -375,7 +383,7 @@ export class BeyondMcpServer {
       await this.sdkMcpServer.connect(transport);
       this.logger.info('BeyondMcpServer: STDIO transport connected');
     } else if (this.config.transport?.type === 'http') {
-      // HTTP transport handled by TransportManager from Phase 3
+      // HTTP transport handled by TransportManager
       await this.transportManager.start();
       this.logger.info('BeyondMcpServer: HTTP transport started via TransportManager');
     }
@@ -521,7 +529,7 @@ export class BeyondMcpServer {
       if (!this.sdkMcpServer) {
         throw new Error('SDK MCP server must be initialized before setting up transport');
       }
-      // Integrate with TransportManager from Phase 3
+      // Integrate with TransportManager
       // Cast to compatible type for TransportManager
       await this.transportManager.initialize(this.sdkMcpServer as any);
     }
@@ -547,6 +555,18 @@ export class BeyondMcpServer {
         available: this.workflowRegistry.getWorkflowNames(),
       },
       timestamp: new Date().toISOString(),
+      health: {
+        status: 'healthy',
+        uptime: performance.now() / 1000,
+        memory: {
+          used: Math.round(Deno.memoryUsage().heapUsed / 1024 / 1024),
+          total: Math.round(Deno.memoryUsage().heapTotal / 1024 / 1024),
+          rss: Math.round(Deno.memoryUsage().rss / 1024 / 1024),
+          external: Math.round(Deno.memoryUsage().external / 1024 / 1024),
+        },
+        version: Deno.version.deno,
+        //permissions: await Deno.permissions.query({ name: 'net' }), // example
+      },
     };
 
     return {

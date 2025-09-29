@@ -2,8 +2,7 @@
  * Session Store - Generic session management for MCP servers
  *
  * Provides a clean interface for managing user sessions with automatic cleanup
- * and expiration handling. Extracted patterns from the ActionStep MCP Server
- * transport and authentication services.
+ * and expiration handling.
  */
 
 import type { SessionData } from './StorageTypes.ts';

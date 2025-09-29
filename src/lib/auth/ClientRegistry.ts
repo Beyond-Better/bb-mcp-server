@@ -5,7 +5,6 @@
  * All client registration, validation, and management operations are preserved exactly
  * from OAuthClientService.ts to maintain RFC 7591 compliance and security.
  *
- * Extracted from: actionstep-mcp-server/src/api/OAuthClientService.ts
  * Security Requirements:
  * - RFC 7591 Dynamic Client Registration Protocol compliance
  * - Secure client ID generation using cryptographically secure randomness

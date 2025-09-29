@@ -2,7 +2,6 @@
  * KV Manager - Generic Deno KV abstraction for bb-mcp-server library
  *
  * Provides a unified interface for Deno KV operations with organized key prefixes.
- * Extracted and generalized from ActionStep MCP Server's UnifiedKVManager.
  *
  * Features:
  * - Configurable key prefixes for organized data storage

@@ -371,47 +371,47 @@ Deno.test({
       redirect_uri: 'http://localhost:3000/mcp/callback',
       state: 'mcp_binding_state',
       user_id: 'mcp_binding_user',
-      actionstep_state: 'actionstep_binding_state_123',
+      external_state: 'external_binding_state_123',
       code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
       created_at: Date.now(),
       expires_at: Date.now() + (10 * 60 * 1000),
     };
 
     // Store MCP auth request
-    await oauthProvider.storeMCPAuthRequest('actionstep_binding_state_123', mcpAuthRequest);
+    await oauthProvider.storeMCPAuthRequest('external_binding_state_123', mcpAuthRequest);
 
     // Retrieve MCP auth request
-    const retrievedRequest = await oauthProvider.getMCPAuthRequest('actionstep_binding_state_123');
+    const retrievedRequest = await oauthProvider.getMCPAuthRequest('external_binding_state_123');
 
     assertExists(retrievedRequest);
     assertEquals(retrievedRequest.client_id, 'mcp_client_binding_test');
     assertEquals(retrievedRequest.redirect_uri, 'http://localhost:3000/mcp/callback');
     assertEquals(retrievedRequest.state, 'mcp_binding_state');
     assertEquals(retrievedRequest.user_id, 'mcp_binding_user');
-    assertEquals(retrievedRequest.actionstep_state, 'actionstep_binding_state_123');
+    assertEquals(retrievedRequest.external_state, 'external_binding_state_123');
 
     await dependencies.kvManager.close();
   },
 });
 
 Deno.test({
-  name: 'OAuthProvider - MCP Token Validation with ActionStep Integration',
+  name: 'OAuthProvider - MCP Token Validation with external Integration',
   async fn() {
     const dependencies = await createTestDependencies();
 
     const oauthProvider = new OAuthProvider(testOAuthProviderConfig, dependencies);
 
-    // Mock ActionStep authentication service response
-    const mockActionStepUser = {
-      id: 'actionstep_user_123',
-      name: 'ActionStep Test User',
-      email: 'test@actionstep.com',
+    // Mock external authentication service response
+    const mockExternalUser = {
+      id: 'external_user_123',
+      name: 'External Test User',
+      email: 'test@example.com',
     };
 
-    // Generate MCP token for ActionStep user
+    // Generate MCP token for External user
     const mcpTokenResult = await oauthProvider.generateMCPAuthorizationCode(
-      'mcp_client_actionstep_test',
-      'actionstep_user_123',
+      'mcp_client_external_test',
+      'external_user_123',
       'http://localhost:3000/mcp/callback',
       'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
       'read write', // Default scope
@@ -423,7 +423,7 @@ Deno.test({
     // Exchange MCP authorization code
     const exchangeResult = await oauthProvider.exchangeMCPAuthorizationCode(
       mcpTokenResult,
-      'mcp_client_actionstep_test',
+      'mcp_client_external_test',
       'http://localhost:3000/mcp/callback',
       'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk',
     );

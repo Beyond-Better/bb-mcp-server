@@ -1,6 +1,5 @@
 /**
- * Unit Tests for MCPServer
- * Tests core MCP server functionality extracted from ActionStepMCPServer
+ * Unit Tests for BeyondMcpServer
  */
 
 import { assertEquals, assertExists, assertRejects } from '@std/assert';
@@ -36,8 +35,8 @@ import {
   MockSdkMcpServer,
 } from '../../utils/test-helpers.ts';
 
-describe('MCPServer', () => {
-  let server: BeyondMcpServer;
+describe('BeyondMcpServer', () => {
+  let beyondMcpServer: BeyondMcpServer;
   let mockSdkMcpServer: MockSdkMcpServer;
   let mockLogger: Logger;
   let mockAuditLogger: AuditLogger;
@@ -48,7 +47,7 @@ describe('MCPServer', () => {
   let config: BeyondMcpServerConfig;
   let dependencies: BeyondMcpServerDependencies;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Create mock dependencies
     mockLogger = createMockLogger();
     mockAuditLogger = createMockAuditLogger();
@@ -81,14 +80,15 @@ describe('MCPServer', () => {
 
     // Create mock MCP server
     mockSdkMcpServer = createMockSdkMcpServer(config);
-    server = new BeyondMcpServer(config, dependencies, mockSdkMcpServer as any);
+    beyondMcpServer = new BeyondMcpServer(config, dependencies, mockSdkMcpServer as any);
+    //await beyondMcpServer.initialize();
   });
 
   afterEach(async () => {
     // Cleanup any active MCP server connections to prevent resource leaks
     try {
-      if (server && typeof server.shutdown === 'function') {
-        await server.shutdown();
+      if (beyondMcpServer && typeof beyondMcpServer.shutdown === 'function') {
+        await beyondMcpServer.shutdown();
       }
     } catch {
       // Ignore shutdown errors in tests
@@ -96,17 +96,17 @@ describe('MCPServer', () => {
   });
 
   describe('Constructor', () => {
-    it('should create MCPServer with valid configuration', () => {
-      assertExists(server);
-      // Verify server exists and has expected properties
-      const mcpServerInfo = server.getSdkMcpServer();
+    it('should create BeyondMcpServer with valid configuration', () => {
+      assertExists(beyondMcpServer);
+      // Verify beyondMcpServer exists and has expected properties
+      const mcpServerInfo = beyondMcpServer.getSdkMcpServer();
       assertExists(mcpServerInfo);
     });
 
     it('should initialize with all dependencies', () => {
-      assertExists(server.getSdkMcpServer());
-      // Verify that the MCP server was created properly
-      const mcpServerInfo = server.getSdkMcpServer();
+      assertExists(beyondMcpServer.getSdkMcpServer());
+      // Verify that the MCP beyondMcpServer was created properly
+      const mcpServerInfo = beyondMcpServer.getSdkMcpServer();
       assertExists(mcpServerInfo);
     });
   });
@@ -123,8 +123,8 @@ describe('MCPServer', () => {
       };
 
       // Test context execution
-      const result = await server.executeWithAuthContext(testContext, async () => {
-        const currentUserId = server.getAuthenticatedUserId();
+      const result = await beyondMcpServer.executeWithAuthContext(testContext, async () => {
+        const currentUserId = beyondMcpServer.getAuthenticatedUserId();
         return currentUserId;
       });
 
@@ -132,7 +132,7 @@ describe('MCPServer', () => {
     });
 
     it('should return null when no context is active', () => {
-      const userId = server.getAuthenticatedUserId();
+      const userId = beyondMcpServer.getAuthenticatedUserId();
       assertEquals(userId, null);
     });
 
@@ -155,14 +155,14 @@ describe('MCPServer', () => {
         metadata: {},
       };
 
-      const result = await server.executeWithAuthContext(outerContext, async () => {
-        const outerUserId = server.getAuthenticatedUserId();
+      const result = await beyondMcpServer.executeWithAuthContext(outerContext, async () => {
+        const outerUserId = beyondMcpServer.getAuthenticatedUserId();
 
-        const innerResult = await server.executeWithAuthContext(innerContext, async () => {
-          return server.getAuthenticatedUserId();
+        const innerResult = await beyondMcpServer.executeWithAuthContext(innerContext, async () => {
+          return beyondMcpServer.getAuthenticatedUserId();
         });
 
-        const restoredUserId = server.getAuthenticatedUserId();
+        const restoredUserId = beyondMcpServer.getAuthenticatedUserId();
 
         return { outerUserId, innerResult, restoredUserId };
       });
@@ -178,10 +178,10 @@ describe('MCPServer', () => {
       const logSpy = spy(mockLogger, 'info');
       const auditSpy = spy(mockAuditLogger, 'logSystemEvent');
 
-      await server.initialize();
+      await beyondMcpServer.initialize();
 
       // Verify logging
-      assertSpyCalls(logSpy, 2); // Initial log + success log
+      assertSpyCalls(logSpy, 4); // Initial log + 2 instructions + success log
       assertSpyCalls(auditSpy, 1); // System startup event
 
       logSpy.restore();
@@ -189,13 +189,13 @@ describe('MCPServer', () => {
     });
 
     it('should not initialize twice', async () => {
-      await server.initialize();
+      await beyondMcpServer.initialize();
 
       const logSpy = spy(mockLogger, 'info');
 
       // Second initialization should be no-op
-      const result = await server.initialize();
-      assertEquals(result, server);
+      const result = await beyondMcpServer.initialize();
+      assertEquals(result, beyondMcpServer);
 
       logSpy.restore();
     });
@@ -206,24 +206,24 @@ describe('MCPServer', () => {
 
       // Test error handling would require more complex mocking
       // This test verifies the error handling structure is in place
-      assertExists(server);
+      assertExists(beyondMcpServer);
     });
 
     it('should start STDIO transport', async () => {
       config.transport = { type: 'stdio' };
-      server = new BeyondMcpServer(config, dependencies, mockSdkMcpServer as any);
+      beyondMcpServer = new BeyondMcpServer(config, dependencies, mockSdkMcpServer as any);
 
-      await server.initialize();
+      await beyondMcpServer.initialize();
 
       const logSpy = spy(mockLogger, 'info');
 
-      await server.start();
+      await beyondMcpServer.start();
 
       assertSpyCalls(logSpy, 3); // Starting + STDIO connected + Success
 
       // Explicitly clean up STDIO transport to prevent resource leaks
       try {
-        await server.shutdown();
+        await beyondMcpServer.shutdown();
       } catch {
         // Ignore shutdown errors
       }
@@ -233,12 +233,12 @@ describe('MCPServer', () => {
 
     it('should start HTTP transport', async () => {
       config.transport = { type: 'http' };
-      server = new BeyondMcpServer(config, dependencies, mockSdkMcpServer as any);
+      beyondMcpServer = new BeyondMcpServer(config, dependencies, mockSdkMcpServer as any);
 
       const transportSpy = spy(mockTransportManager, 'start');
 
-      await server.initialize();
-      await server.start();
+      await beyondMcpServer.initialize();
+      await beyondMcpServer.start();
 
       assertSpyCalls(transportSpy, 1);
 
@@ -246,12 +246,12 @@ describe('MCPServer', () => {
     });
 
     it('should shutdown gracefully', async () => {
-      await server.initialize();
+      await beyondMcpServer.initialize();
 
       const auditSpy = spy(mockAuditLogger, 'logSystemEvent');
       const logSpy = spy(mockLogger, 'info');
 
-      await server.shutdown();
+      await beyondMcpServer.shutdown();
 
       assertSpyCalls(auditSpy, 1); // Shutdown event
       assertSpyCalls(logSpy, 2); // Shutdown start + Shutdown complete
@@ -261,7 +261,7 @@ describe('MCPServer', () => {
     });
 
     it('should handle shutdown errors', async () => {
-      await server.initialize();
+      await beyondMcpServer.initialize();
 
       const errorStub = stub(mockLogger, 'error');
       const auditStub = stub(mockAuditLogger, 'logSystemEvent', () => {
@@ -269,7 +269,7 @@ describe('MCPServer', () => {
       });
 
       await assertRejects(
-        () => server.shutdown(),
+        () => beyondMcpServer.shutdown(),
         Error,
         'Audit failed',
       );
@@ -281,10 +281,10 @@ describe('MCPServer', () => {
 
   describe('Tool Registration', () => {
     it('should register tools successfully', async () => {
-      await server.initialize();
+      await beyondMcpServer.initialize();
 
       // Register a test tool
-      server.registerTool('test_tool', {
+      beyondMcpServer.registerTool('test_tool', {
         title: 'Test Tool',
         description: 'A test tool',
         category: 'testing',
@@ -296,10 +296,12 @@ describe('MCPServer', () => {
       }));
 
       // Verify tool is accessible through tool registry
-      assertExists(server['toolRegistry']);
+      assertExists(beyondMcpServer['toolRegistry']);
     });
 
-    it('should register multiple tools', () => {
+    it('should register multiple tools', async () => {
+      await beyondMcpServer.initialize();
+
       const tools = [
         {
           name: 'tool1',
@@ -321,31 +323,31 @@ describe('MCPServer', () => {
         },
       ];
 
-      server.registerTools(tools);
+      beyondMcpServer.registerTools(tools);
 
       // Should not throw errors
-      assertExists(server);
+      assertExists(beyondMcpServer);
     });
   });
 
   describe('MCP SDK Integration', () => {
     it('should expose createMessage method', async () => {
-      await server.initialize();
+      await beyondMcpServer.initialize();
 
-      assertExists(server.createMessage);
-      assertEquals(typeof server.createMessage, 'function');
+      assertExists(beyondMcpServer.createMessage);
+      assertEquals(typeof beyondMcpServer.createMessage, 'function');
     });
 
     it('should expose elicitInput method', async () => {
-      await server.initialize();
+      await beyondMcpServer.initialize();
 
-      assertExists(server.elicitInput);
-      assertEquals(typeof server.elicitInput, 'function');
+      assertExists(beyondMcpServer.elicitInput);
+      assertEquals(typeof beyondMcpServer.elicitInput, 'function');
     });
   });
 
   describe('Configuration Validation', () => {
-    it('should require server name', () => {
+    it('should require beyondMcpServer name', () => {
       const invalidConfig = {
         server: {
           version: '1.0.0',
@@ -370,7 +372,7 @@ describe('MCPServer', () => {
       assertExists(testServer);
     });
 
-    it('should use provided title or fallback to name', () => {
+    it('should use provided title or fallback to name', async () => {
       const configWithTitle = {
         server: {
           name: 'test-server',
@@ -380,9 +382,11 @@ describe('MCPServer', () => {
         },
       };
 
-      const serverWithTitle = new BeyondMcpServer(configWithTitle, dependencies);
+      const beyondMcpServerWithTitle = new BeyondMcpServer(configWithTitle, dependencies);
+      await beyondMcpServerWithTitle.initialize();
+
       // Verify server has expected title behavior
-      const titleInfo = serverWithTitle.getSdkMcpServer();
+      const titleInfo = beyondMcpServerWithTitle.getSdkMcpServer();
       assertExists(titleInfo);
 
       const configWithoutTitle = {
@@ -393,8 +397,10 @@ describe('MCPServer', () => {
         },
       };
 
-      const serverWithoutTitle = new BeyondMcpServer(configWithoutTitle, dependencies);
-      const noTitleInfo = serverWithoutTitle.getSdkMcpServer();
+      const beyondMcpServerWithoutTitle = new BeyondMcpServer(configWithoutTitle, dependencies);
+      await beyondMcpServerWithoutTitle.initialize();
+
+      const noTitleInfo = beyondMcpServerWithoutTitle.getSdkMcpServer();
       assertExists(noTitleInfo);
     });
   });
@@ -424,7 +430,7 @@ describe('MCPServer', () => {
 });
 
 // Integration test for complete server functionality
-describe('MCPServer Integration', () => {
+describe('BeyondMcpServer Integration', () => {
   it('should work end-to-end with all components', async () => {
     const mockLogger = createMockLogger();
     const mockAuditLogger = createMockAuditLogger();
@@ -450,12 +456,12 @@ describe('MCPServer Integration', () => {
 
     // Use mock MCP server for integration test to prevent resource leaks
     const mockSdkMcpServer = createMockSdkMcpServer(config);
-    const server = new BeyondMcpServer(config, dependencies, mockSdkMcpServer as any);
+    const beyondMcpServer = new BeyondMcpServer(config, dependencies, mockSdkMcpServer as any);
 
     try {
       // Test full lifecycle
-      await server.initialize();
-      await server.start();
+      await beyondMcpServer.initialize();
+      await beyondMcpServer.start();
 
       // Test context execution
       const testContext: BeyondMcpRequestContext = {
@@ -467,9 +473,9 @@ describe('MCPServer Integration', () => {
         metadata: { test: true },
       };
 
-      const result = await server.executeWithAuthContext(testContext, async () => {
+      const result = await beyondMcpServer.executeWithAuthContext(testContext, async () => {
         return {
-          userId: server.getAuthenticatedUserId(),
+          userId: beyondMcpServer.getAuthenticatedUserId(),
           serverName: config.server.name, // Access from config instead of MCP server
         };
       });
@@ -479,7 +485,7 @@ describe('MCPServer Integration', () => {
     } finally {
       // Ensure cleanup happens regardless of test outcome
       try {
-        await server.shutdown();
+        await beyondMcpServer.shutdown();
       } catch {
         // Ignore shutdown errors in tests
       }

@@ -450,24 +450,24 @@ Deno.test({
       redirect_uri: 'http://localhost:3000/mcp/callback',
       state: 'mcp_state_456',
       user_id: 'mcp_user_789',
-      actionstep_state: 'actionstep_state_abc',
+      external_state: 'external_state_abc',
       code_challenge: 'test_code_challenge_def',
       created_at: Date.now(),
       expires_at: Date.now() + (10 * 60 * 1000), // 10 minutes
     };
 
     // Store MCP auth request
-    await authHandler.storeMCPAuthRequest('actionstep_state_abc', mcpAuthRequest);
+    await authHandler.storeMCPAuthRequest('external_state_abc', mcpAuthRequest);
 
     // Retrieve MCP auth request
-    const retrievedRequest = await authHandler.getMCPAuthRequest('actionstep_state_abc');
+    const retrievedRequest = await authHandler.getMCPAuthRequest('external_state_abc');
 
     assertExists(retrievedRequest);
     assertEquals(retrievedRequest.client_id, 'mcp_test_client_123');
     assertEquals(retrievedRequest.redirect_uri, 'http://localhost:3000/mcp/callback');
     assertEquals(retrievedRequest.state, 'mcp_state_456');
     assertEquals(retrievedRequest.user_id, 'mcp_user_789');
-    assertEquals(retrievedRequest.actionstep_state, 'actionstep_state_abc');
+    assertEquals(retrievedRequest.external_state, 'external_state_abc');
     assertEquals(retrievedRequest.code_challenge, 'test_code_challenge_def');
 
     await dependencies.kvManager.close();
@@ -490,16 +490,16 @@ Deno.test({
       redirect_uri: 'http://localhost:3000/mcp/callback',
       state: 'mcp_state_456',
       user_id: 'mcp_user_789',
-      actionstep_state: 'actionstep_state_expired',
+      external_state: 'external_state_expired',
       created_at: Date.now() - (20 * 60 * 1000), // 20 minutes ago
       expires_at: Date.now() - (10 * 60 * 1000), // Expired 10 minutes ago
     };
 
     // Store expired request
-    await authHandler.storeMCPAuthRequest('actionstep_state_expired', expiredMcpRequest);
+    await authHandler.storeMCPAuthRequest('external_state_expired', expiredMcpRequest);
 
     // Try to retrieve expired request
-    const retrievedRequest = await authHandler.getMCPAuthRequest('actionstep_state_expired');
+    const retrievedRequest = await authHandler.getMCPAuthRequest('external_state_expired');
 
     // Should return null for expired request
     assertEquals(retrievedRequest, null);

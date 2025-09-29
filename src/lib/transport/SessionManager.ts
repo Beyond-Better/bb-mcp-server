@@ -1,7 +1,7 @@
 /**
  * Session Manager for Transport Layer
  *
- * Enhanced version of Phase 1 SessionStore for transport-specific needs
+ * Enhanced version of SessionStore for transport-specific needs
  * Handles HTTP transport sessions with creation, persistence, and cleanup
  */
 

@@ -114,7 +114,7 @@ OAUTH_PROVIDER_CLIENT_ID=your-client-id
 OAUTH_PROVIDER_CLIENT_SECRET=your-client-secret
 
 # OAuth Consumer (for third-party API integration)
-OAUTH_CONSUMER_PROVIDER=actionstep
+OAUTH_CONSUMER_PROVIDER=example
 OAUTH_CONSUMER_CLIENT_ID=third-party-client-id
 OAUTH_CONSUMER_CLIENT_SECRET=third-party-secret
 ```

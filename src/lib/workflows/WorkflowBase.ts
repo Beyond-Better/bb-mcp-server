@@ -1,9 +1,7 @@
 /**
  * Enhanced WorkflowBase class for bb-mcp-server
  *
- * Extracted and enhanced from ActionStep MCP Server with:
  * - Zod schema validation
- * - Better Phase 1 integration (Logger, AuditLogger, ErrorHandler)
  * - Plugin compatibility foundation
  * - Performance monitoring
  */
@@ -30,7 +28,7 @@ import type { PluginCategory, RateLimitConfig } from '../types/PluginTypes.ts';
 /**
  * Abstract base class for all workflows
  *
- * Enhanced with Zod validation, better error handling, and Phase 1 integration
+ * Enhanced with Zod validation, better error handling, and integration
  */
 export abstract class WorkflowBase {
   protected context?: WorkflowContext;
@@ -400,7 +398,7 @@ export abstract class WorkflowBase {
   }
 
   /**
-   * Enhanced logging helpers with Phase 1 integration
+   * Enhanced logging helpers with integration
    */
   protected logInfo(message: string, data?: Record<string, unknown>): void {
     this.context?.logger?.info(`[${this.name}] ${message}`, {
@@ -439,7 +437,7 @@ export abstract class WorkflowBase {
   }
 
   /**
-   * Audit logging with Phase 1 AuditLogger integration
+   * Audit logging with AuditLogger integration
    */
   protected async logWorkflowExecution(context: WorkflowContext): Promise<void> {
     if (!context.auditLogger) {
@@ -496,7 +494,7 @@ export abstract class WorkflowBase {
 
   protected checkRateLimit(): boolean {
     // TODO: Implement rate limiting check
-    // This would integrate with RateLimitManager from Phase 4/5
+    // This would integrate with RateLimitManager
     return true;
   }
 }

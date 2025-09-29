@@ -2,7 +2,7 @@
  * Validation Helpers - Generic validation utilities for MCP servers
  *
  * Provides JSON schema validation, input sanitization, and common validation
- * patterns. Extracted from ActionStep MCP Server and generalized for broader use.
+ * patterns.
  */
 
 import type { Logger } from './Logger.ts';

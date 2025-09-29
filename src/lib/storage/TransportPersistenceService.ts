@@ -4,8 +4,6 @@
  * Manages persistence of MCP HTTP transport session information using Deno KV.
  * Enables restoration of transport configurations after server restarts,
  * though actual connections must be re-established by clients.
- *
- * Extracted and generalized from ActionStep MCP Server for use in bb-mcp-server library.
  */
 
 import { StreamableHTTPServerTransport } from 'mcp/server/streamableHttp.js';

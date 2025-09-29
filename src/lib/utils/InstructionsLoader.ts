@@ -1,12 +1,13 @@
 /**
  * Instructions Loader Utility
- * 
+ *
  * Provides flexible loading of instructions content with fallback strategies
  * for both development and production environments. Supports multiple input
  * sources with proper priority and fallback handling.
  */
 
 import type { Logger } from './Logger.ts';
+import { toError } from './Error.ts';
 import { DEFAULT_INSTRUCTIONS } from '../instructions.ts';
 
 export interface InstructionsLoaderOptions {
@@ -14,25 +15,25 @@ export interface InstructionsLoaderOptions {
    * Logger instance for debug and error reporting
    */
   logger: Logger;
-  
+
   /**
    * Direct instructions string from configuration
    * Corresponds to MCP_SERVER_INSTRUCTIONS environment variable
    */
   instructionsConfig?: string;
-  
+
   /**
    * File path to load instructions from
    * Corresponds to MCP_INSTRUCTIONS_FILE environment variable
    */
   instructionsFilePath?: string;
-  
+
   /**
    * Default file name to check for in the project root
    * Defaults to 'mcp_server_instructions.md'
    */
   defaultFileName?: string;
-  
+
   /**
    * Base path for resolving relative file paths
    * Defaults to current working directory
@@ -61,28 +62,36 @@ export async function loadInstructions(options: InstructionsLoaderOptions): Prom
   // Strategy 2: Load from configured file path
   if (instructionsFilePath) {
     try {
-      logger.debug(`InstructionsLoader: Loading from configured file path: ${instructionsFilePath}`);
-      
+      logger.debug(
+        `InstructionsLoader: Loading from configured file path: ${instructionsFilePath}`,
+      );
+
       // Resolve path relative to base path if not absolute
       const resolvedPath = instructionsFilePath.startsWith('/')
         ? instructionsFilePath
         : `${basePath}/${instructionsFilePath}`;
-        
+
       const content = await Deno.readTextFile(resolvedPath);
       if (content.trim()) {
-        logger.info('InstructionsLoader: Successfully loaded instructions from configured file path', {
-          path: resolvedPath,
-          contentLength: content.length,
-        });
+        logger.info(
+          'InstructionsLoader: Successfully loaded instructions from configured file path',
+          {
+            path: resolvedPath,
+            contentLength: content.length,
+          },
+        );
         return content.trim();
       } else {
         logger.warn(`InstructionsLoader: File at ${resolvedPath} is empty, trying next strategy`);
       }
     } catch (error) {
-      logger.warn(`InstructionsLoader: Failed to load from configured path ${instructionsFilePath}:`, {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        path: instructionsFilePath,
-      });
+      logger.warn(
+        `InstructionsLoader: Failed to load from configured path ${instructionsFilePath}:`,
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          path: instructionsFilePath,
+        },
+      );
       // Fall through to next strategy
     }
   }
@@ -91,7 +100,7 @@ export async function loadInstructions(options: InstructionsLoaderOptions): Prom
   try {
     const defaultPath = `${basePath}/${defaultFileName}`;
     logger.debug(`InstructionsLoader: Attempting to load from default path: ${defaultPath}`);
-    
+
     const content = await Deno.readTextFile(defaultPath);
     if (content.trim()) {
       logger.info('InstructionsLoader: Successfully loaded instructions from default file', {
@@ -117,13 +126,18 @@ export async function loadInstructions(options: InstructionsLoaderOptions): Prom
   }
 
   // Final fallback - this should never happen with proper DEFAULT_INSTRUCTIONS
-  const fallback = 'MCP Server - Instructions could not be loaded from any source. Server functionality may be limited.';
-  logger.error('InstructionsLoader: All instruction loading strategies failed, using minimal fallback', {
-    message: 'All instruction loading strategies failed',
-    strategiesTried: ['config', 'filePath', 'defaultFile', 'embedded'],
-    fallbackUsed: true,
-  });
-  
+  const fallback =
+    'MCP Server - Instructions could not be loaded from any source. Server functionality may be limited.';
+  logger.error(
+    'InstructionsLoader: All instruction loading strategies failed, using minimal fallback',
+    toError('All instruction loading strategies failed, using minimal fallback'),
+    {
+      message: 'All instruction loading strategies failed',
+      strategiesTried: ['config', 'filePath', 'defaultFile', 'embedded'],
+      fallbackUsed: true,
+    },
+  );
+
   return fallback;
 }
 
@@ -132,9 +146,9 @@ export async function loadInstructions(options: InstructionsLoaderOptions): Prom
  * Checks for minimum content requirements
  */
 export function validateInstructions(instructions: string, logger?: Logger): boolean {
-  const isValid = instructions.length > 100 && 
-                 (instructions.includes('MCP Server') || instructions.includes('workflow'));
-  
+  const isValid = instructions.length > 100 &&
+    (instructions.includes('MCP Server') || instructions.includes('workflow'));
+
   if (logger) {
     if (isValid) {
       logger.debug('InstructionsLoader: Instructions validation passed', {
@@ -151,7 +165,7 @@ export function validateInstructions(instructions: string, logger?: Logger): boo
       });
     }
   }
-  
+
   return isValid;
 }
 
@@ -167,7 +181,9 @@ export interface InstructionsLoadingSummary {
 /**
  * Get a summary of instruction loading options for debugging
  */
-export function getInstructionsLoadingSummary(options: InstructionsLoaderOptions): InstructionsLoadingSummary {
+export function getInstructionsLoadingSummary(
+  options: InstructionsLoaderOptions,
+): InstructionsLoadingSummary {
   return {
     hasConfigString: !!(options.instructionsConfig && options.instructionsConfig.trim()),
     hasFilePath: !!options.instructionsFilePath,

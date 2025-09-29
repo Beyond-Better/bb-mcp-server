@@ -1,6 +1,6 @@
 /**
  * Unit Tests for RequestContextManager
- * Tests AsyncLocalStorage context management extracted from ActionStepMCPServer
+ * Tests AsyncLocalStorage context management
  */
 
 import { assert, assertEquals, assertExists } from '@std/assert';

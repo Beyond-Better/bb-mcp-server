@@ -1,8 +1,8 @@
 /**
- * HttpServer Test - Phase 5 HTTP Server Integration Tests
+ * HttpServer Test - HTTP Server Integration Tests
  *
  * Tests the core HTTP server functionality including OAuth endpoint integration,
- * API routing, CORS handling, and error management. Validates that all Phase 4
+ * API routing, CORS handling, and error management. Validates that all
  * OAuth components are properly integrated with the HTTP transport layer.
  */
 

@@ -5,10 +5,6 @@
  * These types maintain exact compatibility with the original OAuthClientService.ts and
  * AuthenticationService.ts implementations while providing a clean type system.
  *
- * Extracted from:
- * - actionstep-mcp-server/src/api/OAuthClientService.ts
- * - actionstep-mcp-server/src/api/AuthenticationService.ts
- *
  * Standards Compliance:
  * - RFC 6749: OAuth 2.0 Authorization Framework
  * - RFC 7636: PKCE (Proof Key for Code Exchange)
@@ -369,8 +365,8 @@ export interface MCPAuthorizationRequest {
   code_challenge?: string;
   /** PKCE code challenge method */
   code_challenge_method?: string;
-  /** ActionStep OAuth state (for linking flows) */
-  actionstep_state: string;
+  /** external OAuth state (for linking flows) */
+  external_state: string;
   /** User ID for the request (client_${client_id}) */
   user_id: string;
   /** Request creation timestamp */
@@ -592,8 +588,8 @@ export interface OAuthDependencies {
 export interface AuthorizationRequestResult {
   /** Generated authorization request */
   request: MCPAuthorizationRequest;
-  /** ActionStep OAuth state for linking */
-  actionstepState: string;
+  /** External OAuth state for linking */
+  externalState: string;
 }
 
 /**
@@ -626,8 +622,8 @@ export interface TokenMapping {
     expires_at: number;
     created_at: number;
   } | null;
-  /** Whether ActionStep token exists */
-  actionStepTokenExists: boolean;
+  /** Whether External token exists */
+  externalTokenExists: boolean;
 }
 
 // ============================================================================

@@ -1,6 +1,5 @@
 /**
  * MCP SDK Integration Helpers
- * Extracted from ActionStepMCPServer.ts - MCP SDK integration patterns
  *
  * Utilities for MCP SDK integration with:
  * - Sampling API integration
@@ -27,7 +26,6 @@ import type {
 
 /**
  * Utilities for Beyond MCP SDK integration
- * EXTRACTED: MCP SDK integration patterns from ActionStepMCPServer
  */
 export class BeyondMcpSDKHelpers {
   private sdkMcpServer: SdkMcpServer;
@@ -40,7 +38,6 @@ export class BeyondMcpSDKHelpers {
 
   /**
    * MCP Sampling API integration
-   * PRESERVED: Exact sampling pattern from ActionStepMCPServer
    */
   async createMessage(request: CreateMessageRequest): Promise<CreateMessageResult> {
     this.logger.debug('MCPSDKHelpers: Creating message via MCP sampling API', {
@@ -77,7 +74,6 @@ export class BeyondMcpSDKHelpers {
 
   /**
    * MCP Elicitation API integration
-   * PRESERVED: Exact elicitation pattern from ActionStepMCPServer
    */
   async elicitInput(request: ElicitInputRequest): Promise<ElicitInputResult> {
     this.logger.debug('MCPSDKHelpers: Eliciting input via MCP elicitation API', {
@@ -116,7 +112,6 @@ export class BeyondMcpSDKHelpers {
 
   /**
    * Generate comprehensive tool overview text
-   * EXTRACTED: From ActionStepMCPServer buildWorkflowOverviews pattern
    */
   generateToolOverview(tools: RegisteredTool[]): string {
     if (tools.length === 0) {

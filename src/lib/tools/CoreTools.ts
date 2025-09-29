@@ -1,6 +1,5 @@
 /**
  * Core MCP Tools - Generic tools for any MCP server
- * Extracted from ActionStepMCPServer.ts - Generic tool implementations
  *
  * Provides essential tools that every MCP server needs:
  * - Echo tool for testing
@@ -31,7 +30,6 @@ import { ToolHandlerMode } from '../types/BeyondMcpTypes.ts';
 
 /**
  * Core MCP tools that every server needs
- * EXTRACTED: Generic tool implementations from ActionStepMCPServer
  */
 export class CoreTools {
   private dependencies: CoreToolsDependencies;
@@ -71,7 +69,6 @@ export class CoreTools {
 
   /**
    * Register echo tool - simple testing tool
-   * EXTRACTED: From ActionStepMCPServer.ts echo handler
    */
   private registerEchoTool(registry: ToolRegistry): void {
     registry.registerTool(
@@ -92,7 +89,6 @@ export class CoreTools {
 
   /**
    * Register server status tool
-   * EXTRACTED: From ActionStepMCPServer.ts getServerStatus handler
    */
   private registerServerStatusTool(registry: ToolRegistry): void {
     registry.registerTool(
@@ -111,7 +107,6 @@ export class CoreTools {
 
   /**
    * Register test sampling tool - MCP sampling API integration
-   * EXTRACTED: From ActionStepMCPServer.ts testSampling handler
    */
   private registerTestSamplingTool(registry: ToolRegistry): void {
     registry.registerTool(
@@ -135,7 +130,6 @@ export class CoreTools {
 
   /**
    * Register test elicitation tool - MCP elicitation API integration
-   * EXTRACTED: From ActionStepMCPServer.ts testElicitation handler
    */
   private registerTestElicitationTool(registry: ToolRegistry): void {
     registry.registerTool(
@@ -161,7 +155,6 @@ export class CoreTools {
 
   /**
    * Handle echo tool execution
-   * PRESERVED: Exact implementation from ActionStepMCPServer
    */
   private async handleEcho(args: { message: string }): Promise<CallToolResult> {
     const { message } = args;
@@ -209,6 +202,9 @@ export class CoreTools {
         available: ['echo', 'get_server_status', 'test_sampling', 'test_elicitation'],
         core_tools_loaded: true,
       },
+      workflows: {
+        available: [], // need workflowRegistry to get workflow names
+      },
       health: {
         status: 'healthy',
         uptime: process.uptime(),
@@ -229,7 +225,6 @@ export class CoreTools {
 
   /**
    * Handle test sampling tool execution
-   * PRESERVED: Exact implementation from ActionStepMCPServer testSampling
    */
   private async handleTestSampling(
     args: { prompt: string; model: string },
@@ -258,7 +253,6 @@ export class CoreTools {
         throw new Error('SDK MCP server not available - check dependency injection');
       }
 
-      // PRESERVED: Exact MCP SDK sampling pattern from ActionStepMCPServer
       const samplingResult = await this.sdkMcpServer.server.createMessage({
         _meta: (extra?._meta || {}) as {
           [x: string]: unknown;
@@ -343,7 +337,6 @@ export class CoreTools {
 
   /**
    * Handle test elicitation tool execution
-   * PRESERVED: Exact implementation from ActionStepMCPServer testElicitation
    */
   private async handleTestElicitation(
     args: { message: string; requestedSchema: string },
@@ -386,7 +379,6 @@ export class CoreTools {
         throw new Error('SDK MCP server not available - check dependency injection');
       }
 
-      // PRESERVED: Exact MCP SDK elicitation pattern from ActionStepMCPServer
       const elicitationResult = await this.sdkMcpServer.server.elicitInput({
         message,
         requestedSchema: parsedSchema as any, // Cast for MCP SDK compatibility
@@ -410,7 +402,6 @@ export class CoreTools {
         },
       });
 
-      // PRESERVED: Handle elicitation response patterns from ActionStepMCPServer
       if (elicitationResult.action === 'accept' && elicitationResult.content) {
         return {
           content: [{

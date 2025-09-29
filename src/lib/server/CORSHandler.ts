@@ -3,8 +3,6 @@
  *
  * Manages CORS headers, preflight requests, and cross-origin security for the HTTP server.
  * Provides configurable CORS policies with sensible defaults for MCP server usage.
- *
- * Extracted from: actionstep-mcp-server/src/server/HttpServer.ts CORS handling
  */
 
 import type { Logger } from '../../types/library.types.ts';

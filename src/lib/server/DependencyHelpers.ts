@@ -604,7 +604,7 @@ export function getAllDependencies(overrides: AppServerOverrides = {}): AppServe
     ...consumerDeps,
   };
 
-  // Use pre-built MCP server instance (Option A pattern)
+  // Use pre-built MCP server instance if it exists
   const beyondMcpServer = overrides.beyondMcpServer || (() => {
     // Fallback: create generic MCP server if no consumer server provided
     const serverConfig = overrides.serverConfig || {
@@ -635,6 +635,7 @@ export function getAllDependencies(overrides: AppServerOverrides = {}): AppServe
       server.registerTool(tool.name, tool.definition, tool.handler, tool.options)
     );
 
+    // the server will be initialized in AppServer.start()
     return server;
   })();
 

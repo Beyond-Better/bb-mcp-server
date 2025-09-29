@@ -3,8 +3,6 @@
  *
  * Provides comprehensive server monitoring endpoints including health checks,
  * readiness probes, liveness probes, and detailed server status information.
- *
- * Extracted from: actionstep-mcp-server/src/server/HttpServer.ts status methods
  */
 
 import type { Logger } from '../../types/library.types.ts';

@@ -5,7 +5,6 @@
  * to prevent authorization code interception attacks in OAuth 2.0 flows. All
  * cryptographic operations are preserved exactly from OAuthClientService.ts.
  *
- * Extracted from: actionstep-mcp-server/src/api/OAuthClientService.ts
  * Security Requirements:
  * - RFC 7636 full compliance for PKCE implementation
  * - SHA-256 digest for S256 code challenge method
