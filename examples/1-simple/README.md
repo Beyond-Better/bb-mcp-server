@@ -1,10 +1,11 @@
 # 1-Simple: Basic Plugin Tools Example
 
-**Complexity**: ⭐ Beginner  
-**Learning Focus**: "How to get started with minimal setup"  
+**Complexity**: ⭐ Beginner\
+**Learning Focus**: "How to get started with minimal setup"\
 **Duration**: ~15 minutes to understand and run
 
 This example demonstrates the simplest approach to building an MCP server with bb-mcp-server:
+
 - Zero custom dependencies (uses library defaults)
 - Plugin discovery with basic utility tools
 - Minimal configuration and maximum learning focus
@@ -12,12 +13,14 @@ This example demonstrates the simplest approach to building an MCP server with b
 ## 🎯 What You'll Learn
 
 ### Core Concepts
+
 - **Plugin Architecture**: Self-contained plugins with discovery
 - **Tool Development**: Basic utility tools with parameter validation
 - **Configuration Management**: Environment-driven configuration
 - **Transport Modes**: STDIO vs HTTP transport options
 
 ### Technical Skills
+
 - Creating self-contained plugins
 - Parameter validation with Zod schemas
 - Error handling and response formatting
@@ -42,6 +45,7 @@ Simple MCP Server
 ```
 
 ### Key Architectural Benefits
+
 - **🎯 Zero Boilerplate**: Library handles all infrastructure
 - **🔍 Plugin Discovery**: Automatic tool registration from plugin arrays
 - **⚙️ Environment Driven**: Complete configuration via .env
@@ -52,6 +56,7 @@ Simple MCP Server
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - [Deno](https://deno.land/) 2.0+ installed (tested with v2.5.x)
 - Basic understanding of TypeScript/JavaScript
 
@@ -92,6 +97,7 @@ Simple MCP Server
 The SimplePlugin provides three utility tools:
 
 ### 1. current_datetime
+
 **Purpose**: Demonstrates basic data retrieval and formatting
 
 ```typescript
@@ -111,17 +117,20 @@ The SimplePlugin provides three utility tools:
 ```
 
 **Parameters**:
+
 - `timezone` (optional): Timezone string (e.g., "UTC", "America/New_York")
 - `format` (optional): Output format - "iso" (default), "human", "unix", "custom"
 - `customFormat` (optional): Custom format string when format="custom"
 
 **Learning Points**:
+
 - Parameter validation with optional fields
 - Data formatting and transformation
 - Timezone handling
 - Multiple output formats
 
 ### 2. get_system_info
+
 **Purpose**: Shows system integration and information gathering
 
 ```typescript
@@ -142,17 +151,20 @@ The SimplePlugin provides three utility tools:
 ```
 
 **Parameters**:
+
 - `detail` (optional): "basic" (default) or "detailed"
 - `includeMemory` (optional): Include memory usage info (default: true)
 - `includeEnvironment` (optional): Include safe environment variables (default: false)
 
 **Learning Points**:
+
 - Safe system API integration
 - Memory and resource information
 - Structured data response formatting
 - Security considerations for system data
 
 ### 3. validate_json
+
 **Purpose**: Demonstrates data validation and transformation
 
 ```typescript
@@ -177,12 +189,14 @@ The SimplePlugin provides three utility tools:
 ```
 
 **Parameters**:
+
 - `json_string`: JSON string to validate and format
 - `format` (optional): Whether to prettify the JSON (default: true)
 - `validate_only` (optional): Only validate, don't return formatted JSON (default: false)
 - `indent` (optional): Indentation spaces (default: 2)
 
 **Learning Points**:
+
 - Input validation and error handling
 - JSON parsing and formatting
 - User-friendly error messages
@@ -200,17 +214,17 @@ const SimplePlugin: AppPlugin = {
   name: 'simple-plugin',
   version: '1.0.0',
   description: 'Basic utility tools',
-  
+
   // 🎯 Populate tools array - PluginManager handles registration automatically
   tools: [
     {
       name: 'current_datetime',
-      definition: { title: 'Current DateTime', /* ... */ },
-      handler: async (args) => { /* tool logic */ },
+      definition: { title: 'Current DateTime' /* ... */ },
+      handler: async (args) => {/* tool logic */},
     },
     // ... more tools
   ],
-  
+
   workflows: [], // Empty for simple tools-only plugins
 };
 
@@ -225,28 +239,28 @@ const ComplexPlugin: AppPlugin = {
   name: 'complex-plugin',
   tools: [], // Empty initially
   workflows: [],
-  
+
   // ⚠️ CORRECT signature when initialize() is needed:
   async initialize(
     dependencies: AppServerDependencies,
     toolRegistry: ToolRegistry,
-    workflowRegistry: WorkflowRegistry
+    workflowRegistry: WorkflowRegistry,
   ): Promise<void> {
     // Only use for complex async setup (database connections, etc.)
     // PluginManager calls: plugin.initialize(pluginDependencies, toolRegistry, workflowRegistry)
-    
+
     // Manual registration - unnecessary complexity for most cases
     toolRegistry.registerTool('tool_name', definition, handler);
-  }
+  },
 };
 ```
 
 ### 🎓 When to Use Each Pattern
 
-| Pattern | Use Case | Example |
-|---------|----------|----------|
-| **Tools Array** | Most plugins (recommended) | Static tool definitions |
-| **Initialize Method** | Complex async setup only | Database connections, external API setup |
+| Pattern               | Use Case                   | Example                                  |
+| --------------------- | -------------------------- | ---------------------------------------- |
+| **Tools Array**       | Most plugins (recommended) | Static tool definitions                  |
+| **Initialize Method** | Complex async setup only   | Database connections, external API setup |
 
 **Reference**: See `examples/plugin-api-auth/src/plugins/ExamplePlugin.ts` for more advanced patterns with dependency injection.
 
@@ -273,6 +287,7 @@ deno task test:watch
 ```
 
 ### Test Structure
+
 ```
 tests/
 ├── tools/                     # Tool-specific tests
@@ -289,6 +304,7 @@ tests/
 ## 📝 Configuration Options
 
 ### Environment Variables
+
 All configuration is done via `.env` file:
 
 ```bash
@@ -312,6 +328,7 @@ DENO_KV_PATH=./data/simple-mcp-server.db
 ### Development vs Production
 
 **Development**:
+
 ```bash
 LOG_LEVEL=debug
 DEV_MODE=true
@@ -319,6 +336,7 @@ PLUGINS_WATCH_CHANGES=false  # true for hot reload
 ```
 
 **Production**:
+
 ```bash
 LOG_LEVEL=info
 DEV_MODE=false
@@ -333,10 +351,10 @@ AUDIT_ENABLED=true
    ```bash
    # Check plugin discovery path
    PLUGINS_DISCOVERY_PATHS=./src/plugins
-   
+
    # Enable debug logging
    LOG_LEVEL=debug
-   
+
    # Check plugin syntax
    deno check src/plugins/SimplePlugin.ts
    ```
@@ -345,7 +363,7 @@ AUDIT_ENABLED=true
    ```bash
    # Ensure all permissions
    deno run --allow-all main.ts
-   
+
    # Or specific permissions
    deno run --allow-net --allow-read --allow-write --allow-env main.ts
    ```
@@ -354,10 +372,10 @@ AUDIT_ENABLED=true
    ```bash
    # Check transport setting
    MCP_TRANSPORT=http
-   
+
    # Check port availability
    lsof -i :3000
-   
+
    # Try different port
    HTTP_PORT=3001
    ```
@@ -368,7 +386,9 @@ AUDIT_ENABLED=true
    - Use debug logging to see validation details
 
 ### Debug Mode
+
 Enable comprehensive logging:
+
 ```bash
 LOG_LEVEL=debug deno run --allow-all main.ts
 ```
@@ -376,6 +396,7 @@ LOG_LEVEL=debug deno run --allow-all main.ts
 ## 🎓 Learning Exercises
 
 ### Beginner Exercises
+
 1. **Add a new tool** to SimplePlugin:
    - Create a `random_number` tool with min/max parameters
    - Add proper validation and error handling
@@ -392,6 +413,7 @@ LOG_LEVEL=debug deno run --allow-all main.ts
    - Modify plugin discovery settings
 
 ### Intermediate Exercises
+
 1. **Create a second plugin** in the same example:
    - Add `MathPlugin.ts` with calculation tools
    - Configure plugin loading preferences
@@ -429,12 +451,14 @@ After mastering this simple example:
 ## 💡 Key Takeaways
 
 ### What Makes This Simple
+
 - **Zero Infrastructure Code**: AppServer handles everything
 - **Plugin Discovery**: Automatic tool registration
 - **Minimal Configuration**: Everything via environment variables
 - **Focus on Tools**: Spend time on business logic, not setup
 
 ### What You've Learned
+
 - Self-contained plugin architecture
 - Tool development patterns and best practices
 - Parameter validation and error handling
@@ -442,7 +466,9 @@ After mastering this simple example:
 - Testing patterns for tools and plugins
 
 ### Production Readiness
+
 This simple example is actually production-ready:
+
 - Complete error handling and logging
 - Security best practices
 - Performance monitoring
@@ -452,6 +478,7 @@ This simple example is actually production-ready:
 ---
 
 **🎯 Success Criteria**: You've mastered this example when you can:
+
 - Create new tools following the established patterns
 - Configure the server for different environments
 - Debug issues using logging and error messages

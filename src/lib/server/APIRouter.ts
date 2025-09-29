@@ -3,7 +3,6 @@
  *
  * Handles /api/v1/* endpoints with extensible routing for auth, status, metrics,
  * and workflow endpoints. Provides clean API structure and delegation to specialized handlers.
- *
  */
 
 import type { Logger } from '../../types/library.types.ts';

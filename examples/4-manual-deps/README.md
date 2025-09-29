@@ -16,6 +16,7 @@ This example teaches you how to:
 ## 🔧 Key Features
 
 ### 1. Manual Tool and Workflow Registration
+
 **Complete control over registration within dependency creation**
 
 ```typescript
@@ -23,8 +24,8 @@ This example teaches you how to:
 export async function createManualDependencies(): Promise<Partial<AppServerDependencies>> {
   // Create tool registry and register tools manually
   const toolRegistry = await getToolRegistry(logger, errorHandler);
-  const exampleTools = new ExampleTools({ /* dependencies */ });
-  
+  const exampleTools = new ExampleTools({/* dependencies */});
+
   // Manual registration with complete control
   const toolRegistrations = exampleTools.getTools();
   for (const registration of toolRegistrations) {
@@ -32,19 +33,19 @@ export async function createManualDependencies(): Promise<Partial<AppServerDepen
       registration.name,
       registration.definition,
       registration.handler,
-      registration.options
+      registration.options,
     );
   }
-  
+
   // Create workflow registry and register workflows manually
   const workflowRegistry = await getWorkflowRegistry(logger, errorHandler);
-  const queryWorkflow = new ExampleQueryWorkflow({ /* dependencies */ });
-  const operationWorkflow = new ExampleOperationWorkflow({ /* dependencies */ });
-  
+  const queryWorkflow = new ExampleQueryWorkflow({/* dependencies */});
+  const operationWorkflow = new ExampleOperationWorkflow({/* dependencies */});
+
   // Manual workflow registration
   workflowRegistry.registerWorkflow(queryWorkflow);
   workflowRegistry.registerWorkflow(operationWorkflow);
-  
+
   return {
     toolRegistry,
     workflowRegistry,
@@ -54,29 +55,31 @@ export async function createManualDependencies(): Promise<Partial<AppServerDepen
 ```
 
 **Demonstrates**:
+
 - Direct control over all tool and workflow registration
 - Custom registration logic and conditional loading
 - Manual dependency injection for each component
 - Expert-level lifecycle management
 
 ### 2. Complete Library Component Override
+
 **Manual setup of all infrastructure components**
 
 ```typescript
 // Manual creation of all library components
 const logger = new Logger({
   level: configManager.get('LOG_LEVEL', 'info'),
-  format: configManager.get('LOG_FORMAT', 'json')
+  format: configManager.get('LOG_FORMAT', 'json'),
 });
 
 const auditLogger = new AuditLogger({
   enabled: configManager.get('AUDIT_ENABLED', 'true') === 'true',
   logAllApiCalls: configManager.get('AUDIT_LOG_ALL_API_CALLS', 'true') === 'true',
-  retentionDays: parseInt(configManager.get('AUDIT_RETENTION_DAYS', '90'), 10)
+  retentionDays: parseInt(configManager.get('AUDIT_RETENTION_DAYS', '90'), 10),
 }, logger);
 
 const kvManager = new KVManager({
-  kvPath: configManager.get('DENO_KV_PATH', './data/manual-deps.db')
+  kvPath: configManager.get('DENO_KV_PATH', './data/manual-deps.db'),
 }, logger);
 
 const oauthProvider = new OAuthProvider({
@@ -91,17 +94,19 @@ const transportManager = new TransportManager({
     hostname: configManager.get('HTTP_HOST', 'localhost'),
     port: parseInt(configManager.get('HTTP_PORT', '3000'), 10),
     // ... complete HTTP configuration
-  }
+  },
 }, { logger, kvManager, sessionStore, eventStore });
 ```
 
 **Demonstrates**:
+
 - Manual instantiation of all library components
 - Complete configuration control and validation
 - Custom implementations and overrides
 - Expert-level dependency wiring
 
 ### 3. Advanced Health Checks and Validation
+
 **Comprehensive validation and monitoring**
 
 ```typescript
@@ -111,7 +116,7 @@ await performHealthChecks(
     thirdpartyApiClient,
     oAuthConsumer,
     oauthProvider,
-    kvManager
+    kvManager,
   },
   logger,
   // Additional custom health checks
@@ -127,11 +132,11 @@ await performHealthChecks(
           healthy: true,
           status: 'Workflows registered',
           workflowCount: workflowNames.length,
-          discoveryMode: 'manual'
+          discoveryMode: 'manual',
         };
-      }
-    }
-  ]
+      },
+    },
+  ],
 );
 
 // Validate required configuration for manual setup
@@ -139,6 +144,7 @@ await validateConfiguration(configManager, logger, { oAuthConsumer });
 ```
 
 **Demonstrates**:
+
 - Custom health checks for manual components
 - Comprehensive dependency validation
 - Expert-level monitoring and diagnostics
@@ -147,6 +153,7 @@ await validateConfiguration(configManager, logger, { oAuthConsumer });
 ## 🏗️ Architecture Patterns
 
 ### Manual Dependency Control Architecture
+
 ```
 AppServer.create(custom dependency function)
 ├── Custom Dependency Function (complete control)
@@ -162,6 +169,7 @@ AppServer.create(custom dependency function)
 ```
 
 ### Manual Registration Pattern
+
 ```typescript
 // Expert-level dependency creation with manual registration
 const appServer = await AppServer.create(createManualDependencies);
@@ -173,6 +181,7 @@ await appServer.start();
 ```
 
 **Benefits**:
+
 - **Maximum Control**: Override any library component as needed
 - **Conditional Loading**: Register components based on complex business logic
 - **Performance Optimization**: Fine-grained control over resource usage
@@ -181,18 +190,19 @@ await appServer.start();
 
 ### Expert Control vs Plugin Discovery
 
-| Aspect | Plugin Discovery (Examples 1-3) | Manual Control (This Example) |
-|--------|---------------------------------|--------------------------------|
-| **Complexity** | Simple configuration | Expert-level implementation |
-| **Control** | Library handles registration | Complete manual control |
-| **Flexibility** | Standard patterns | Unlimited customization |
-| **Setup** | Minimal code required | Comprehensive setup needed |
-| **Performance** | Good defaults | Optimized for specific needs |
-| **Maintenance** | Library manages lifecycle | Manual lifecycle management |
+| Aspect          | Plugin Discovery (Examples 1-3) | Manual Control (This Example) |
+| --------------- | ------------------------------- | ----------------------------- |
+| **Complexity**  | Simple configuration            | Expert-level implementation   |
+| **Control**     | Library handles registration    | Complete manual control       |
+| **Flexibility** | Standard patterns               | Unlimited customization       |
+| **Setup**       | Minimal code required           | Comprehensive setup needed    |
+| **Performance** | Good defaults                   | Optimized for specific needs  |
+| **Maintenance** | Library manages lifecycle       | Manual lifecycle management   |
 
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Deno 2.5.0 or later
 - Expert-level TypeScript knowledge
 - Understanding of dependency injection patterns
@@ -218,7 +228,7 @@ await appServer.start();
    ```bash
    # STDIO transport with manual configuration
    deno run --allow-all main.ts
-   
+
    # HTTP transport with complete custom setup
    MCP_TRANSPORT=http deno run --allow-all main.ts
    ```
@@ -232,6 +242,7 @@ await appServer.start();
 ### Configuration
 
 #### Core Infrastructure Configuration
+
 ```bash
 # Transport Configuration (manual setup)
 MCP_TRANSPORT=stdio|http
@@ -252,6 +263,7 @@ DENO_KV_PATH=./examples/4-manual-deps/data/manual-mcp-server.db
 ```
 
 #### OAuth Provider Configuration (Manual Setup)
+
 ```bash
 # OAuth Provider (MCP server as OAuth provider)
 OAUTH_PROVIDER_ISSUER=http://localhost:3000
@@ -263,6 +275,7 @@ OAUTH_REFRESH_TOKEN_EXPIRATION=2592000000
 ```
 
 #### OAuth Consumer Configuration (for External APIs)
+
 ```bash
 # OAuth Consumer (for ExampleCorp API)
 OAUTH_CONSUMER_CLIENT_ID=your-examplecorp-client-id
@@ -284,6 +297,7 @@ THIRDPARTY_API_RETRY_ATTEMPTS=3
 ### Step-by-Step Manual Setup
 
 #### 1. Manual Tool Registration
+
 ```typescript
 // Create tool registry manually
 const toolRegistry = await getToolRegistry(logger, errorHandler);
@@ -295,12 +309,12 @@ toolRegistry.sdkMcpServer = new SdkMcpServer(
     name: 'examplecorp-mcp-server',
     version: '1.0.0',
     title: 'ExampleCorp API Integration',
-    description: 'Manual dependency management example'
+    description: 'Manual dependency management example',
   },
   {
     capabilities: { tools: {}, logging: {} },
-    instructions
-  }
+    instructions,
+  },
 );
 
 // Create tools with manual dependency injection
@@ -308,7 +322,7 @@ const exampleTools = new ExampleTools({
   apiClient: thirdpartyApiClient,
   oauthConsumer: oAuthConsumer,
   logger: logger,
-  auditLogger: auditLogger
+  auditLogger: auditLogger,
 });
 
 // Register each tool with complete control
@@ -318,13 +332,14 @@ for (const registration of toolRegistrations) {
     registration.name,
     registration.definition,
     registration.handler,
-    registration.options
+    registration.options,
   );
   logger.info(`Manually registered tool: ${registration.definition.title}`);
 }
 ```
 
 #### 2. Manual Workflow Registration
+
 ```typescript
 // Create workflow registry manually
 const workflowRegistry = await getWorkflowRegistry(logger, errorHandler);
@@ -332,12 +347,12 @@ const workflowRegistry = await getWorkflowRegistry(logger, errorHandler);
 // Create workflows with explicit dependency injection
 const queryWorkflow = new ExampleQueryWorkflow({
   apiClient: thirdpartyApiClient,
-  logger: logger
+  logger: logger,
 });
 
 const operationWorkflow = new ExampleOperationWorkflow({
   apiClient: thirdpartyApiClient,
-  logger: logger
+  logger: logger,
 });
 
 // Manual registration with logging
@@ -346,15 +361,16 @@ workflowRegistry.registerWorkflow(operationWorkflow);
 
 logger.info('Manually registered workflows:', {
   workflows: [queryWorkflow.name, operationWorkflow.name],
-  registrationMode: 'manual'
+  registrationMode: 'manual',
 });
 ```
 
 #### 3. Manual Infrastructure Setup
+
 ```typescript
 // Manual creation of all infrastructure components
 const kvManager = new KVManager({
-  kvPath: configManager.get('DENO_KV_PATH', './data/manual-deps.db')
+  kvPath: configManager.get('DENO_KV_PATH', './data/manual-deps.db'),
 }, logger);
 
 // Initialize KV connection manually
@@ -367,14 +383,14 @@ const credentialStore = new CredentialStore(kvManager, {}, logger);
 const sessionStore = new SessionStore(
   kvManager,
   { keyPrefix: ['sessions'] },
-  logger
+  logger,
 );
 
 // Manual event store setup
 const eventStore = new TransportEventStore(
   kvManager.getKV(),
   ['events'],
-  logger
+  logger,
 );
 
 // Manual transport manager configuration
@@ -387,12 +403,12 @@ const transportManager = new TransportManager({
     maxConcurrentSessions: 1000,
     enableSessionPersistence: true,
     // ... complete HTTP configuration
-  }
+  },
 }, {
   logger,
   kvManager,
   sessionStore,
-  eventStore
+  eventStore,
 });
 ```
 
@@ -401,6 +417,7 @@ const transportManager = new TransportManager({
 ### Manually Registered Tools
 
 #### `query_customers_example`
+
 **Customer search with manual OAuth integration**
 
 ```json
@@ -417,6 +434,7 @@ const transportManager = new TransportManager({
 ```
 
 #### `create_order_example`
+
 **Order creation with manual validation and processing**
 
 ```json
@@ -441,6 +459,7 @@ const transportManager = new TransportManager({
 ### Manually Registered Workflows
 
 #### `example_query` Workflow
+
 **Advanced querying with manual error handling**
 
 ```json
@@ -464,6 +483,7 @@ const transportManager = new TransportManager({
 ```
 
 #### `example_operation` Workflow
+
 **Complex operations with manual transaction control**
 
 ```json
@@ -497,6 +517,7 @@ const transportManager = new TransportManager({
 ## 🧪 Testing Manual Setup
 
 ### Comprehensive Test Suite
+
 ```bash
 # Test manual tool registration
 deno test --allow-all tests/tools/
@@ -512,10 +533,11 @@ deno test --allow-all tests/integration/ManualSetup.test.ts
 ```
 
 ### Manual Registration Verification
+
 ```typescript
 // Verify manual tool registration
 const registeredTools = toolRegistry.listTools();
-console.log('Manually registered tools:', registeredTools.map(t => t.name));
+console.log('Manually registered tools:', registeredTools.map((t) => t.name));
 
 // Verify manual workflow registration
 const registeredWorkflows = workflowRegistry.getWorkflowNames();
@@ -525,7 +547,7 @@ console.log('Manually registered workflows:', registeredWorkflows);
 console.log('Custom dependencies:', {
   hasApiClient: !!thirdpartyApiClient,
   hasOAuthConsumer: !!oAuthConsumer,
-  hasCustomLogger: logger.constructor.name === 'Logger'
+  hasCustomLogger: logger.constructor.name === 'Logger',
 });
 ```
 
@@ -570,7 +592,7 @@ console.log('Custom dependencies:', {
    // Log initialization sequence
    logger.debug('Manual dependency creation sequence:', {
      step: 'infrastructure',
-     components: ['Logger', 'KVManager', 'CredentialStore']
+     components: ['Logger', 'KVManager', 'CredentialStore'],
    });
    ```
 
@@ -581,7 +603,7 @@ console.log('Custom dependencies:', {
      logger: !!logger,
      kvManager: !!kvManager && kvManager.isInitialized(),
      toolRegistry: !!toolRegistry && toolRegistry.listTools().length > 0,
-     workflowRegistry: !!workflowRegistry && workflowRegistry.getWorkflowNames().length > 0
+     workflowRegistry: !!workflowRegistry && workflowRegistry.getWorkflowNames().length > 0,
    };
    logger.info('Manual dependency validation:', dependencyValidation);
    ```
@@ -592,14 +614,14 @@ If you're coming from the `3-plugin-api-auth` example:
 
 ### Key Differences
 
-| Aspect | Plugin-API-Auth | Manual-Deps |
-|--------|-----------------|--------------|
-| **Plugin Discovery** | Automatic discovery | No plugin discovery |
-| **Registration** | Library handles | Manual registration |
-| **Dependencies** | Custom injection | Complete manual control |
-| **Infrastructure** | Library defaults | Manual setup of everything |
-| **Complexity** | Moderate setup | Expert-level implementation |
-| **Flexibility** | Good customization | Unlimited control |
+| Aspect               | Plugin-API-Auth     | Manual-Deps                 |
+| -------------------- | ------------------- | --------------------------- |
+| **Plugin Discovery** | Automatic discovery | No plugin discovery         |
+| **Registration**     | Library handles     | Manual registration         |
+| **Dependencies**     | Custom injection    | Complete manual control     |
+| **Infrastructure**   | Library defaults    | Manual setup of everything  |
+| **Complexity**       | Moderate setup      | Expert-level implementation |
+| **Flexibility**      | Good customization  | Unlimited control           |
 
 ### Migration Steps
 
@@ -615,6 +637,7 @@ If you're coming from the `3-plugin-api-auth` example:
 ### When to Use Manual Control
 
 **Use Manual Control When**:
+
 - **Enterprise Integration**: Need to integrate with existing infrastructure
 - **Performance Critical**: Require fine-grained resource optimization
 - **Custom Authentication**: Implementing specialized auth patterns

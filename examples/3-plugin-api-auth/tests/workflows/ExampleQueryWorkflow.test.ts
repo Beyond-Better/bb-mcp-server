@@ -22,23 +22,14 @@
  * 7. Test dry run and execution planning
  */
 
-import {
-  assert,
-  assertEquals,
-  assertExists,
-} from "https://deno.land/std@0.208.0/assert/mod.ts";
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  it,
-} from "https://deno.land/std@0.208.0/testing/bdd.ts";
-import { type Spy, spy } from "https://deno.land/std@0.208.0/testing/mock.ts";
-import { errorMessage } from "@beyondbetter/bb-mcp-server";
+import { assert, assertEquals, assertExists } from 'https://deno.land/std@0.208.0/assert/mod.ts';
+import { afterEach, beforeEach, describe, it } from 'https://deno.land/std@0.208.0/testing/bdd.ts';
+import { type Spy, spy } from 'https://deno.land/std@0.208.0/testing/mock.ts';
+import { errorMessage } from '@beyondbetter/bb-mcp-server';
 
 // Import the plugin to get workflows
-import createPlugin from "../../src/plugins/ExamplePlugin.ts";
-import { ExampleQueryWorkflow } from "../../src/plugins/workflows/ExampleQueryWorkflow.ts";
+import createPlugin from '../../src/plugins/ExamplePlugin.ts';
+import { ExampleQueryWorkflow } from '../../src/plugins/workflows/ExampleQueryWorkflow.ts';
 
 // Import OAuth-aware test utilities
 import {
@@ -50,8 +41,8 @@ import {
   MockApiClient,
   MockAuthLogger,
   MockOAuthConsumer,
-} from "../utils/test-helpers.ts";
-import { getResultData } from "../utils/type-helpers.ts";
+} from '../utils/test-helpers.ts';
+import { getResultData } from '../utils/type-helpers.ts';
 
 type WorkflowContext = any;
 
@@ -61,7 +52,7 @@ type WorkflowContext = any;
  * These tests demonstrate comprehensive OAuth-aware workflow testing
  * for complex query workflows with external API integration.
  */
-describe("ExampleQueryWorkflow - OAuth Integration", () => {
+describe('ExampleQueryWorkflow - OAuth Integration', () => {
   let mockOAuth: MockOAuthConsumer;
   let mockApiClient: MockApiClient;
   let mockLogger: MockAuthLogger;
@@ -78,7 +69,7 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
     mockLogger = createMockAuthLogger();
 
     // Set up logging spy
-    logSpy = spy(mockLogger, "info");
+    logSpy = spy(mockLogger, 'info');
 
     // Create plugin and extract workflow
     plugin = createPlugin({
@@ -89,8 +80,8 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
     } as any);
 
     // Find the query workflow
-    workflow = plugin.workflows.find((w: any) => w.name === "example_query");
-    assertExists(workflow, "ExampleQueryWorkflow should be found in plugin");
+    workflow = plugin.workflows.find((w: any) => w.name === 'example_query');
+    assertExists(workflow, 'ExampleQueryWorkflow should be found in plugin');
 
     // Create authenticated workflow context
     context = createAuthenticatedWorkflowContext({
@@ -105,122 +96,122 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
   /**
    * WORKFLOW REGISTRATION AND METADATA
    */
-  describe("Workflow Registration", () => {
-    it("should have correct OAuth-aware workflow metadata", () => {
-      assertEquals(workflow.name, "example_query");
-      assertEquals(workflow.version, "1.0.0");
-      assertEquals(workflow.category, "query");
+  describe('Workflow Registration', () => {
+    it('should have correct OAuth-aware workflow metadata', () => {
+      assertEquals(workflow.name, 'example_query');
+      assertEquals(workflow.version, '1.0.0');
+      assertEquals(workflow.category, 'query');
       assert(Array.isArray(workflow.tags));
-      assert(workflow.tags.includes("query"));
-      assert(workflow.tags.includes("examplecorp"));
+      assert(workflow.tags.includes('query'));
+      assert(workflow.tags.includes('examplecorp'));
     });
 
-    it("should return proper registration with parameter schema", () => {
+    it('should return proper registration with parameter schema', () => {
       const registration = workflow.getRegistration();
 
-      assertEquals(registration.name, "example_query");
-      assertEquals(registration.displayName, "ExampleCorp Query Workflow");
-      assertEquals(registration.version, "1.0.0");
-      assertEquals(registration.category, "query");
+      assertEquals(registration.name, 'example_query');
+      assertEquals(registration.displayName, 'ExampleCorp Query Workflow');
+      assertEquals(registration.version, '1.0.0');
+      assertEquals(registration.category, 'query');
       assertExists(
         registration.parameterSchema,
-        "Should include parameter schema",
+        'Should include parameter schema',
       );
     });
 
-    it("should provide comprehensive workflow overview", () => {
+    it('should provide comprehensive workflow overview', () => {
       const overview = workflow.getOverview();
 
-      assert(overview.includes("Query ExampleCorp data"));
-      assert(overview.includes("customers: Query customer records"));
-      assert(overview.includes("orders: Query order history"));
-      assert(overview.includes("products: Query product catalog"));
-      assert(overview.includes("analytics: Query business analytics"));
-      assert(overview.includes("Advanced filtering and search"));
+      assert(overview.includes('Query ExampleCorp data'));
+      assert(overview.includes('customers: Query customer records'));
+      assert(overview.includes('orders: Query order history'));
+      assert(overview.includes('products: Query product catalog'));
+      assert(overview.includes('analytics: Query business analytics'));
+      assert(overview.includes('Advanced filtering and search'));
     });
   });
 
   /**
    * PARAMETER VALIDATION WITH OAUTH
    */
-  describe("OAuth-Aware Parameter Validation", () => {
-    it("should validate required OAuth user parameters", async () => {
+  describe('OAuth-Aware Parameter Validation', () => {
+    it('should validate required OAuth user parameters', async () => {
       const validParams = {
-        userId: "test-user",
-        queryType: "customers",
-        searchTerm: "Acme Corporation",
-        outputFormat: "summary",
+        userId: 'test-user',
+        queryType: 'customers',
+        searchTerm: 'Acme Corporation',
+        outputFormat: 'summary',
       };
 
       const result = await workflow.validateParameters(validParams);
       assertEquals(result.valid, true);
       const data = getResultData(result);
       assertExists(data);
-      assertEquals(data.userId, "test-user");
+      assertEquals(data.userId, 'test-user');
     });
 
-    it("should fail validation without userId for OAuth", async () => {
+    it('should fail validation without userId for OAuth', async () => {
       const invalidParams = {
-        queryType: "customers",
-        searchTerm: "test",
+        queryType: 'customers',
+        searchTerm: 'test',
       };
 
       const result = await workflow.validateParameters(invalidParams);
       assertEquals(result.valid, false);
       assert(Array.isArray(result.errors));
-      assert(result.errors.some((err: any) => err.path.includes("userId")));
+      assert(result.errors.some((err: any) => err.path.includes('userId')));
     });
 
-    it("should validate query type enum values", async () => {
+    it('should validate query type enum values', async () => {
       const invalidParams = {
-        userId: "test-user",
-        queryType: "invalid_query_type",
+        userId: 'test-user',
+        queryType: 'invalid_query_type',
       };
 
       const result = await workflow.validateParameters(invalidParams);
       assertEquals(result.valid, false);
-      assert(result.errors.some((err: any) => err.path.includes("queryType")));
+      assert(result.errors.some((err: any) => err.path.includes('queryType')));
     });
 
-    it("should apply correct default values", async () => {
+    it('should apply correct default values', async () => {
       const params = {
-        userId: "test-user",
-        queryType: "customers",
+        userId: 'test-user',
+        queryType: 'customers',
       };
 
       const result = await workflow.validateParameters(params);
       assertEquals(result.valid, true);
       const data = getResultData(result);
-      assertEquals(data.outputFormat, "summary"); // Default value
+      assertEquals(data.outputFormat, 'summary'); // Default value
       assertEquals(data.dryRun, false); // Default value
       assertEquals(data.includeMetadata, false); // Default value
       assertEquals(data.pagination?.page, 1); // Default value
     });
 
-    it("should validate complex nested filter parameters", async () => {
+    it('should validate complex nested filter parameters', async () => {
       const params = {
-        userId: "test-user",
-        queryType: "orders",
+        userId: 'test-user',
+        queryType: 'orders',
         filters: {
           dateRange: {
-            startDate: "2024-01-01T00:00:00Z",
-            endDate: "2024-12-31T23:59:59Z",
+            startDate: '2024-01-01T00:00:00Z',
+            endDate: '2024-12-31T23:59:59Z',
           },
-          status: "completed",
-          region: "US-West",
+          status: 'completed',
+          region: 'US-West',
         },
         pagination: {
           page: 2,
           limit: 50,
-          sortBy: "createdDate",
-          sortOrder: "desc",
+          sortBy: 'createdDate',
+          sortOrder: 'desc',
         },
       };
 
       const result = await workflow.validateParameters(params);
       assertEquals(result.valid, true);
       const data = getResultData(result);
-      assertEquals(data.filters.dateRange.startDate, "2024-01-01T00:00:00Z");
+      assertEquals(data.filters.dateRange.startDate, '2024-01-01T00:00:00Z');
       assertEquals(data.pagination.page, 2);
     });
   });
@@ -228,17 +219,17 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
   /**
    * OAUTH-AUTHENTICATED WORKFLOW EXECUTION
    */
-  describe("OAuth-Authenticated Execution", () => {
-    it("should execute customer query with OAuth authentication", async () => {
+  describe('OAuth-Authenticated Execution', () => {
+    it('should execute customer query with OAuth authentication', async () => {
       const params = {
-        userId: "test-user",
-        queryType: "customers",
-        searchTerm: "Acme",
+        userId: 'test-user',
+        queryType: 'customers',
+        searchTerm: 'Acme',
         filters: {
-          status: "active",
-          region: "US-West",
+          status: 'active',
+          region: 'US-West',
         },
-        outputFormat: "detailed",
+        outputFormat: 'detailed',
         includeMetadata: true,
       };
 
@@ -252,35 +243,33 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
       assertExists(result.metadata);
 
       // Verify OAuth token was used
-      assert(mockOAuth.hasValidToken("test-user"));
+      assert(mockOAuth.hasValidToken('test-user'));
 
       // Verify API was called with correct parameters
-      assertEquals(mockApiClient.getCallCount("queryCustomers"), 1);
+      assertEquals(mockApiClient.getCallCount('queryCustomers'), 1);
       const apiCalls = mockApiClient.getCallLog();
-      const customerCall = apiCalls.find((call) =>
-        call.method === "queryCustomers"
-      );
+      const customerCall = apiCalls.find((call) => call.method === 'queryCustomers');
       assertExists(customerCall);
-      assertEquals(customerCall.params.search, "Acme");
-      assertEquals(customerCall.params.filters.status, "active");
+      assertEquals(customerCall.params.search, 'Acme');
+      assertEquals(customerCall.params.filters.status, 'active');
     });
 
-    it("should execute orders query with date filtering", async () => {
+    it('should execute orders query with date filtering', async () => {
       const params = {
-        userId: "test-user",
-        queryType: "orders",
+        userId: 'test-user',
+        queryType: 'orders',
         filters: {
           dateRange: {
-            startDate: "2024-01-01T00:00:00Z",
-            endDate: "2024-03-31T23:59:59Z",
+            startDate: '2024-01-01T00:00:00Z',
+            endDate: '2024-03-31T23:59:59Z',
           },
-          status: "completed",
+          status: 'completed',
         },
         pagination: {
           page: 1,
           limit: 25,
-          sortBy: "totalAmount",
-          sortOrder: "desc",
+          sortBy: 'totalAmount',
+          sortOrder: 'desc',
         },
       };
 
@@ -289,23 +278,23 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
       assertEquals(result.success, true);
 
       // Verify API was called with date range filters
-      assertEquals(mockApiClient.getCallCount("queryOrders"), 1);
+      assertEquals(mockApiClient.getCallCount('queryOrders'), 1);
       const apiCalls = mockApiClient.getCallLog();
-      const orderCall = apiCalls.find((call) => call.method === "queryOrders");
+      const orderCall = apiCalls.find((call) => call.method === 'queryOrders');
       assertExists(orderCall);
-      assertEquals(orderCall.params.filters.status, "completed");
+      assertEquals(orderCall.params.filters.status, 'completed');
       assertExists(orderCall.params.filters.dateRange);
     });
 
-    it("should execute products query with category filtering", async () => {
+    it('should execute products query with category filtering', async () => {
       const params = {
-        userId: "test-user",
-        queryType: "products",
-        searchTerm: "Widget",
+        userId: 'test-user',
+        queryType: 'products',
+        searchTerm: 'Widget',
         filters: {
-          category: "electronics",
+          category: 'electronics',
         },
-        outputFormat: "raw",
+        outputFormat: 'raw',
       };
 
       const result = await workflow.executeWithValidation(params, context);
@@ -313,24 +302,22 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
       assertEquals(result.success, true);
 
       // Verify API was called correctly
-      assertEquals(mockApiClient.getCallCount("queryProducts"), 1);
+      assertEquals(mockApiClient.getCallCount('queryProducts'), 1);
       const apiCalls = mockApiClient.getCallLog();
-      const productCall = apiCalls.find((call) =>
-        call.method === "queryProducts"
-      );
+      const productCall = apiCalls.find((call) => call.method === 'queryProducts');
       assertExists(productCall);
-      assertEquals(productCall.params.search, "Widget");
-      assertEquals(productCall.params.filters.category, "electronics");
+      assertEquals(productCall.params.search, 'Widget');
+      assertEquals(productCall.params.filters.category, 'electronics');
     });
 
-    it("should execute analytics query with date range", async () => {
+    it('should execute analytics query with date range', async () => {
       const params = {
-        userId: "test-user",
-        queryType: "analytics",
+        userId: 'test-user',
+        queryType: 'analytics',
         filters: {
           dateRange: {
-            startDate: "2024-01-01T00:00:00Z",
-            endDate: "2024-12-31T23:59:59Z",
+            startDate: '2024-01-01T00:00:00Z',
+            endDate: '2024-12-31T23:59:59Z',
           },
         },
       };
@@ -340,11 +327,9 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
       assertEquals(result.success, true);
 
       // Verify analytics API was called
-      assertEquals(mockApiClient.getCallCount("queryAnalytics"), 1);
+      assertEquals(mockApiClient.getCallCount('queryAnalytics'), 1);
       const apiCalls = mockApiClient.getCallLog();
-      const analyticsCall = apiCalls.find((call) =>
-        call.method === "queryAnalytics"
-      );
+      const analyticsCall = apiCalls.find((call) => call.method === 'queryAnalytics');
       assertExists(analyticsCall);
       assertExists(analyticsCall.params.filters.dateRange);
     });
@@ -353,12 +338,12 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
   /**
    * OUTPUT FORMATTING TESTING
    */
-  describe("Output Formatting", () => {
-    it("should format summary output correctly", async () => {
+  describe('Output Formatting', () => {
+    it('should format summary output correctly', async () => {
       const params = {
-        userId: "test-user",
-        queryType: "customers",
-        outputFormat: "summary",
+        userId: 'test-user',
+        queryType: 'customers',
+        outputFormat: 'summary',
         includeMetadata: false,
       };
 
@@ -372,15 +357,15 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
       assertEquals(
         data.metadata,
         undefined,
-        "Should not include metadata when not requested",
+        'Should not include metadata when not requested',
       );
     });
 
-    it("should format detailed output with metadata", async () => {
+    it('should format detailed output with metadata', async () => {
       const params = {
-        userId: "test-user",
-        queryType: "orders",
-        outputFormat: "detailed",
+        userId: 'test-user',
+        queryType: 'orders',
+        outputFormat: 'detailed',
         includeMetadata: true,
       };
 
@@ -400,14 +385,14 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
       assertExists(data.items);
       assertExists(data.pagination);
       assertExists(data.summary);
-      assertExists(data.metadata, "Should include metadata when requested");
+      assertExists(data.metadata, 'Should include metadata when requested');
     });
 
-    it("should return raw output format", async () => {
+    it('should return raw output format', async () => {
       const params = {
-        userId: "test-user",
-        queryType: "products",
-        outputFormat: "raw",
+        userId: 'test-user',
+        queryType: 'products',
+        outputFormat: 'raw',
       };
 
       const result = await workflow.executeWithValidation(params, context);
@@ -419,12 +404,12 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
       assertExists(data.totalCount);
     });
 
-    it("should generate type-specific summaries", async () => {
+    it('should generate type-specific summaries', async () => {
       // Test customer summary
       const customerParams = {
-        userId: "test-user",
-        queryType: "customers",
-        outputFormat: "detailed",
+        userId: 'test-user',
+        queryType: 'customers',
+        outputFormat: 'detailed',
       };
 
       const customerResult = await workflow.executeWithValidation(
@@ -439,9 +424,9 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
 
       // Test order summary
       const orderParams = {
-        userId: "test-user",
-        queryType: "orders",
-        outputFormat: "detailed",
+        userId: 'test-user',
+        queryType: 'orders',
+        outputFormat: 'detailed',
       };
 
       const orderResult = await workflow.executeWithValidation(
@@ -459,15 +444,15 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
   /**
    * DRY RUN AND EXECUTION PLANNING
    */
-  describe("Dry Run and Planning", () => {
-    it("should perform dry run validation with OAuth check", async () => {
+  describe('Dry Run and Planning', () => {
+    it('should perform dry run validation with OAuth check', async () => {
       const params = {
-        userId: "test-user",
+        userId: 'test-user',
         dryRun: true,
-        queryType: "customers",
-        searchTerm: "test",
+        queryType: 'customers',
+        searchTerm: 'test',
         filters: {
-          status: "active",
+          status: 'active',
         },
       };
 
@@ -481,20 +466,20 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
       assertExists(data.queryPlan);
 
       // Should validate API connectivity
-      assertEquals(mockApiClient.getCallCount("healthCheck"), 1);
+      assertEquals(mockApiClient.getCallCount('healthCheck'), 1);
 
       // Should not perform actual query
-      assertEquals(mockApiClient.getCallCount("queryCustomers"), 0);
+      assertEquals(mockApiClient.getCallCount('queryCustomers'), 0);
     });
 
-    it("should validate API connectivity in dry run", async () => {
+    it('should validate API connectivity in dry run', async () => {
       // Set API as unhealthy
-      mockApiClient.setApiFailure("healthCheck", true);
+      mockApiClient.setApiFailure('healthCheck', true);
 
       const params = {
-        userId: "test-user",
+        userId: 'test-user',
         dryRun: true,
-        queryType: "customers",
+        queryType: 'customers',
       };
 
       const result = await workflow.executeWithValidation(params, context);
@@ -510,18 +495,18 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
       // Should return failure result, not throw exception
       assertEquals(result.success, false);
       assertExists(result.error);
-      assert(result.error.message.includes("API is not accessible"));
+      assert(result.error.message.includes('API is not accessible'));
     });
 
-    it("should generate appropriate execution plan", async () => {
+    it('should generate appropriate execution plan', async () => {
       const params = {
-        userId: "test-user",
+        userId: 'test-user',
         dryRun: true,
-        queryType: "analytics",
+        queryType: 'analytics',
         filters: {
           dateRange: {
-            startDate: "2024-01-01T00:00:00Z",
-            endDate: "2024-12-31T23:59:59Z",
+            startDate: '2024-01-01T00:00:00Z',
+            endDate: '2024-12-31T23:59:59Z',
           },
         },
       };
@@ -530,7 +515,7 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
 
       assertEquals(result.success, true);
       const data = getResultData(result);
-      assertEquals(data.queryPlan.queryType, "analytics");
+      assertEquals(data.queryPlan.queryType, 'analytics');
       assertEquals(data.queryPlan.searchEnabled, false);
       assertEquals(data.queryPlan.estimatedApiCalls, 1);
       assertExists(data.queryPlan.estimatedExecutionTime);
@@ -540,15 +525,15 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
   /**
    * ERROR HANDLING WITH OAUTH
    */
-  describe("OAuth Error Handling", () => {
-    it("should handle OAuth authentication failure", async () => {
+  describe('OAuth Error Handling', () => {
+    it('should handle OAuth authentication failure', async () => {
       // Set up OAuth failure
-      mockOAuth.setAuthFailure("auth-fail-user", true);
+      mockOAuth.setAuthFailure('auth-fail-user', true);
 
       const params = {
-        userId: "auth-fail-user",
-        queryType: "customers",
-        searchTerm: "test",
+        userId: 'auth-fail-user',
+        queryType: 'customers',
+        searchTerm: 'test',
       };
 
       const result = await workflow.executeWithValidation(params, context);
@@ -565,20 +550,20 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
 
       assertEquals(result.success, false);
       assertExists(result.error);
-      assertEquals(result.error.type, "system_error");
-      assert(result.error.message.includes("OAuth authentication failed"));
+      assertEquals(result.error.type, 'system_error');
+      assert(result.error.message.includes('OAuth authentication failed'));
       assertEquals(result.failed_steps.length, 1);
-      assertEquals(result.failed_steps[0]!.operation, "query_customers");
+      assertEquals(result.failed_steps[0]!.operation, 'query_customers');
     });
 
-    it("should handle API service failure", async () => {
+    it('should handle API service failure', async () => {
       // Set up API failure
-      mockApiClient.setApiFailure("queryCustomers", true);
+      mockApiClient.setApiFailure('queryCustomers', true);
 
       const params = {
-        userId: "test-user",
-        queryType: "customers",
-        searchTerm: "test",
+        userId: 'test-user',
+        queryType: 'customers',
+        searchTerm: 'test',
       };
 
       const result = await workflow.executeWithValidation(params, context);
@@ -587,12 +572,12 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
       assertExists(result.error);
       assert(
         result.error.message.includes(
-          "Customer service temporarily unavailable",
+          'Customer service temporarily unavailable',
         ),
       );
     });
 
-    it("should handle invalid query type gracefully", async () => {
+    it('should handle invalid query type gracefully', async () => {
       // This should be caught by parameter validation, but test runtime handling
       const workflow_direct = new ExampleQueryWorkflow({
         apiClient: mockApiClient as any,
@@ -600,31 +585,31 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
       });
 
       const invalidParams = {
-        userId: "test-user",
-        queryType: "invalid_type" as any,
+        userId: 'test-user',
+        queryType: 'invalid_type' as any,
       };
 
       const result = await workflow_direct.execute(invalidParams as any);
 
       assertEquals(result.success, false);
-      assert(result.error?.message.includes("Unsupported query type"));
+      assert(result.error?.message.includes('Unsupported query type'));
     });
 
-    it("should provide detailed error information", async () => {
+    it('should provide detailed error information', async () => {
       // Ensure OAuth is properly set up for test user
-      mockOAuth.setTokenForUser("test-user", {
-        access_token: "valid_token_for_api_test",
-        refresh_token: "refresh_token",
+      mockOAuth.setTokenForUser('test-user', {
+        access_token: 'valid_token_for_api_test',
+        refresh_token: 'refresh_token',
         expires_at: Date.now() + 3600000,
-        token_type: "Bearer",
+        token_type: 'Bearer',
       });
 
       // Set API failure AFTER OAuth is confirmed working
-      mockApiClient.setApiFailure("queryOrders", true);
+      mockApiClient.setApiFailure('queryOrders', true);
 
       const params = {
-        userId: "test-user",
-        queryType: "orders",
+        userId: 'test-user',
+        queryType: 'orders',
       };
 
       const result = await workflow.executeWithValidation(params, context);
@@ -632,8 +617,8 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
       assertEquals(result.success, false);
       assertExists(result.failed_steps);
       assertEquals(result.failed_steps.length, 1);
-      assertEquals(result.failed_steps[0]!.operation, "query_orders");
-      assertEquals(result.failed_steps[0]!.error_type, "system_error");
+      assertEquals(result.failed_steps[0]!.operation, 'query_orders');
+      assertEquals(result.failed_steps[0]!.error_type, 'system_error');
       assertExists(result.failed_steps[0]!.message);
       assertExists(result.failed_steps[0]!.timestamp);
     });
@@ -642,16 +627,16 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
   /**
    * PAGINATION AND FILTERING
    */
-  describe("Pagination and Filtering", () => {
-    it("should handle pagination parameters correctly", async () => {
+  describe('Pagination and Filtering', () => {
+    it('should handle pagination parameters correctly', async () => {
       const params = {
-        userId: "test-user",
-        queryType: "customers",
+        userId: 'test-user',
+        queryType: 'customers',
         pagination: {
           page: 3,
           limit: 15,
-          sortBy: "name",
-          sortOrder: "desc",
+          sortBy: 'name',
+          sortOrder: 'desc',
         },
       };
 
@@ -661,27 +646,25 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
 
       // Verify pagination was passed to API
       const apiCalls = mockApiClient.getCallLog();
-      const customerCall = apiCalls.find((call) =>
-        call.method === "queryCustomers"
-      );
+      const customerCall = apiCalls.find((call) => call.method === 'queryCustomers');
       assertExists(customerCall);
       assertEquals(customerCall.params.pagination.page, 3);
       assertEquals(customerCall.params.pagination.limit, 15);
-      assertEquals(customerCall.params.pagination.sortBy, "name");
-      assertEquals(customerCall.params.pagination.sortOrder, "desc");
+      assertEquals(customerCall.params.pagination.sortBy, 'name');
+      assertEquals(customerCall.params.pagination.sortOrder, 'desc');
     });
 
-    it("should apply complex filters correctly", async () => {
+    it('should apply complex filters correctly', async () => {
       const params = {
-        userId: "test-user",
-        queryType: "orders",
-        searchTerm: "urgent",
+        userId: 'test-user',
+        queryType: 'orders',
+        searchTerm: 'urgent',
         filters: {
           dateRange: {
-            startDate: "2024-06-01T00:00:00Z",
-            endDate: "2024-06-30T23:59:59Z",
+            startDate: '2024-06-01T00:00:00Z',
+            endDate: '2024-06-30T23:59:59Z',
           },
-          status: "processing",
+          status: 'processing',
         },
       };
 
@@ -691,14 +674,14 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
 
       // Verify filters were applied
       const apiCalls = mockApiClient.getCallLog();
-      const orderCall = apiCalls.find((call) => call.method === "queryOrders");
+      const orderCall = apiCalls.find((call) => call.method === 'queryOrders');
       assertExists(orderCall);
-      assertEquals(orderCall.params.search, "urgent");
-      assertEquals(orderCall.params.filters.status, "processing");
+      assertEquals(orderCall.params.search, 'urgent');
+      assertEquals(orderCall.params.filters.status, 'processing');
       assertExists(orderCall.params.filters.dateRange);
       assertEquals(
         orderCall.params.filters.dateRange.startDate,
-        "2024-06-01T00:00:00Z",
+        '2024-06-01T00:00:00Z',
       );
     });
   });
@@ -706,12 +689,12 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
   /**
    * LOGGING AND MONITORING
    */
-  describe("Logging and Monitoring", () => {
-    it("should log workflow execution steps with OAuth context", async () => {
+  describe('Logging and Monitoring', () => {
+    it('should log workflow execution steps with OAuth context', async () => {
       const params = {
-        userId: "test-user",
-        queryType: "customers",
-        searchTerm: "test",
+        userId: 'test-user',
+        queryType: 'customers',
+        searchTerm: 'test',
       };
 
       await workflow.executeWithValidation(params, context);
@@ -721,20 +704,20 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
       assert(logCalls.length > 0);
 
       const startLog = logCalls.find((call) =>
-        call.args[0].includes("ExampleCorp query workflow started")
+        call.args[0].includes('ExampleCorp query workflow started')
       );
       assertExists(startLog);
 
       // Should include OAuth context in logs
       const logData = startLog.args[1];
-      assertEquals(logData.userId, "test-user");
-      assertEquals(logData.queryType, "customers");
+      assertEquals(logData.userId, 'test-user');
+      assertEquals(logData.queryType, 'customers');
     });
 
-    it("should track execution performance", async () => {
+    it('should track execution performance', async () => {
       const params = {
-        userId: "test-user",
-        queryType: "products",
+        userId: 'test-user',
+        queryType: 'products',
       };
 
       const result = await workflow.executeWithValidation(params, context);
@@ -750,7 +733,7 @@ describe("ExampleQueryWorkflow - OAuth Integration", () => {
       assertEquals(result.success, true);
       assertExists(result.metadata);
       assertExists(result.metadata.executionTime);
-      assert(typeof result.metadata.executionTime === "number");
+      assert(typeof result.metadata.executionTime === 'number');
       assert(result.metadata.executionTime > 0);
     });
   });

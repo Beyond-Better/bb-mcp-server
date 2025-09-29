@@ -273,7 +273,10 @@ export class CORSHandler {
   /**
    * Create a middleware function for use with other HTTP frameworks
    */
-  createMiddleware(): (request: Request, handler: (request: Request) => Promise<Response>) => Promise<Response> {
+  createMiddleware(): (
+    request: Request,
+    handler: (request: Request) => Promise<Response>,
+  ) => Promise<Response> {
     return async (
       request: Request,
       handler: (request: Request) => Promise<Response>,

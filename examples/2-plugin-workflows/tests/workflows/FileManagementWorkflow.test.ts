@@ -1,6 +1,6 @@
 /**
  * File Management Workflow Test Suite
- * 
+ *
  * Tests the complete file management lifecycle workflow including:
  * - Parameter validation for file operations
  * - Multi-step execution (create → validate → process → archive)
@@ -9,16 +9,16 @@
  * - Metadata tracking and archival processes
  */
 
-import { assertEquals, assert, assertExists } from 'https://deno.land/std@0.208.0/assert/mod.ts';
-import { describe, it, beforeEach, afterEach } from 'https://deno.land/std@0.208.0/testing/bdd.ts';
-import { spy, type Spy } from 'https://deno.land/std@0.208.0/testing/mock.ts';
+import { assert, assertEquals, assertExists } from 'https://deno.land/std@0.208.0/assert/mod.ts';
+import { afterEach, beforeEach, describe, it } from 'https://deno.land/std@0.208.0/testing/bdd.ts';
+import { type Spy, spy } from 'https://deno.land/std@0.208.0/testing/mock.ts';
 import WorkflowPlugin from '../../src/plugins/WorkflowPlugin.ts';
-import { createTestContext, createMockLogger } from '../utils/test-helpers.ts';
+import { createMockLogger, createTestContext } from '../utils/test-helpers.ts';
 import type { WorkflowContext } from '@beyondbetter/bb-mcp-server';
 
 // Extract the FileManagementWorkflow class for direct testing
 const fileManagementWorkflow = WorkflowPlugin.workflows?.find(
-  workflow => workflow.name === 'file_management_lifecycle'
+  (workflow) => workflow.name === 'file_management_lifecycle',
 );
 
 describe('FileManagementWorkflow', () => {
@@ -30,10 +30,10 @@ describe('FileManagementWorkflow', () => {
   beforeEach(() => {
     assertExists(fileManagementWorkflow, 'FileManagementWorkflow should be found in plugin');
     workflow = fileManagementWorkflow;
-    
+
     mockLogger = createMockLogger();
     logSpy = spy(mockLogger, 'info');
-    
+
     context = createTestContext({
       logger: mockLogger,
     });
@@ -58,7 +58,7 @@ describe('FileManagementWorkflow', () => {
 
     it('should return proper registration info', () => {
       const registration = workflow.getRegistration();
-      
+
       assertEquals(registration.name, 'file_management_lifecycle');
       assertEquals(registration.displayName, 'File Management Lifecycle');
       assertEquals(registration.version, '1.0.0');
@@ -70,7 +70,7 @@ describe('FileManagementWorkflow', () => {
 
     it('should provide comprehensive workflow overview', () => {
       const overview = workflow.getOverview();
-      
+
       assert(overview.includes('Complete file lifecycle management'));
       assert(overview.includes('1. Creates a file'));
       assert(overview.includes('2. Validates content'));
@@ -188,10 +188,10 @@ describe('FileManagementWorkflow', () => {
       assertExists(result.data.file_info);
       assertExists(result.data.final_content);
       assertExists(result.data.archive_info);
-      
+
       // Check file type detection
       assertEquals(result.data.file_info.type, 'application/json');
-      
+
       // Check that JSON was prettified
       assert(result.data.final_content.includes('\n  '));
     });
@@ -236,7 +236,7 @@ describe('FileManagementWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const validationResults = result.data.validation_results;
       const notEmptyResult = validationResults.find((r: any) => r.rule === 'not_empty');
       assertExists(notEmptyResult);
@@ -253,10 +253,10 @@ describe('FileManagementWorkflow', () => {
       };
 
       const result = await workflow.executeWithValidation(params, context);
-      
+
       // Workflow continues even with validation failures
-      assert(result.failed_steps.some((step: any) => 
-        step.operation === 'validate_not_empty' && 
+      assert(result.failed_steps.some((step: any) =>
+        step.operation === 'validate_not_empty' &&
         step.message.includes('cannot be empty')
       ));
     });
@@ -272,7 +272,7 @@ describe('FileManagementWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const validationResults = result.data.validation_results;
       const jsonResult = validationResults.find((r: any) => r.rule === 'valid_json');
       assertExists(jsonResult);
@@ -289,9 +289,9 @@ describe('FileManagementWorkflow', () => {
       };
 
       const result = await workflow.executeWithValidation(params, context);
-      
-      assert(result.failed_steps.some((step: any) => 
-        step.operation === 'validate_valid_json' && 
+
+      assert(result.failed_steps.some((step: any) =>
+        step.operation === 'validate_valid_json' &&
         step.message.includes('not valid JSON')
       ));
     });
@@ -307,7 +307,7 @@ describe('FileManagementWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const validationResults = result.data.validation_results;
       const sizeResult = validationResults.find((r: any) => r.rule === 'max_size');
       assertExists(sizeResult);
@@ -325,7 +325,7 @@ describe('FileManagementWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const validationResults = result.data.validation_results;
       const scriptResult = validationResults.find((r: any) => r.rule === 'no_scripts');
       assertExists(scriptResult);
@@ -342,9 +342,9 @@ describe('FileManagementWorkflow', () => {
       };
 
       const result = await workflow.executeWithValidation(params, context);
-      
-      assert(result.failed_steps.some((step: any) => 
-        step.operation === 'validate_no_scripts' && 
+
+      assert(result.failed_steps.some((step: any) =>
+        step.operation === 'validate_no_scripts' &&
         step.message.includes('unsafe scripts')
       ));
     });
@@ -360,11 +360,11 @@ describe('FileManagementWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       // Should have validation results for all rules
       const validationResults = result.data.validation_results;
       assertEquals(validationResults.length, 4);
-      
+
       const rules = validationResults.map((r: any) => r.rule);
       assert(rules.includes('not_empty'));
       assert(rules.includes('valid_json'));
@@ -389,7 +389,7 @@ describe('FileManagementWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const finalContent = result.data.final_content;
       assert(finalContent.includes('\n'));
       assert(finalContent.includes('  "compact": true'));
@@ -411,7 +411,7 @@ describe('FileManagementWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const finalContent = result.data.final_content;
       assertEquals(finalContent, '{"formatted":true,"value":42}');
     });
@@ -431,7 +431,7 @@ describe('FileManagementWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const finalContent = result.data.final_content;
       assertEquals(finalContent, 'line1\nline2  indented\nline3');
     });
@@ -451,7 +451,7 @@ describe('FileManagementWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const finalContent = result.data.final_content;
       assert(finalContent.includes('_metadata'));
       assert(finalContent.includes('processed_at'));
@@ -474,7 +474,7 @@ describe('FileManagementWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const finalContent = result.data.final_content;
       assert(finalContent.includes('&lt;div&gt;'));
       assert(finalContent.includes('&quot;quotes&quot;'));
@@ -498,7 +498,7 @@ describe('FileManagementWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const archiveInfo = result.data.archive_info;
       assertExists(archiveInfo);
       assertExists(archiveInfo.original_file);
@@ -506,15 +506,15 @@ describe('FileManagementWorkflow', () => {
       assertExists(archiveInfo.validation_results);
       assertExists(archiveInfo.archive_location);
       assertExists(archiveInfo.archive_created_at);
-      
+
       // Check original file info
       assertEquals(archiveInfo.original_file.name, 'important.json');
       assertEquals(archiveInfo.original_file.created_by, 'test-user');
-      
+
       // Check processed file info
       assertEquals(archiveInfo.processed_file.name, 'important.json.processed');
       assertExists(archiveInfo.processed_file.processed_at);
-      
+
       // Check validation results are included
       assertEquals(archiveInfo.validation_results.length, 2);
     });
@@ -530,7 +530,7 @@ describe('FileManagementWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       assertExists(result.metadata);
       assertEquals(result.metadata.workflow, 'file_management');
       assertEquals(result.metadata.file_name, 'test.txt');
@@ -553,8 +553,8 @@ describe('FileManagementWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, false);
-      
-      assert(result.failed_steps.some((step: any) => 
+
+      assert(result.failed_steps.some((step: any) =>
         step.operation === 'parameter_validation' &&
         step.message.includes('String must contain at least 1 character(s)')
       ));
@@ -570,11 +570,11 @@ describe('FileManagementWorkflow', () => {
       };
 
       const result = await workflow.executeWithValidation(params, context);
-      
+
       // Should have some failed steps but continue processing
       assert(result.failed_steps.length > 0);
       assert(result.completed_steps.length > 0);
-      
+
       // Should still have file creation and processing steps
       assert(result.completed_steps.some((step: any) => step.operation === 'create_file'));
       assert(result.completed_steps.some((step: any) => step.operation === 'process_content'));
@@ -594,10 +594,10 @@ describe('FileManagementWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       assert(typeof result.duration === 'number');
       assert(result.duration > 0);
-      
+
       // Each step should have timing information
       result.completed_steps.forEach((step: any) => {
         assert(typeof step.duration_ms === 'number');
@@ -616,19 +616,15 @@ describe('FileManagementWorkflow', () => {
       };
 
       await workflow.executeWithValidation(params, context);
-      
+
       const logCalls = logSpy.calls;
       assert(logCalls.length > 0);
-      
+
       // Should log lifecycle start
-      assert(logCalls.some(call => 
-        call.args[0].includes('Starting file management lifecycle')
-      ));
-      
+      assert(logCalls.some((call) => call.args[0].includes('Starting file management lifecycle')));
+
       // Should log individual steps
-      assert(logCalls.some(call => 
-        call.args[0].includes('Creating file with initial content')
-      ));
+      assert(logCalls.some((call) => call.args[0].includes('Creating file with initial content')));
     });
   });
 });

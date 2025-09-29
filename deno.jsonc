@@ -18,7 +18,7 @@
     "check:all": "deno check src/mod.ts tests/**/*.ts examples/*/main.ts examples/*/tests/**/*.ts",
     "update-deps": "deno cache src/mod.ts",
     "lint": "deno lint src/",
-    "fmt": "deno fmt src/ tests/",
+    "fmt": "deno fmt src/ tests/ examples/",
     "tool:check-types": "deno check --all src/**/*.ts tests/**/*.ts",
     "tool:check-types:all": "deno check --all src/**/*.ts tests/**/*.ts examples/*/main.ts examples/*/tests/**/*.ts",
     "tool:check-types:apps": "deno check --all examples/*/main.ts examples/*/tests/**/*.ts",

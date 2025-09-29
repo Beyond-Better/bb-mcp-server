@@ -2,7 +2,7 @@
  * Credential Store - Secure credential management for OAuth and API tokens
  *
  * Provides encrypted storage and management of OAuth credentials, API keys,
- * and other sensitive authentication data. 
+ * and other sensitive authentication data.
  */
 
 import type { OAuthCredentials } from './StorageTypes.ts';

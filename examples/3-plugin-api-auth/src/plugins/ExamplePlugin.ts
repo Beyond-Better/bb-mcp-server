@@ -140,25 +140,25 @@ export default function createPlugin(dependencies: AppServerDependencies): AppPl
  */
 function createExampleTools(dependencies: ExampleToolsDependencies): ToolRegistration[] {
   const exampleTools = new ExampleTools(dependencies);
-  
+
   // Get tool registrations from the ToolBase class
   const toolRegistrations = exampleTools.getTools();
-  
+
   // ToolRegistrations are already in the correct format for PluginManager
   return toolRegistrations;
 }
 
 /**
  * UPDATED PLUGIN ARCHITECTURE:
- * 
+ *
  * This plugin now demonstrates the CORRECT PATTERN for tool and workflow registration:
- * 
+ *
  * ✅ **Plugin populates tools array**: PluginManager registers tools automatically
- * ✅ **Plugin populates workflows array**: PluginManager registers workflows automatically  
+ * ✅ **Plugin populates workflows array**: PluginManager registers workflows automatically
  * ✅ **No manual registration**: Plugin doesn't call registerWith() directly
  * ✅ **Dependency injection**: Factory function handles proper dependency setup
  * ✅ **Dual tool support**: ExampleTools supports both plugin and direct registration patterns
- * 
+ *
  * USAGE APPROACHES:
  * 1. **Automatic Discovery** (Recommended): PluginManager finds and registers everything
  * 2. **Factory Function**: Manual plugin creation with createExamplePlugin()

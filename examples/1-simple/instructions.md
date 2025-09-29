@@ -5,16 +5,19 @@ This guide walks you through setting up and running the simple MCP server exampl
 ## 📋 Prerequisites
 
 ### Required Software
+
 - **Deno 2.0+**: [Install Deno](https://deno.land/manual/getting_started/installation) (tested with v2.5.x)
 - **Text Editor**: VS Code, Vim, or your preferred editor
 - **Terminal/Command Line**: Bash, Zsh, PowerShell, or similar
 
 ### Optional Tools
+
 - **Git**: For version control and collaboration
 - **Beyond Better CLI**: For testing MCP client integration
 - **Postman/curl**: For HTTP transport testing
 
 ### Knowledge Prerequisites
+
 - Basic TypeScript/JavaScript understanding
 - Command line familiarity
 - Basic understanding of environment variables
@@ -22,6 +25,7 @@ This guide walks you through setting up and running the simple MCP server exampl
 ## 🚀 Setup Process
 
 ### Step 1: Navigate to Example Directory
+
 ```bash
 # From the bb-mcp-server root directory
 cd examples/1-simple
@@ -32,6 +36,7 @@ ls -la
 ```
 
 ### Step 2: Install Dependencies
+
 ```bash
 # Install required dependencies (Deno v2+)
 deno add jsr:@std/assert@^1.0.0
@@ -43,6 +48,7 @@ cat deno.jsonc | grep -A 10 "imports"
 ```
 
 ### Step 3: Environment Configuration
+
 ```bash
 # Copy the environment template
 cp .env.example .env
@@ -52,11 +58,13 @@ cat .env.example
 ```
 
 **Key Configuration Options**:
+
 - `MCP_TRANSPORT`: Choose 'stdio' (default) or 'http'
 - `LOG_LEVEL`: Set to 'debug' for learning, 'info' for normal use
 - `PLUGINS_DISCOVERY_PATHS`: Where to find plugins (default: ./src/plugins)
 
 **For Learning** (recommended settings in `.env`):
+
 ```bash
 # Enable debug logging to see what's happening
 LOG_LEVEL=debug
@@ -70,6 +78,7 @@ DEV_MODE=true
 ```
 
 ### Step 4: Understand the Code Structure
+
 ```bash
 # Explore the project structure
 tree -I 'node_modules|.git'
@@ -78,12 +87,14 @@ find . -type f -name '*.ts' -o -name '*.md' -o -name '*.json*' | sort
 ```
 
 **Key Files**:
+
 - `main.ts`: Entry point with minimal AppServer setup
 - `src/plugins/SimplePlugin.ts`: Self-contained plugin with 3 tools
 - `.env.example`: Configuration template
 - `deno.jsonc`: Deno configuration and tasks
 
 ### Step 5: Examine the Plugin Code
+
 ```bash
 # Look at the main entry point
 cat main.ts
@@ -93,6 +104,7 @@ cat src/plugins/SimplePlugin.ts
 ```
 
 **Understanding the Plugin**:
+
 1. **Plugin Definition**: Metadata and initialization
 2. **Tool Registration**: Three utility tools
 3. **Parameter Validation**: Zod schemas for type safety
@@ -102,6 +114,7 @@ cat src/plugins/SimplePlugin.ts
 ## ⚡ Running the Example
 
 ### Option 1: STDIO Transport (Recommended for Learning)
+
 ```bash
 # Run with default settings
 deno run --allow-all main.ts
@@ -114,6 +127,7 @@ deno task start:debug
 ```
 
 **What You'll See**:
+
 ```
 🔧 Initializing SimplePlugin...
 ✅ SimplePlugin initialized with 3 tools
@@ -125,6 +139,7 @@ deno task start:debug
 **STDIO Mode**: The server reads from stdin and writes to stdout, following the MCP protocol. It's ready for MCP client integration.
 
 ### Option 2: HTTP Transport (For Testing and Debugging)
+
 ```bash
 # Run with HTTP transport
 MCP_TRANSPORT=http deno run --allow-all main.ts
@@ -134,6 +149,7 @@ deno task start:http
 ```
 
 **What You'll See**:
+
 ```
 🔧 Initializing SimplePlugin...
 ✅ SimplePlugin initialized with 3 tools
@@ -144,6 +160,7 @@ deno task start:http
 ```
 
 **HTTP Mode**: The server runs as a web service. You can:
+
 - View server status at: `http://localhost:3000`
 - Test tools via HTTP requests
 - Use browser dev tools for debugging
@@ -220,6 +237,7 @@ deno task test:watch
 ## 🐛 Debugging and Troubleshooting
 
 ### Enable Debug Logging
+
 ```bash
 # Set debug level in .env
 LOG_LEVEL=debug
@@ -229,6 +247,7 @@ LOG_LEVEL=debug deno task start
 ```
 
 **Debug Output Shows**:
+
 - Plugin discovery and loading
 - Tool registration process
 - Request/response details
@@ -238,6 +257,7 @@ LOG_LEVEL=debug deno task start
 ### Common Issues and Solutions
 
 #### 1. Permission Errors
+
 ```bash
 # Error: Permission denied
 # Solution: Use --allow-all flag
@@ -248,6 +268,7 @@ deno run --allow-net --allow-read --allow-write --allow-env main.ts
 ```
 
 #### 2. Plugin Not Found
+
 ```bash
 # Error: Plugin discovery failed
 # Check: Plugin discovery path in .env
@@ -261,6 +282,7 @@ deno check src/plugins/SimplePlugin.ts
 ```
 
 #### 3. Port Already in Use (HTTP Mode)
+
 ```bash
 # Error: Address already in use
 # Solution: Use different port
@@ -271,6 +293,7 @@ lsof -i :3000
 ```
 
 #### 4. Tool Parameter Validation Errors
+
 ```bash
 # Error: Parameter validation failed
 # Check: Parameter names and types match Zod schema
@@ -281,6 +304,7 @@ LOG_LEVEL=debug
 ```
 
 #### 5. Environment Variable Issues
+
 ```bash
 # Error: Configuration not loaded
 # Check: .env file exists and is readable
@@ -308,13 +332,13 @@ echo $MCP_TRANSPORT
    ```bash
    # ISO format (default)
    {"format": "iso"}
-   
+
    # Human readable
    {"format": "human"}
-   
+
    # Unix timestamp
    {"format": "unix"}
-   
+
    # Different timezones
    {"timezone": "UTC"}
    {"timezone": "America/Los_Angeles"}
@@ -325,7 +349,7 @@ echo $MCP_TRANSPORT
    ```bash
    # Basic info
    {"detail": "basic"}
-   
+
    # Detailed info
    {"detail": "detailed", "includeMemory": true, "includeEnvironment": true}
    ```
@@ -334,10 +358,10 @@ echo $MCP_TRANSPORT
    ```bash
    # Valid JSON
    {"json_string": "{\"valid\": true}"}
-   
+
    # Invalid JSON
    {"json_string": "{invalid}"}
-   
+
    # Complex nested JSON
    {"json_string": "{\"user\": {\"name\": \"test\", \"prefs\": [1,2,3]}}"}
    ```
@@ -351,7 +375,7 @@ echo $MCP_TRANSPORT
        min: z.number().default(0),
        max: z.number().default(100),
      });
-     
+
      registry.registerTool('random_number', {
        title: 'Random Number Generator',
        description: 'Generate a random number within specified range',
@@ -361,12 +385,12 @@ echo $MCP_TRANSPORT
      }, async (args) => {
        const params = parameterSchema.parse(args);
        const randomNum = Math.floor(Math.random() * (params.max - params.min + 1)) + params.min;
-       
+
        return {
          content: [{
            type: 'text',
            text: JSON.stringify({ number: randomNum, min: params.min, max: params.max }),
-         }]
+         }],
        };
      });
    }
@@ -404,18 +428,21 @@ echo $MCP_TRANSPORT
 After completing this example:
 
 ### Immediate Next Steps
+
 1. **Review the code**: Understand every line in main.ts and SimplePlugin.ts
 2. **Run all tests**: See the testing patterns in action
 3. **Modify tools**: Add parameters, change behavior, create new tools
 4. **Experiment**: Try different configurations and observe behavior
 
 ### Progression Path
+
 1. **Master this example**: Complete all activities and exercises
 2. **Move to 2-plugin-workflows**: Learn about multi-step processes
 3. **Study 3-plugin-api-auth**: Understand external API integration
 4. **Explore 4-manual-deps**: Gain complete infrastructure control
 
 ### Key Concepts to Internalize
+
 - **Plugin Architecture**: Self-contained, discoverable plugins
 - **Tool Development**: Parameter validation, error handling, response formatting
 - **Configuration Management**: Environment-driven, flexible configuration
@@ -425,6 +452,7 @@ After completing this example:
 ---
 
 **🎯 Success Criteria**: You've successfully completed this example when you can:
+
 - Run the server in both STDIO and HTTP modes
 - Test all three tools with various parameters
 - Debug issues using log output and error messages

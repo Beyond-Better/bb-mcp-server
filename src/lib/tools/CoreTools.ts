@@ -185,9 +185,12 @@ export class CoreTools {
       try {
         return await this.enhancedStatusProvider();
       } catch (error) {
-        this.logger.warn('CoreTools: Enhanced status provider failed, falling back to basic status', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        this.logger.warn(
+          'CoreTools: Enhanced status provider failed, falling back to basic status',
+          {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        );
       }
     }
 

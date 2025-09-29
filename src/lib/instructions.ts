@@ -1,14 +1,15 @@
 /**
  * Default instructions content for Beyond MCP Servers
- * 
- * This file exports generic instructions as a string to ensure they're 
+ *
+ * This file exports generic instructions as a string to ensure they're
  * properly embedded in the compiled binary as a reliable fallback.
- * 
- * These instructions focus on the core workflow system and can be 
+ *
+ * These instructions focus on the core workflow system and can be
  * overridden by server-specific instructions files.
  */
 
-export const DEFAULT_INSTRUCTIONS = `MCP Server built with Beyond MCP Server (bb-mcp-server) library - Workflow-driven integration server.
+export const DEFAULT_INSTRUCTIONS =
+  `MCP Server built with Beyond MCP Server (bb-mcp-server) library - Workflow-driven integration server.
 
 ## Overview
 

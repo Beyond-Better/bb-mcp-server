@@ -1,6 +1,6 @@
 /**
  * Data Processing Workflow Test Suite
- * 
+ *
  * Tests the complete data processing pipeline workflow including:
  * - Parameter validation with comprehensive Zod schemas
  * - Multi-step execution (validate → transform → analyze → export)
@@ -9,16 +9,16 @@
  * - Resource tracking and performance monitoring
  */
 
-import { assertEquals, assert, assertExists } from 'https://deno.land/std@0.208.0/assert/mod.ts';
-import { describe, it, beforeEach, afterEach } from 'https://deno.land/std@0.208.0/testing/bdd.ts';
-import { spy, type Spy } from 'https://deno.land/std@0.208.0/testing/mock.ts';
+import { assert, assertEquals, assertExists } from 'https://deno.land/std@0.208.0/assert/mod.ts';
+import { afterEach, beforeEach, describe, it } from 'https://deno.land/std@0.208.0/testing/bdd.ts';
+import { type Spy, spy } from 'https://deno.land/std@0.208.0/testing/mock.ts';
 import WorkflowPlugin from '../../src/plugins/WorkflowPlugin.ts';
-import { createTestContext, createMockLogger } from '../utils/test-helpers.ts';
+import { createMockLogger, createTestContext } from '../utils/test-helpers.ts';
 import type { WorkflowContext } from '@beyondbetter/bb-mcp-server';
 
 // Extract the DataProcessingWorkflow class for direct testing
 const dataProcessingWorkflow = WorkflowPlugin.workflows?.find(
-  workflow => workflow.name === 'data_processing_pipeline'
+  (workflow) => workflow.name === 'data_processing_pipeline',
 );
 
 describe('DataProcessingWorkflow', () => {
@@ -30,10 +30,10 @@ describe('DataProcessingWorkflow', () => {
   beforeEach(() => {
     assertExists(dataProcessingWorkflow, 'DataProcessingWorkflow should be found in plugin');
     workflow = dataProcessingWorkflow;
-    
+
     mockLogger = createMockLogger();
     logSpy = spy(mockLogger, 'info');
-    
+
     context = createTestContext({
       logger: mockLogger,
     });
@@ -57,7 +57,7 @@ describe('DataProcessingWorkflow', () => {
 
     it('should return proper registration info', () => {
       const registration = workflow.getRegistration();
-      
+
       assertEquals(registration.name, 'data_processing_pipeline');
       assertEquals(registration.displayName, 'Data Processing Pipeline');
       assertEquals(registration.version, '1.0.0');
@@ -69,7 +69,7 @@ describe('DataProcessingWorkflow', () => {
 
     it('should provide comprehensive workflow overview', () => {
       const overview = workflow.getOverview();
-      
+
       assert(overview.includes('Multi-step data processing pipeline'));
       assert(overview.includes('1. Validates input data'));
       assert(overview.includes('2. Applies specified transformations'));
@@ -214,16 +214,18 @@ describe('DataProcessingWorkflow', () => {
       const result = await workflow.executeWithValidation(params, context);
 
       assertEquals(result.success, true);
-      
+
       // Check that transformations were applied
       const processedData = result.data.processed_data;
       assertEquals(processedData.length, 2); // Deduplication should remove one
-      
+
       // Check normalization (should be lowercase)
-      assert(processedData.every((item: any) => 
-        typeof item.name === 'string' && item.name === item.name.toLowerCase()
-      ));
-      
+      assert(
+        processedData.every((item: any) =>
+          typeof item.name === 'string' && item.name === item.name.toLowerCase()
+        ),
+      );
+
       // Check sorting (should be sorted by name)
       assertEquals(processedData[0].name, 'alice');
       assertEquals(processedData[1].name, 'bob');
@@ -240,7 +242,7 @@ describe('DataProcessingWorkflow', () => {
       // Test summary analysis
       const summaryResult = await workflow.executeWithValidation(
         { ...baseParams, analysisType: 'summary' },
-        context
+        context,
       );
       assertEquals(summaryResult.success, true);
       assertExists(summaryResult.data.analysis.summary);
@@ -250,7 +252,7 @@ describe('DataProcessingWorkflow', () => {
       // Test detailed analysis
       const detailedResult = await workflow.executeWithValidation(
         { ...baseParams, analysisType: 'detailed' },
-        context
+        context,
       );
       assertEquals(detailedResult.success, true);
       assertExists(detailedResult.data.analysis.detailed);
@@ -259,7 +261,7 @@ describe('DataProcessingWorkflow', () => {
       // Test statistical analysis
       const statisticalResult = await workflow.executeWithValidation(
         { ...baseParams, analysisType: 'statistical' },
-        context
+        context,
       );
       assertEquals(statisticalResult.success, true);
       assertExists(statisticalResult.data.analysis.statistical);
@@ -279,7 +281,7 @@ describe('DataProcessingWorkflow', () => {
       // Test JSON export
       const jsonResult = await workflow.executeWithValidation(
         { ...baseParams, outputFormat: 'json' },
-        context
+        context,
       );
       assertEquals(jsonResult.success, true);
       const jsonOutput = jsonResult.data.exported_output;
@@ -290,7 +292,7 @@ describe('DataProcessingWorkflow', () => {
       // Test CSV export
       const csvResult = await workflow.executeWithValidation(
         { ...baseParams, outputFormat: 'csv' },
-        context
+        context,
       );
       assertEquals(csvResult.success, true);
       const csvOutput = csvResult.data.exported_output;
@@ -329,7 +331,7 @@ describe('DataProcessingWorkflow', () => {
       assertEquals(result.success, true);
       assert(typeof result.duration === 'number');
       assert(result.duration > 0);
-      
+
       // Check metadata includes performance info
       assertExists(result.metadata);
       assertEquals(result.metadata.pipeline, 'data_processing');
@@ -368,7 +370,7 @@ describe('DataProcessingWorkflow', () => {
       assertEquals(validationResult.valid, false);
       assert(Array.isArray(validationResult.errors));
       assert(validationResult.errors.length > 0);
-      
+
       const dataError = validationResult.errors.find((err: any) => err.path.includes('data'));
       assertExists(dataError);
       assertExists(dataError.message);
@@ -378,14 +380,14 @@ describe('DataProcessingWorkflow', () => {
     it('should classify errors correctly', async () => {
       const params = {
         userId: '', // Empty user ID should cause validation error
-        data: [],   // Empty array should cause validation error
+        data: [], // Empty array should cause validation error
         transformations: ['normalize'],
         outputFormat: 'json',
         analysisType: 'summary',
       };
 
       const result = await workflow.executeWithValidation(params, context);
-      
+
       if (!result.success && result.failed_steps.length > 0) {
         const failedStep = result.failed_steps[0];
         assert(['validation', 'system_error'].includes(failedStep.error_type));
@@ -408,9 +410,9 @@ describe('DataProcessingWorkflow', () => {
       // Should have logged various steps
       const logCalls = logSpy.calls;
       assert(logCalls.length > 0);
-      
+
       // Should log pipeline start
-      const startLog = logCalls.find(call => 
+      const startLog = logCalls.find((call) =>
         call.args[0].includes('Starting data processing pipeline')
       );
       assertExists(startLog);

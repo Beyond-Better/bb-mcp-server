@@ -111,7 +111,7 @@ export abstract class WorkflowBase {
       // Enhanced logging with performance data
       const duration = performance.now() - this.startTime;
 
-     this.logInfo('Workflow completed', {
+      this.logInfo('Workflow completed', {
         workflow: this.name,
         success: result.success,
         duration_ms: duration,

@@ -1,16 +1,16 @@
 /**
  * Workflow Plugin - Multi-Step Workflow Demonstrations
- * 
+ *
  * This plugin demonstrates the CORRECT patterns for MCP workflow development:
  * - Populate workflows[] array directly (no manual registration)
  * - Let PluginManager handle all registration automatically
  * - Multi-step workflows with proper state tracking
  * - Error handling and recovery patterns
  * - Resource tracking and performance monitoring
- * 
+ *
  * PLUGIN ARCHITECTURE:
  * ===================
- * 
+ *
  * WorkflowPlugin
  * ├── tools[] array with basic utility tools
  * ├── workflows[] array with 3 comprehensive workflows:
@@ -18,10 +18,10 @@
  * │   ├── FileManagementWorkflow (create → validate → process → archive)
  * │   └── ContentGenerationWorkflow (plan → generate → review → publish)
  * └── PluginManager automatically registers everything
- * 
+ *
  * LEARNING FOCUS:
  * ===============
- * 
+ *
  * This plugin teaches:
  * 1. Multi-step workflow implementation with state tracking
  * 2. Workflow parameter validation with comprehensive Zod schemas
@@ -32,20 +32,25 @@
  */
 
 import { z } from 'zod';
-import type { AppPlugin, ToolRegistration, WorkflowRegistration } from '@beyondbetter/bb-mcp-server';
+import type {
+  AppPlugin,
+  ToolRegistration,
+  WorkflowRegistration,
+} from '@beyondbetter/bb-mcp-server';
 import { WorkflowBase } from '@beyondbetter/bb-mcp-server';
 import type { WorkflowContext, WorkflowResult } from '@beyondbetter/bb-mcp-server';
 
 /**
  * Data Processing Pipeline Workflow
- * 
+ *
  * Multi-step pipeline: validate → transform → analyze → export
  * Demonstrates complex data processing with state tracking
  */
 class DataProcessingWorkflow extends WorkflowBase {
   readonly name = 'data_processing_pipeline';
   readonly version = '1.0.0';
-  readonly description = 'Multi-step data processing pipeline with validation, transformation, analysis, and export';
+  readonly description =
+    'Multi-step data processing pipeline with validation, transformation, analysis, and export';
   readonly category = 'data' as const;
   readonly tags = ['data', 'pipeline', 'processing', 'validation'];
   override readonly estimatedDuration = 30; // seconds
@@ -56,9 +61,15 @@ class DataProcessingWorkflow extends WorkflowBase {
     requestId: z.string().optional(),
     dryRun: z.boolean().default(false),
     data: z.array(z.record(z.unknown())).describe('Array of data objects to process'),
-    transformations: z.array(z.enum(['normalize', 'filter_empty', 'sort', 'deduplicate'])).describe('Transformations to apply'),
-    outputFormat: z.enum(['json', 'csv']).default('json').describe('Output format for processed data'),
-    analysisType: z.enum(['summary', 'detailed', 'statistical']).default('summary').describe('Type of analysis to perform'),
+    transformations: z.array(z.enum(['normalize', 'filter_empty', 'sort', 'deduplicate'])).describe(
+      'Transformations to apply',
+    ),
+    outputFormat: z.enum(['json', 'csv']).default('json').describe(
+      'Output format for processed data',
+    ),
+    analysisType: z.enum(['summary', 'detailed', 'statistical']).default('summary').describe(
+      'Type of analysis to perform',
+    ),
   });
 
   getRegistration(): WorkflowRegistration {
@@ -102,12 +113,12 @@ Perfect for demonstrating complex multi-step workflows with state management.`;
       // Step 1: Validate Data
       const validationStep = await this.safeExecute('validate_data', async () => {
         this.logInfo('Validating input data structure');
-        
+
         if (!Array.isArray(params.data) || params.data.length === 0) {
           throw new Error('Data must be a non-empty array');
         }
 
-        const validItems = params.data.filter((item: any) => 
+        const validItems = params.data.filter((item: any) =>
           typeof item === 'object' && item !== null
         );
 
@@ -124,7 +135,9 @@ Perfect for demonstrating complex multi-step workflows with state management.`;
 
       if (validationStep.success) {
         steps.push(this.createStepResult('validate_data', true, validationStep.data));
-        processedData = params.data.filter((item: any) => typeof item === 'object' && item !== null);
+        processedData = params.data.filter((item: any) =>
+          typeof item === 'object' && item !== null
+        );
       } else {
         failed.push(validationStep.error!);
         return this.createFailureResult(steps, failed, 'Data validation failed');
@@ -134,10 +147,10 @@ Perfect for demonstrating complex multi-step workflows with state management.`;
       for (const transformation of params.transformations) {
         const transformStep = await this.safeExecute(`transform_${transformation}`, async () => {
           this.logInfo(`Applying transformation: ${transformation}`);
-          
+
           switch (transformation) {
             case 'normalize':
-              return processedData.map(item => {
+              return processedData.map((item) => {
                 const normalized: any = {};
                 for (const [key, value] of Object.entries(item)) {
                   normalized[key] = typeof value === 'string' ? value.toLowerCase() : value;
@@ -146,24 +159,24 @@ Perfect for demonstrating complex multi-step workflows with state management.`;
               });
 
             case 'filter_empty':
-              return processedData.filter(item => 
-                Object.values(item).some(value => 
+              return processedData.filter((item) =>
+                Object.values(item).some((value) =>
                   value !== null && value !== undefined && value !== ''
                 )
               );
 
             case 'sort':
               return [...processedData].sort((a, b) => {
-                const keyA = Object.keys(a).find(key => typeof a[key] === 'string');
-                const keyB = Object.keys(b).find(key => typeof b[key] === 'string');
-                
+                const keyA = Object.keys(a).find((key) => typeof a[key] === 'string');
+                const keyB = Object.keys(b).find((key) => typeof b[key] === 'string');
+
                 if (!keyA || !keyB) return 0;
                 return String(a[keyA]).localeCompare(String(b[keyB]));
               });
 
             case 'deduplicate':
               const seen = new Set();
-              return processedData.filter(item => {
+              return processedData.filter((item) => {
                 const str = JSON.stringify(item);
                 if (seen.has(str)) {
                   return false;
@@ -191,7 +204,7 @@ Perfect for demonstrating complex multi-step workflows with state management.`;
       // Step 3: Analyze Data
       const analysisStep = await this.safeExecute('analyze_data', async () => {
         this.logInfo(`Performing ${params.analysisType} analysis`);
-        
+
         const analysis: any = {
           type: params.analysisType,
           total_items: processedData.length,
@@ -214,7 +227,7 @@ Perfect for demonstrating complex multi-step workflows with state management.`;
                 keys: Object.keys(item),
                 values_count: Object.keys(item).length,
                 sample_data: Object.fromEntries(
-                  Object.entries(item).slice(0, 3)
+                  Object.entries(item).slice(0, 3),
                 ),
               })),
             };
@@ -237,7 +250,7 @@ Perfect for demonstrating complex multi-step workflows with state management.`;
       // Step 4: Export Results
       const exportStep = await this.safeExecute('export_results', async () => {
         this.logInfo(`Exporting results in ${params.outputFormat} format`);
-        
+
         const exportData = {
           metadata: {
             processed_at: new Date().toISOString(),
@@ -265,11 +278,11 @@ Perfect for demonstrating complex multi-step workflows with state management.`;
               const headers = [...new Set(processedData.flatMap(Object.keys))];
               const csvRows = [
                 headers.join(','),
-                ...processedData.map(item => 
-                  headers.map(header => {
+                ...processedData.map((item) =>
+                  headers.map((header) => {
                     const value = item[header];
-                    return typeof value === 'string' && value.includes(',') 
-                      ? `"${value}"` 
+                    return typeof value === 'string' && value.includes(',')
+                      ? `"${value}"`
                       : String(value || '');
                   }).join(',')
                 ),
@@ -304,11 +317,13 @@ Perfect for demonstrating complex multi-step workflows with state management.`;
         success,
         completed_steps: steps,
         failed_steps: failed,
-        data: success ? {
-          processed_data: processedData,
-          analysis: analysisStep.data,
-          exported_output: exportStep.data?.output,
-        } : undefined,
+        data: success
+          ? {
+            processed_data: processedData,
+            analysis: analysisStep.data,
+            exported_output: exportStep.data?.output,
+          }
+          : undefined,
         metadata: {
           pipeline: 'data_processing',
           original_items: params.data.length,
@@ -318,7 +333,6 @@ Perfect for demonstrating complex multi-step workflows with state management.`;
           output_format: params.outputFormat,
         },
       };
-
     } catch (error) {
       this.logError('Pipeline execution failed', error as Error);
       return this.createFailureResult(steps, failed, (error as Error).message);
@@ -327,7 +341,7 @@ Perfect for demonstrating complex multi-step workflows with state management.`;
 
   private analyzeDataTypes(data: any[]): Record<string, string[]> {
     const typeMap: Record<string, Set<string>> = {};
-    
+
     for (const item of data) {
       for (const [key, value] of Object.entries(item)) {
         if (!typeMap[key]) {
@@ -341,7 +355,7 @@ Perfect for demonstrating complex multi-step workflows with state management.`;
     for (const [key, types] of Object.entries(typeMap)) {
       result[key] = Array.from(types);
     }
-    
+
     return result;
   }
 
@@ -349,7 +363,7 @@ Perfect for demonstrating complex multi-step workflows with state management.`;
     if (data.length === 0) return null;
 
     const numericFields: Record<string, number[]> = {};
-    
+
     for (const item of data) {
       for (const [key, value] of Object.entries(item)) {
         if (typeof value === 'number' && !isNaN(value)) {
@@ -362,7 +376,7 @@ Perfect for demonstrating complex multi-step workflows with state management.`;
     }
 
     const statistics: Record<string, any> = {};
-    
+
     for (const [field, values] of Object.entries(numericFields)) {
       if (values.length > 0) {
         const sorted = [...values].sort((a, b) => a - b);
@@ -401,15 +415,16 @@ Perfect for demonstrating complex multi-step workflows with state management.`;
 }
 
 /**
- * File Management Workflow  
- * 
+ * File Management Workflow
+ *
  * Multi-step pipeline: create → validate → process → archive
  * Demonstrates file lifecycle management patterns
  */
 class FileManagementWorkflow extends WorkflowBase {
   readonly name = 'file_management_lifecycle';
   readonly version = '1.0.0';
-  readonly description = 'Complete file lifecycle management: create, validate, process, and archive';
+  readonly description =
+    'Complete file lifecycle management: create, validate, process, and archive';
   readonly category = 'utility' as const;
   readonly tags = ['files', 'lifecycle', 'management', 'validation'];
   override readonly estimatedDuration = 20;
@@ -421,7 +436,8 @@ class FileManagementWorkflow extends WorkflowBase {
     dryRun: z.boolean().default(false),
     fileName: z.string().min(1).describe('Name of the file to manage'),
     content: z.string().describe('Initial content of the file'),
-    validationRules: z.array(z.enum(['not_empty', 'valid_json', 'max_size', 'no_scripts'])).describe('Validation rules to apply'),
+    validationRules: z.array(z.enum(['not_empty', 'valid_json', 'max_size', 'no_scripts']))
+      .describe('Validation rules to apply'),
     processingOptions: z.object({
       format: z.enum(['pretty', 'minify', 'normalize']).default('pretty'),
       addMetadata: z.boolean().default(true),
@@ -475,7 +491,7 @@ Demonstrates state management and error recovery in file operations.`;
       // Step 1: Create File
       const createStep = await this.safeExecute('create_file', async () => {
         this.logInfo('Creating file with initial content');
-        
+
         if (!params.fileName || params.fileName.trim().length === 0) {
           throw new Error('File name cannot be empty');
         }
@@ -508,7 +524,7 @@ Demonstrates state management and error recovery in file operations.`;
       for (const rule of params.validationRules) {
         const validationStep = await this.safeExecute(`validate_${rule}`, async () => {
           this.logInfo(`Applying validation rule: ${rule}`);
-          
+
           switch (rule) {
             case 'not_empty':
               if (!fileContent || fileContent.trim().length === 0) {
@@ -547,10 +563,10 @@ Demonstrates state management and error recovery in file operations.`;
           steps.push(this.createStepResult(`validate_${rule}`, true, validationStep.data));
         } else {
           // Add failed validation as both a step and a failed step for complete tracking
-          steps.push(this.createStepResult(`validate_${rule}`, false, { 
-            rule, 
-            result: 'failed', 
-            error: validationStep.error?.message || 'Validation failed' 
+          steps.push(this.createStepResult(`validate_${rule}`, false, {
+            rule,
+            result: 'failed',
+            error: validationStep.error?.message || 'Validation failed',
           }));
           failed.push(validationStep.error!);
         }
@@ -559,7 +575,7 @@ Demonstrates state management and error recovery in file operations.`;
       // Step 3: Process Content
       const processStep = await this.safeExecute('process_content', async () => {
         this.logInfo('Processing file content', { options: params.processingOptions });
-        
+
         let processedContent = fileContent;
 
         // Apply formatting
@@ -609,7 +625,9 @@ Demonstrates state management and error recovery in file operations.`;
             parsed._metadata = metadata;
             processedContent = JSON.stringify(parsed, null, 2);
           } catch {
-            processedContent = `// File Metadata: ${JSON.stringify(metadata)}\n\n${processedContent}`;
+            processedContent = `// File Metadata: ${
+              JSON.stringify(metadata)
+            }\n\n${processedContent}`;
           }
         }
 
@@ -646,7 +664,7 @@ Demonstrates state management and error recovery in file operations.`;
       // Step 4: Archive Results
       const archiveStep = await this.safeExecute('archive_file', async () => {
         this.logInfo('Archiving processed file');
-        
+
         const archiveInfo = {
           original_file: {
             name: params.fileName,
@@ -660,8 +678,8 @@ Demonstrates state management and error recovery in file operations.`;
             processing_options: params.processingOptions,
           },
           validation_results: steps
-            .filter(step => step.operation.startsWith('validate_'))
-            .map(step => ({
+            .filter((step) => step.operation.startsWith('validate_'))
+            .map((step) => ({
               rule: step.operation.replace('validate_', ''),
               success: step.success,
               data: step.data,
@@ -685,29 +703,32 @@ Demonstrates state management and error recovery in file operations.`;
         success,
         completed_steps: steps,
         failed_steps: failed,
-        data: success ? {
-          file_info: fileMetadata,
-          final_content: fileContent,
-          validation_results: steps
-            .filter(s => s.operation.startsWith('validate_'))
-            .map(s => ({
-              rule: s.operation.replace('validate_', ''),
-              success: s.success,
-              ...s.data
-            })),
-          processing_applied: processStep.data,
-          archive_info: archiveStep.data,
-        } : undefined,
+        data: success
+          ? {
+            file_info: fileMetadata,
+            final_content: fileContent,
+            validation_results: steps
+              .filter((s) => s.operation.startsWith('validate_'))
+              .map((s) => ({
+                rule: s.operation.replace('validate_', ''),
+                success: s.success,
+                ...s.data,
+              })),
+            processing_applied: processStep.data,
+            archive_info: archiveStep.data,
+          }
+          : undefined,
         metadata: {
           workflow: 'file_management',
           file_name: params.fileName,
-          validations_passed: steps.filter(s => s.operation.startsWith('validate_') && s.success).length,
-          validations_failed: failed.filter(f => f.operation.startsWith('validate_')).length,
+          validations_passed: steps.filter((s) =>
+            s.operation.startsWith('validate_') && s.success
+          ).length,
+          validations_failed: failed.filter((f) => f.operation.startsWith('validate_')).length,
           processing_completed: processStep.success,
           archived: archiveStep.success,
         },
       };
-
     } catch (error) {
       this.logError('File management workflow failed', error as Error);
       return this.createFailureResult(steps, failed, (error as Error).message);
@@ -751,14 +772,15 @@ Demonstrates state management and error recovery in file operations.`;
 
 /**
  * Content Generation Workflow
- * 
+ *
  * Multi-step pipeline: plan → generate → review → publish
  * Demonstrates content creation with user interaction (elicitation)
  */
 class ContentGenerationWorkflow extends WorkflowBase {
   readonly name = 'content_generation_pipeline';
   readonly version = '1.0.0';
-  readonly description = 'AI-powered content generation with planning, creation, review, and publishing steps';
+  readonly description =
+    'AI-powered content generation with planning, creation, review, and publishing steps';
   readonly category = 'automation' as const;
   readonly tags = ['content', 'generation', 'ai', 'review', 'publishing'];
   override readonly estimatedDuration = 45;
@@ -768,7 +790,9 @@ class ContentGenerationWorkflow extends WorkflowBase {
     userId: z.string(),
     requestId: z.string().optional(),
     dryRun: z.boolean().default(false),
-    contentType: z.enum(['blog', 'documentation', 'report']).describe('Type of content to generate'),
+    contentType: z.enum(['blog', 'documentation', 'report']).describe(
+      'Type of content to generate',
+    ),
     topic: z.string().min(5).describe('Main topic or subject for the content'),
     requirements: z.object({
       wordCount: z.number().min(100).max(5000).default(500),
@@ -826,7 +850,7 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
       // Step 1: Plan Content
       const planStep = await this.safeExecute('plan_content', async () => {
         this.logInfo('Planning content structure and outline');
-        
+
         const plan = {
           content_type: params.contentType,
           topic: params.topic,
@@ -853,12 +877,12 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
       // Step 2: Generate Content
       const generateStep = await this.safeExecute('generate_content', async () => {
         this.logInfo('Generating content based on plan');
-        
+
         const content = this.generateMockContent(
           params.contentType,
           params.topic,
           params.requirements,
-          contentPlan.outline
+          contentPlan.outline,
         );
 
         const generationInfo = {
@@ -882,7 +906,7 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
       // Step 3: Review Content
       const reviewStep = await this.safeExecute('review_content', async () => {
         this.logInfo('Reviewing generated content');
-        
+
         const reviewResults = {
           word_count_check: {
             target: params.requirements.wordCount,
@@ -890,7 +914,7 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
             within_range: this.isWithinRange(
               generatedContent.split(' ').length,
               params.requirements.wordCount,
-              0.2
+              0.2,
             ),
           },
           tone_check: {
@@ -919,10 +943,10 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
         failed.push(reviewStep.error!);
       }
 
-      // Step 4: Publish Content  
+      // Step 4: Publish Content
       const publishStep = await this.safeExecute('publish_content', async () => {
         this.logInfo('Publishing final content');
-        
+
         const finalContent = reviewedContent || generatedContent;
         const publishInfo = {
           content_id: `content_${Date.now()}`,
@@ -960,13 +984,15 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
         success,
         completed_steps: steps,
         failed_steps: failed,
-        data: success ? {
-          content_plan: contentPlan,
-          generated_content: generatedContent,
-          reviewed_content: reviewedContent,
-          publish_info: publishStep.data,
-          full_content: reviewedContent || generatedContent,
-        } : undefined,
+        data: success
+          ? {
+            content_plan: contentPlan,
+            generated_content: generatedContent,
+            reviewed_content: reviewedContent,
+            publish_info: publishStep.data,
+            full_content: reviewedContent || generatedContent,
+          }
+          : undefined,
         metadata: {
           workflow: 'content_generation',
           content_type: params.contentType,
@@ -978,7 +1004,6 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
           final_word_count: (reviewedContent || generatedContent).split(' ').length,
         },
       };
-
     } catch (error) {
       this.logError('Content generation workflow failed', error as Error);
       return this.createFailureResult(steps, failed, (error as Error).message);
@@ -989,7 +1014,7 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
     const outlines: Record<string, string[]> = {
       blog: [
         'Introduction and hook',
-        'Main points and arguments', 
+        'Main points and arguments',
         'Supporting examples and evidence',
         'Practical applications',
         'Conclusion and call-to-action',
@@ -1009,7 +1034,7 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
         'Conclusion and next steps',
       ],
     };
-    
+
     return outlines[contentType] || outlines.blog!;
   }
 
@@ -1019,11 +1044,16 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
       documentation: ['overview', 'installation', 'usage', 'examples', 'api_reference'],
       report: ['summary', 'introduction', 'analysis', 'recommendations', 'appendix'],
     };
-    
+
     return sections[contentType] || sections.blog!;
   }
 
-  private generateMockContent(contentType: string, topic: string, requirements: any, outline: string[]): string {
+  private generateMockContent(
+    contentType: string,
+    topic: string,
+    requirements: any,
+    outline: string[],
+  ): string {
     const paragraphs = [
       `This ${contentType} explores the topic of "${topic}" in detail, providing valuable insights and practical information for ${requirements.audience} audiences.`,
       `Understanding ${topic} is crucial for anyone working in this field, as it impacts various aspects of modern practices and industry standards.`,
@@ -1036,7 +1066,7 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
 
     const targetParagraphs = Math.max(3, Math.ceil(requirements.wordCount / 100));
     let content = `# ${this.extractTitle('', topic)}\n\n`;
-    
+
     for (let i = 0; i < Math.min(targetParagraphs, outline.length); i++) {
       const paragraph = paragraphs[i % paragraphs.length];
       content += `## ${outline[i]}\n\n${paragraph}\n\n`;
@@ -1063,7 +1093,7 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
 
   private generateRecommendations(content: string, requirements: any): string[] {
     const recommendations = [];
-    
+
     const wordCount = content.split(' ').length;
     if (wordCount < requirements.wordCount * 0.8) {
       recommendations.push('Consider expanding content to meet word count target');
@@ -1071,11 +1101,11 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
     if (wordCount > requirements.wordCount * 1.2) {
       recommendations.push('Consider condensing content to meet word count target');
     }
-    
+
     if (!content.includes('\n#')) {
       recommendations.push('Add section headers to improve structure');
     }
-    
+
     if (requirements.includeReferences && !content.includes('http')) {
       recommendations.push('Consider adding relevant references and links');
     }
@@ -1085,11 +1115,12 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
 
   private applyAutomatedImprovements(content: string, reviewResults: any): string {
     let improved = content;
-    
+
     if (!improved.includes('conclusion') && !improved.includes('Conclusion')) {
-      improved += '\n\n## Conclusion\n\nThis analysis provides a comprehensive overview of the topic and its implications for future development.';
+      improved +=
+        '\n\n## Conclusion\n\nThis analysis provides a comprehensive overview of the topic and its implications for future development.';
     }
-    
+
     return improved;
   }
 
@@ -1098,7 +1129,7 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
     if (match) {
       return match[1]!;
     }
-    
+
     return `Understanding ${fallbackTopic}: A Comprehensive Guide`;
   }
 
@@ -1125,23 +1156,24 @@ Demonstrates elicitation for user interaction and complex multi-step content wor
 
 /**
  * Workflow Plugin Implementation
- * 
+ *
  * This plugin demonstrates the CORRECT pattern:
  * - Populate workflows array with workflow instances
  * - Populate tools array with basic utility tools
- * - PluginManager handles all registration automatically  
+ * - PluginManager handles all registration automatically
  * - Clean, minimal plugin structure with comprehensive workflows
  */
 const WorkflowPlugin: AppPlugin = {
   name: 'workflow-plugin',
   version: '1.0.0',
-  description: 'Comprehensive workflow demonstrations with multi-step processing and state management',
+  description:
+    'Comprehensive workflow demonstrations with multi-step processing and state management',
   author: 'Beyond MCP Server Examples',
   license: 'MIT',
-  
+
   // Plugin metadata for discovery and documentation
   tags: ['workflows', 'multi-step', 'state-management', 'examples'],
-  
+
   // 🔧 Workflows array - populated with comprehensive workflow implementations
   // PluginManager will automatically register these workflows
   workflows: [
@@ -1149,7 +1181,7 @@ const WorkflowPlugin: AppPlugin = {
     new FileManagementWorkflow(),
     new ContentGenerationWorkflow(),
   ],
-  
+
   // 🛠️ Tools array - basic utility tools (fewer than simple example)
   // Focus is on workflows, but some tools are useful for supporting operations
   tools: [
@@ -1169,18 +1201,22 @@ const WorkflowPlugin: AppPlugin = {
         try {
           const timezone = args.timezone || 'UTC';
           const now = new Date();
-          const formatted = timezone === 'UTC' 
-            ? now.toISOString() 
+          const formatted = timezone === 'UTC'
+            ? now.toISOString()
             : now.toLocaleString('en-US', { timeZone: timezone });
-          
+
           return {
             content: [{
               type: 'text',
-              text: JSON.stringify({
-                datetime: formatted,
-                timezone,
-                unix_timestamp: Math.floor(now.getTime() / 1000),
-              }, null, 2),
+              text: JSON.stringify(
+                {
+                  datetime: formatted,
+                  timezone,
+                  unix_timestamp: Math.floor(now.getTime() / 1000),
+                },
+                null,
+                2,
+              ),
             }],
             metadata: { tool: 'current_datetime', timezone },
           };
@@ -1195,8 +1231,8 @@ const WorkflowPlugin: AppPlugin = {
         }
       },
     },
-    
-    // Basic JSON validator  
+
+    // Basic JSON validator
     {
       name: 'validate_json',
       definition: {
@@ -1222,7 +1258,9 @@ const WorkflowPlugin: AppPlugin = {
           return {
             content: [{
               type: 'text',
-              text: `❌ JSON validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              text: `❌ JSON validation failed: ${
+                error instanceof Error ? error.message : 'Unknown error'
+              }`,
             }],
             metadata: { tool: 'validate_json', valid: false },
           };

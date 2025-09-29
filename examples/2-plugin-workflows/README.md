@@ -16,6 +16,7 @@ This example teaches you how to:
 ## 🔧 Workflow Implementations
 
 ### 1. Data Processing Pipeline (`data_processing_pipeline`)
+
 **Steps**: validate → transform → analyze → export
 
 ```typescript
@@ -24,21 +25,23 @@ const result = await workflow.execute({
   userId: 'user123',
   data: [
     { name: 'John', score: 85, category: 'A' },
-    { name: 'Jane', score: 92, category: 'B' }
+    { name: 'Jane', score: 92, category: 'B' },
   ],
   transformations: ['normalize', 'sort', 'deduplicate'],
   outputFormat: 'json',
-  analysisType: 'statistical'
+  analysisType: 'statistical',
 });
 ```
 
 **Demonstrates**:
+
 - Complex data transformation pipelines
 - Statistical analysis and data type detection
 - Multiple output formats (JSON, CSV)
 - Graceful error handling with partial success
 
 ### 2. File Management Lifecycle (`file_management_lifecycle`)
+
 **Steps**: create → validate → process → archive
 
 ```typescript
@@ -51,18 +54,20 @@ const result = await workflow.execute({
   processingOptions: {
     format: 'pretty',
     addMetadata: true,
-    sanitize: true
-  }
+    sanitize: true,
+  },
 });
 ```
 
 **Demonstrates**:
+
 - File lifecycle management patterns
 - Configurable validation rules
 - Content processing and sanitization
 - Metadata tracking and archival
 
 ### 3. Content Generation Pipeline (`content_generation_pipeline`)
+
 **Steps**: plan → generate → review → publish
 
 ```typescript
@@ -75,12 +80,13 @@ const result = await workflow.execute({
     wordCount: 800,
     tone: 'professional',
     audience: 'developers',
-    includeReferences: true
-  }
+    includeReferences: true,
+  },
 });
 ```
 
 **Demonstrates**:
+
 - AI-powered content creation workflows
 - Multi-step content planning and generation
 - Quality review and automated improvements
@@ -96,19 +102,20 @@ The plugin also includes basic utility tools that support workflow operations:
 ## 🏗️ Architecture Patterns
 
 ### Correct Plugin Structure
+
 ```typescript
 const WorkflowPlugin: AppPlugin = {
   name: 'workflow-plugin',
   version: '1.0.0',
   description: 'Multi-step workflow demonstrations',
-  
+
   // ✅ Populate arrays directly - PluginManager handles registration
   workflows: [
     new DataProcessingWorkflow(),
-    new FileManagementWorkflow(), 
+    new FileManagementWorkflow(),
     new ContentGenerationWorkflow(),
   ],
-  
+
   tools: [
     // Basic utility tools
   ],
@@ -116,6 +123,7 @@ const WorkflowPlugin: AppPlugin = {
 ```
 
 ### Workflow Implementation Pattern
+
 ```typescript
 class DataProcessingWorkflow extends WorkflowBase {
   readonly name = 'data_processing_pipeline';
@@ -126,20 +134,20 @@ class DataProcessingWorkflow extends WorkflowBase {
   protected async executeWorkflow(params: any, context: WorkflowContext): Promise<WorkflowResult> {
     const steps: any[] = [];
     const failed: any[] = [];
-    
+
     // Step-by-step execution with state tracking
     const validationStep = await this.safeExecute('validate_data', async () => {
       // Step implementation with error handling
     });
-    
+
     // Continue with other steps...
-    
+
     return {
       success: failed.length === 0,
       completed_steps: steps,
       failed_steps: failed,
       data: processedData,
-      metadata: { /* workflow metadata */ }
+      metadata: {/* workflow metadata */},
     };
   }
 }
@@ -148,6 +156,7 @@ class DataProcessingWorkflow extends WorkflowBase {
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Deno 2.5.0 or later
 - Basic understanding of Beyond MCP Server library
 - Familiarity with TypeScript and async/await patterns
@@ -188,6 +197,7 @@ const appServer = await AppServer.create({
 ## 📊 Workflow Execution Flow
 
 ### State Management
+
 ```
 Workflow Start
     ↓
@@ -209,6 +219,7 @@ Workflow Start
 ```
 
 ### Error Handling
+
 - **safeExecute()** wrapper provides consistent error handling
 - **Failed steps** are tracked but don't stop execution
 - **Recovery patterns** allow workflows to continue after non-critical failures
@@ -224,7 +235,7 @@ describe('DataProcessingWorkflow', () => {
   it('should execute complete pipeline successfully', async () => {
     const workflow = new DataProcessingWorkflow();
     const result = await workflow.executeWithValidation(validParams, testContext);
-    
+
     assertEquals(result.success, true);
     assertEquals(result.completed_steps.length, 4);
     assert(result.data?.processed_data);
@@ -245,13 +256,13 @@ If you're coming from the `1-simple` example:
 
 ### Workflow vs Tool Decision Matrix
 
-| Use Tools When | Use Workflows When |
-|---|---|
-| Single operation | Multiple related steps |
-| Stateless | Stateful processing |
+| Use Tools When      | Use Workflows When          |
+| ------------------- | --------------------------- |
+| Single operation    | Multiple related steps      |
+| Stateless           | Stateful processing         |
 | Simple input/output | Complex data transformation |
-| Quick validation | Business process automation |
-| Utility functions | Error recovery needed |
+| Quick validation    | Business process automation |
+| Utility functions   | Error recovery needed       |
 
 ### Best Practices
 

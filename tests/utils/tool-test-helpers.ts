@@ -16,7 +16,7 @@ import { SpyAuditLogger, SpyLogger } from './test-helpers.ts';
  * Type guard to check if a CallToolResult has valid text content
  */
 function hasTextContent(result: CallToolResult): result is CallToolResult & {
-  content: Array<{ type: 'text'; text: string }>
+  content: Array<{ type: 'text'; text: string }>;
 } {
   return (
     !!result.content &&

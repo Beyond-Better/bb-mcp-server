@@ -31,6 +31,7 @@ vim .env  # or use your preferred editor
 ```
 
 **Required OAuth Configuration:**
+
 ```bash
 # OAuth Consumer Configuration (for ExampleCorp API)
 OAUTH_CONSUMER_CLIENT_ID=your-examplecorp-client-id
@@ -56,6 +57,7 @@ MCP_TRANSPORT=http deno run --allow-all main.ts
 ```
 
 You should see:
+
 ```
 [INFO] Starting MCP server: examplecorp-mcp-server v1.0.0
 [INFO] OAuth consumer initialized: ExampleCorp API
@@ -86,11 +88,12 @@ const oAuthConsumer = new ExampleOAuthConsumer({
   authUrl: 'https://api.examplecorp.com/oauth/authorize',
   tokenUrl: 'https://api.examplecorp.com/oauth/token',
   clientId: 'your-client-id',
-  clientSecret: 'your-client-secret'
+  clientSecret: 'your-client-secret',
 });
 ```
 
 **OAuth Consumer Flow:**
+
 1. **Authorization Request**: Generate OAuth authorization URL
 2. **User Authorization**: User authorizes access via ExampleCorp
 3. **Code Exchange**: Exchange authorization code for access tokens
@@ -105,7 +108,7 @@ The API client handles all OAuth complexity:
 // Authenticated API calls are transparent
 const customers = await apiClient.get('/customers', {
   filters: { status: 'active' },
-  userId: 'user-123'
+  userId: 'user-123',
 });
 
 // OAuth tokens are automatically included in headers
@@ -117,9 +120,11 @@ const customers = await apiClient.get('/customers', {
 ### 1. Workflow Execution Tool
 
 #### `execute_workflow_examplecorp`
+
 Execute specialized ExampleCorp workflows with OAuth authentication.
 
 **Example Parameters:**
+
 ```json
 {
   "workflow_name": "example_query",
@@ -142,9 +147,11 @@ Execute specialized ExampleCorp workflows with OAuth authentication.
 ### 2. Direct API Tools
 
 #### `query_customers_example`
+
 Direct customer search with OAuth authentication.
 
 **Example Parameters:**
+
 ```json
 {
   "search": "Acme Corporation",
@@ -159,9 +166,11 @@ Direct customer search with OAuth authentication.
 ```
 
 #### `create_order_example`
+
 Create orders in ExampleCorp system with validation.
 
 **Example Parameters:**
+
 ```json
 {
   "customerId": "cust-12345",
@@ -186,9 +195,11 @@ Create orders in ExampleCorp system with validation.
 ```
 
 #### `get_order_status_example`
+
 Retrieve order status and tracking information.
 
 **Example Parameters:**
+
 ```json
 {
   "orderId": "ord-67890",
@@ -198,6 +209,7 @@ Retrieve order status and tracking information.
 ```
 
 #### `get_api_info_example`
+
 Get ExampleCorp API connectivity and status information.
 
 **Parameters:** None required
@@ -210,41 +222,49 @@ The `ExampleDependencies.ts` file demonstrates the dependency injection pattern:
 
 ```typescript
 export async function createExampleDependencies(
-  { configManager, logger, kvManager }: CreateCustomAppServerDependencies
+  { configManager, logger, kvManager }: CreateCustomAppServerDependencies,
 ): Promise<Partial<AppServerDependencies>> {
-  
   // 1. Create OAuth consumer with environment configuration
-  const oAuthConsumer = new ExampleOAuthConsumer({
-    provider: 'examplecorp',
-    authUrl: configManager.get('OAUTH_CONSUMER_AUTH_URL'),
-    tokenUrl: configManager.get('OAUTH_CONSUMER_TOKEN_URL'),
-    clientId: configManager.get('OAUTH_CONSUMER_CLIENT_ID'),
-    clientSecret: configManager.get('OAUTH_CONSUMER_CLIENT_SECRET'),
-    // ... other OAuth config
-  }, logger, kvManager);
-  
+  const oAuthConsumer = new ExampleOAuthConsumer(
+    {
+      provider: 'examplecorp',
+      authUrl: configManager.get('OAUTH_CONSUMER_AUTH_URL'),
+      tokenUrl: configManager.get('OAUTH_CONSUMER_TOKEN_URL'),
+      clientId: configManager.get('OAUTH_CONSUMER_CLIENT_ID'),
+      clientSecret: configManager.get('OAUTH_CONSUMER_CLIENT_SECRET'),
+      // ... other OAuth config
+    },
+    logger,
+    kvManager,
+  );
+
   // 2. Create API client with OAuth integration
-  const thirdpartyApiClient = new ExampleApiClient({
-    baseUrl: configManager.get('THIRDPARTY_API_BASE_URL'),
-    timeout: configManager.get('THIRDPARTY_API_TIMEOUT', 30000),
-    retryAttempts: configManager.get('THIRDPARTY_API_RETRY_ATTEMPTS', 3),
-    // ... other API config
-  }, oAuthConsumer, logger);
-  
+  const thirdpartyApiClient = new ExampleApiClient(
+    {
+      baseUrl: configManager.get('THIRDPARTY_API_BASE_URL'),
+      timeout: configManager.get('THIRDPARTY_API_TIMEOUT', 30000),
+      retryAttempts: configManager.get('THIRDPARTY_API_RETRY_ATTEMPTS', 3),
+      // ... other API config
+    },
+    oAuthConsumer,
+    logger,
+  );
+
   // 3. Return combined dependencies
   return {
     // Library dependencies (from bb-mcp-server)
     configManager,
     logger,
-    
+
     // Custom dependencies (ExampleCorp-specific)
     thirdpartyApiClient,
-    oAuthConsumer
+    oAuthConsumer,
   };
 }
 ```
 
 **Key Benefits:**
+
 - **Clean Separation**: Library vs business logic dependencies
 - **Type Safety**: Full TypeScript support for all dependencies
 - **Testability**: Easy to mock dependencies for testing
@@ -336,9 +356,9 @@ const mockDependencies = {
     mockTokens: {
       accessToken: 'mock-access-token',
       refreshToken: 'mock-refresh-token',
-      expiresAt: Date.now() + 3600000
-    }
-  })
+      expiresAt: Date.now() + 3600000,
+    },
+  }),
 };
 ```
 
@@ -352,6 +372,7 @@ LOG_LEVEL=debug deno run --allow-all main.ts
 ```
 
 This shows:
+
 - OAuth token request/response details
 - API client request/response logging
 - Dependency injection process
@@ -363,11 +384,13 @@ This shows:
 #### 1. OAuth Configuration Issues
 
 **Problem:**
+
 ```
 Error: OAuth consumer configuration invalid
 ```
 
 **Solution:**
+
 - Verify all required OAuth environment variables are set
 - Check that URLs are accessible and correct
 - Confirm client ID and secret are valid
@@ -376,11 +399,13 @@ Error: OAuth consumer configuration invalid
 #### 2. Token Storage Issues
 
 **Problem:**
+
 ```
 Error: Failed to store OAuth tokens
 ```
 
 **Solution:**
+
 - Check Deno KV database path is writable
 - Verify `DENO_KV_PATH` environment variable
 - Ensure sufficient disk space
@@ -389,11 +414,13 @@ Error: Failed to store OAuth tokens
 #### 3. API Authentication Failures
 
 **Problem:**
+
 ```
 Error: 401 Unauthorized - Invalid token
 ```
 
 **Solution:**
+
 - Verify OAuth scopes include required permissions
 - Check if access token has expired
 - Confirm automatic token refresh is working
@@ -402,11 +429,13 @@ Error: 401 Unauthorized - Invalid token
 #### 4. Plugin Discovery Issues
 
 **Problem:**
+
 ```
 Error: ExamplePlugin not found
 ```
 
 **Solution:**
+
 - Verify plugin file exists in `src/plugins/`
 - Check plugin exports default ExamplePlugin
 - Ensure plugin is properly structured
@@ -421,7 +450,7 @@ Error: ExamplePlugin not found
      authUrl: configManager.get('OAUTH_CONSUMER_AUTH_URL'),
      tokenUrl: configManager.get('OAUTH_CONSUMER_TOKEN_URL'),
      clientId: configManager.get('OAUTH_CONSUMER_CLIENT_ID'),
-     redirectUri: configManager.get('OAUTH_CONSUMER_REDIRECT_URI')
+     redirectUri: configManager.get('OAUTH_CONSUMER_REDIRECT_URI'),
    });
    ```
 
@@ -443,15 +472,15 @@ Error: ExamplePlugin not found
 
 ### Progression from Plugin-Workflows
 
-| Aspect | Plugin-Workflows | Plugin-API-Auth |
-|--------|------------------|-----------------|
-| **Setup Complexity** | Minimal config | OAuth credentials required |
-| **Authentication** | None | Full OAuth 2.0 flow |
-| **Data Source** | Mock/local data | Real external API |
-| **Dependencies** | Library defaults | Custom dependency injection |
-| **Error Handling** | Local workflow errors | Network + auth error handling |
-| **Security** | Basic patterns | Production OAuth security |
-| **Testing** | Simple unit tests | OAuth integration tests |
+| Aspect               | Plugin-Workflows      | Plugin-API-Auth               |
+| -------------------- | --------------------- | ----------------------------- |
+| **Setup Complexity** | Minimal config        | OAuth credentials required    |
+| **Authentication**   | None                  | Full OAuth 2.0 flow           |
+| **Data Source**      | Mock/local data       | Real external API             |
+| **Dependencies**     | Library defaults      | Custom dependency injection   |
+| **Error Handling**   | Local workflow errors | Network + auth error handling |
+| **Security**         | Basic patterns        | Production OAuth security     |
+| **Testing**          | Simple unit tests     | OAuth integration tests       |
 
 ### Key New Concepts
 

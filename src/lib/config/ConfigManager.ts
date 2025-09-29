@@ -2,7 +2,7 @@
  * Configuration Manager - Generic configuration loading for bb-mcp-server library
  *
  * Provides flexible configuration loading from environment variables, files, and
- * programmatic sources. 
+ * programmatic sources.
  */
 
 import '@std/dotenv/load';
