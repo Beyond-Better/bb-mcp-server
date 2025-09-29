@@ -2,49 +2,173 @@
 
 A comprehensive library for building Deno-based MCP (Model Context Protocol) servers with OAuth and workflow capabilities.
 
-## Quick Start
+## 🚀 Quick Start for Users
+
+Get started building your own MCP server in minutes with our example applications!
 
 ### Installation
+
+```bash
+# Install from JSR registry
+deno add jsr:@beyondbetter/bb-mcp-server
+```
+
+### 📚 Example Applications (Recommended Learning Path)
+
+We provide **4 progressive examples** that teach you everything from basic tools to advanced OAuth integration:
+
+| Example | Complexity | Focus | What You'll Learn |
+|---------|------------|-------|------------------|
+| **[1-simple](examples/1-simple/)** | ⭐ Beginner | Basic tools & plugins | Get started with minimal setup |
+| **[2-plugin-workflows](examples/2-plugin-workflows/)** | ⭐⭐ Intermediate | Multi-step workflows | When to use workflows vs tools |
+| **[3-plugin-api-auth](examples/3-plugin-api-auth/)** | ⭐⭐⭐ Advanced | OAuth & API integration | Third-party API authentication |
+| **[4-manual-deps](examples/4-manual-deps/)** | ⭐⭐⭐⭐ Expert | Full customization | Complete infrastructure control |
+
+### 🎯 Start with Example 1 - Simple MCP Server
+
+```bash
+# Clone and run the simplest example
+git clone https://github.com/beyond-better/bb-mcp-server.git
+cd bb-mcp-server/examples/1-simple
+
+# Copy environment template and configure
+cp .env.example .env
+
+# Run the MCP server
+deno run --allow-all main.ts
+```
+
+**✨ What you get out of the box:**
+- ✅ Working MCP server with plugin discovery
+- ✅ Basic utility tools (datetime, system info, JSON validation)
+- ✅ Both STDIO and HTTP transport support
+- ✅ Environment-based configuration
+- ✅ Comprehensive logging and error handling
+
+### 📖 Complete Getting Started Guide
+
+👉 **For detailed setup instructions, architecture explanations, and step-by-step tutorials, see [examples/README.md](examples/README.md)**
+
+The examples directory contains everything you need to:
+- 🏃‍♂️ **Get running quickly** with working code
+- 📚 **Learn progressively** from simple to advanced concepts
+- 🧪 **See testing patterns** for validation and debugging
+- 🛠️ **Use as templates** for your own MCP server implementations
+
+### Library Usage (Without Examples)
+
+If you prefer to start from scratch:
+
+```typescript
+import { BeyondMcpServer } from 'jsr:@beyondbetter/bb-mcp-server';
+
+// Create and start server with minimal configuration
+const server = await BeyondMcpServer.create({
+  transport: { type: 'stdio' },
+  plugins: { discoveryPaths: ['./src/plugins'] },
+});
+
+await server.start();
+```
+
+## ✨ Key Features
+
+- **🎯 Plugin System**: Automatic discovery and loading of workflows and tools
+- **🔐 OAuth Ready**: Built-in OAuth provider and configurable consumer for third-party APIs
+- **⚡ Dual Transport**: STDIO and HTTP transport with session management
+- **💾 Persistent Storage**: Deno KV-based storage with automatic cleanup
+- **📊 Comprehensive Logging**: Audit trails and structured logging throughout
+- **🔧 Type-Safe**: Full TypeScript support with strict checking and validation
+- **🧪 Testing Support**: Extensive test utilities and demonstration patterns
+- **📦 Ready for JSR**: Published on JSR registry for easy installation
+
+## ⚙️ Configuration Overview
+
+The library supports comprehensive configuration via environment variables. Here are the key settings:
+
+### **Essential Configuration**
+```bash
+# Transport type
+MCP_TRANSPORT=stdio|http       # Default: stdio
+HTTP_PORT=3000                 # Default: 3001
+
+# Plugin discovery
+PLUGINS_DISCOVERY_PATHS=./src/plugins
+PLUGINS_AUTOLOAD=true
+
+# Storage
+DENO_KV_PATH=./data/app.db
+
+# Logging
+LOG_LEVEL=info                 # debug|info|warn|error
+```
+
+### **OAuth Integration**
+```bash
+# OAuth Provider (when MCP server acts as OAuth provider)
+OAUTH_PROVIDER_CLIENT_ID=your-client-id
+OAUTH_PROVIDER_CLIENT_SECRET=your-client-secret
+
+# OAuth Consumer (for third-party API integration)
+OAUTH_CONSUMER_PROVIDER=actionstep
+OAUTH_CONSUMER_CLIENT_ID=third-party-client-id
+OAUTH_CONSUMER_CLIENT_SECRET=third-party-secret
+```
+
+**📚 For complete configuration details, see the [examples](examples/) - each shows different configuration patterns.**
+
+## 🏗️ Architecture Overview
+
+Beyond MCP Server provides a layered architecture that separates concerns:
+
+### **Core Components**
+- **🚀 BeyondMcpServer**: Main server orchestrating all components
+- **🔄 Transport Layer**: STDIO/HTTP transport with session management  
+- **🔌 Plugin System**: Auto-discovery and loading of tools/workflows
+- **🔐 OAuth Services**: Provider and consumer for authentication flows
+- **💾 Storage Layer**: Deno KV-based persistence with automatic cleanup
+- **📊 Logging System**: Structured logging with audit trails
+
+### **Plugin Architecture**
+- **Tools**: Simple, single-purpose functions for direct operations
+- **Workflows**: Multi-step, stateful processes for complex business logic
+- **Plugins**: Bundled collections of tools and workflows for distribution
+
+**🎯 Design Goal**: You focus on business logic, the library handles infrastructure.
+
+## 📚 Documentation & Support
+
+- **🚀 [Getting Started Guide](examples/README.md)** - Complete learning progression with examples
+- **🔧 [API Documentation](docs/)** - Detailed API reference and guides
+- **🐛 [Issues & Bug Reports](https://github.com/beyond-better/bb-mcp-server/issues)** - Community support and bug tracking
+- **💬 [Discussions](https://github.com/beyond-better/bb-mcp-server/discussions)** - Community Q&A and feature requests
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## 🔗 Related Projects
+
+- [Model Context Protocol](https://github.com/modelcontextprotocol/typescript-sdk) - Official MCP TypeScript SDK
+- [Beyond Better](https://github.com/beyond-better) - AI-powered development tools
+
+---
+
+# 🛠️ For Contributors & Maintainers
+
+*The following sections are for those contributing to or maintaining the bb-mcp-server library itself.*
+
+## 🚀 Development Setup
 
 ```bash
 # Clone the repository
 git clone https://github.com/beyond-better/bb-mcp-server.git
 cd bb-mcp-server
 
-# Install dependencies and run tests
-deno task test
-```
+# Run all tests (library + examples)
+deno task test:all
 
-### Basic Usage
-
-```typescript
-import { KVManager, ConfigManager, Logger } from 'jsr:@beyondbetter/bb-mcp-server';
-
-// Create logger
-const logger = new Logger({ level: 'info' });
-
-// Load configuration
-const configManager = new ConfigManager({}, logger);
-const config = await configManager.loadConfig();
-
-// Initialize storage
-const kvManager = new KVManager({ kvPath: './data/app.db' }, logger);
-await kvManager.initialize();
-
-// Use the storage
-await kvManager.set(['user', 'john'], { name: 'John Doe', email: 'john@example.com' });
-const user = await kvManager.get(['user', 'john']);
-
-console.log('User:', user);
-
-// Cleanup
-await kvManager.close();
-```
-
-## Testing
-
-```bash
-# Run all tests
+# Run library tests only  
 deno task test
 
 # Run specific test file
@@ -54,141 +178,35 @@ deno task test tests/unit/storage/KVManager.test.ts
 deno task tool:test
 ```
 
-### Key Features
+## 🧪 Testing
 
-- **Type-Safe**: Full TypeScript support with strict checking
-- **Configurable**: Flexible configuration via environment variables
-- **Persistent**: Deno KV-based storage with automatic cleanup
-- **Observable**: Comprehensive logging and audit trails
-- **Testable**: Extensive test coverage with mocking support
-- **Generic**: Extracted from production MCP server, generalized for reuse
-- **Plugin System**: Automatic discovery and loading of workflows and tools
-- **Extensible**: Easy to add custom workflows, tools, and plugins
+- **Unit Tests**: All library components with >90% coverage
+- **Integration Tests**: End-to-end workflow execution, OAuth flows
+- **Example Tests**: Demonstration tests in each example app
+- **Mock Services**: Comprehensive mocking for isolated testing
 
-## Configuration
-
-The library supports comprehensive configuration via environment variables:
-
-### **Core Configuration**
-```bash
-# Transport type
-MCP_TRANSPORT=stdio|http       # Default: stdio
-HTTP_PORT=3000                 # Default: 3001
-HTTP_HOST=localhost            # Default: localhost
-# Allow HTTP transport without OAuth provider (development/testing only)
-HTTP_ALLOW_INSECURE=false      # Default: false (⚠️ security risk if enabled)
-```
-
-### **Session Management (Production Critical)**
-```bash
-# Session timeout in milliseconds
-MCP_SESSION_TIMEOUT=7200000        # 2 hours (default: 30 minutes)
-# Session cleanup interval in milliseconds  
-MCP_SESSION_CLEANUP_INTERVAL=600000 # 10 minutes (default: 5 minutes)
-# Maximum concurrent sessions
-MCP_MAX_CONCURRENT_SESSIONS=1000   # Default: 1000
-# Enable session persistence across restarts
-MCP_ENABLE_SESSION_PERSISTENCE=true # Default: true
-```
-
-### **OAuth Configuration**
-```bash
-# OAuth Provider (when MCP server acts as OAuth provider)
-OAUTH_PROVIDER_CLIENT_ID=your-client-id
-OAUTH_PROVIDER_CLIENT_SECRET=your-client-secret
-OAUTH_PROVIDER_REDIRECT_URI=http://localhost:3000/callback
-
-# OAuth Consumer (for third-party API integration)
-OAUTH_CONSUMER_PROVIDER=actionstep
-OAUTH_CONSUMER_CLIENT_ID=third-party-client-id
-OAUTH_CONSUMER_CLIENT_SECRET=third-party-secret
-```
-
-### **Logging & Storage**
-```bash
-# Logging configuration
-LOG_LEVEL=info                 # debug|info|warn|error
-LOG_FORMAT=text                # text|json
-
-# Storage configuration
-DENO_KV_PATH=./data/app.db     # Default: ./data/mcp-server.db
-STORAGE_PERSISTENCE=true       # Default: true
-```
-
-### **Plugin System**
-```bash
-# Plugin discovery paths
-PLUGINS_DISCOVERY_PATHS=./src/workflows,./plugins
-# Auto-load discovered plugins
-PLUGINS_AUTOLOAD=true
-# Watch for plugin changes (development)
-PLUGINS_WATCH_CHANGES=false
-# Plugin filtering
-PLUGINS_ALLOWED_LIST=plugin1,plugin2  # Optional whitelist
-PLUGINS_BLOCKED_LIST=old-plugin        # Optional blacklist
-```
-
-See `example/.env.example` for a complete configuration template.
-
-## Plugin System
-
-The bb-mcp-server library includes a comprehensive plugin system for organizing and distributing workflows and tools:
-
-### Architecture Overview
-
-- **Tools**: Simple, single-purpose functions for direct API operations
-- **Workflows**: Multi-step, stateful processes for complex business logic
-- **Plugins**: Bundled collections of tools and workflows for distribution
-
-### Plugin Discovery
-
-The library automatically discovers and loads plugins from configured paths:
-
-```typescript
-// Automatic plugin discovery
-const workflowRegistry = await getWorkflowRegistryWithPlugins(configManager, logger)
-
-// Manual plugin registration
-const plugin = createMyPlugin({ apiClient, logger })
-registry.registerPlugin(plugin)
-```
-
-### Key Benefits
-
-- **🔍 Auto-Discovery**: Automatically finds and loads plugins from directories
-- **📦 Distribution**: Package and share functionality across projects
-- **🎯 Organization**: Clean separation between infrastructure and business logic
-- **🔄 Hot Reload**: Development-friendly plugin reloading (when enabled)
-- **⚙️ Configuration**: Environment-driven plugin management
-
-### Quick Start
-
-1. **Configure Discovery**: Set `PLUGINS_DISCOVERY_PATHS` in your environment
-2. **Create Plugin**: Implement workflows extending `WorkflowBase`
-3. **Plugin Manifest**: Add `plugin.json` for structured plugins
-4. **Auto-Load**: Enable `PLUGINS_AUTOLOAD=true` for automatic loading
-
-**📖 For detailed guidance, see [Plugins, Tools, and Workflows Guide](docs/plugins-tools-workflows.md)**
-
-## Contributing
-
-This library is being actively developed.
-
-3. Follow the established patterns for new components
-4. Ensure tests have >90% coverage for new functionality
-5. Maintain backward compatibility with extracted components
-
-## Requirements
+## 📋 Requirements
 
 - **Deno**: Version 2.5.0 or later
 - **Permissions**: `--allow-all --unstable-kv` (for Deno KV operations)
 - **Standards Compliance**: TypeScript strict mode, ESLint rules
 
-## License
+## 🤝 Contributing
 
-MIT License - see [LICENSE](LICENSE) for details.
+This library is being actively developed and extracted from production MCP servers. Contributions welcome!
 
-## Related Projects
+### Contribution Guidelines
+1. Follow the established patterns for new components
+2. Ensure tests have >90% coverage for new functionality
+3. Maintain backward compatibility with extracted components
+4. Update documentation and examples when adding features
+5. Use TypeScript strict mode and follow existing code style
 
-- [Model Context Protocol](https://github.com/modelcontextprotocol/typescript-sdk) - Official MCP TypeScript SDK
+### Development Workflow
+1. **Fork & Clone**: Fork the repo and clone your fork
+2. **Branch**: Create feature branch from `main`
+3. **Develop**: Make changes following established patterns
+4. **Test**: Run `deno task test:all` to verify all tests pass
+5. **Document**: Update relevant documentation and examples
+6. **PR**: Submit pull request with clear description
 
