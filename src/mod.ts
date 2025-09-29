@@ -165,6 +165,8 @@ export type {
 export type {
   BaseWorkflowParameters,
   FailedStep,
+  ValidationError as WorkflowValidationError,
+  ValidationResult as WorkflowValidationResult,
   //WorkflowCategory,
   WorkflowContext,
   WorkflowError,
