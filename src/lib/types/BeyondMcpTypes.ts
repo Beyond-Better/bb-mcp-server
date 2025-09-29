@@ -44,9 +44,10 @@ export interface BeyondMcpServerConfig {
     resources?: { subscribe?: boolean };
     completions?: {};
   };
-  instructions?: string;
+  mcpServerInstructions?: string;
   transport?: TransportConfig;
-  workflows?: WorkflowRegistryConfig;
+  //workflows?: WorkflowRegistryConfig;
+  //tools?: ToolRegistryConfig;
 }
 
 /**
@@ -372,7 +373,7 @@ export interface HealthCheckResult {
 /**
  * Configuration Validation
  */
-export interface ConfigValidationResult {
+export interface MCPConfigValidationResult {
   valid: boolean;
   errors: string[];
   warnings: string[];
@@ -409,7 +410,7 @@ export interface AuditEvent {
 /**
  * Rate Limiting Types
  */
-export interface RateLimitInfo {
+export interface MCPRateLimitInfo {
   allowed: boolean;
   limit: number;
   remaining: number;

@@ -20,7 +20,7 @@ export type { CORSConfig } from './CORSHandler.ts';
 /**
  * HTTP request context for server operations
  */
-export interface RequestContext {
+export interface HttpRequestContext {
   /** Request ID for tracking */
   requestId: string;
   /** Request start timestamp */
@@ -42,7 +42,7 @@ export interface RequestContext {
 /**
  * Response metadata for logging and monitoring
  */
-export interface ResponseMetadata {
+export interface HttpResponseMetadata {
   /** Response status code */
   status: number;
   /** Response size in bytes */
@@ -58,7 +58,7 @@ export interface ResponseMetadata {
 /**
  * Error information for structured error handling
  */
-export interface ErrorInfo {
+export interface HttpErrorInfo {
   /** Error code */
   code: string;
   /** Error message */
@@ -76,7 +76,7 @@ export interface ErrorInfo {
 /**
  * Endpoint registration information
  */
-export interface EndpointInfo {
+export interface HttpEndpointInfo {
   /** Endpoint path pattern */
   path: string;
   /** Supported HTTP methods */
@@ -158,7 +158,7 @@ export interface HealthCheckResult {
 /**
  * Rate limiting information
  */
-export interface RateLimitInfo {
+export interface HttpRateLimitInfo {
   /** Limit identifier */
   id: string;
   /** Maximum requests allowed */
@@ -176,7 +176,7 @@ export interface RateLimitInfo {
 /**
  * Authentication context for requests
  */
-export interface AuthContext {
+export interface HttpAuthContext {
   /** Whether request is authenticated */
   authenticated: boolean;
   /** User identifier */
@@ -198,7 +198,7 @@ export interface AuthContext {
  */
 export type ServerMiddleware = (
   request: Request,
-  context: RequestContext,
+  context: HttpRequestContext,
   next: () => Promise<Response>,
 ) => Promise<Response>;
 
@@ -207,7 +207,7 @@ export type ServerMiddleware = (
  */
 export type RouteHandler = (
   request: Request,
-  context: RequestContext,
+  context: HttpRequestContext,
   params: Record<string, string>,
 ) => Promise<Response>;
 
@@ -217,19 +217,19 @@ export type RouteHandler = (
 export interface ServerEvents {
   'server:start': { port: number; hostname: string };
   'server:stop': { reason?: string };
-  'request:start': { context: RequestContext };
-  'request:complete': { context: RequestContext; metadata: ResponseMetadata };
-  'request:error': { context: RequestContext; error: ErrorInfo };
-  'auth:success': { context: RequestContext; auth: AuthContext };
-  'auth:failure': { context: RequestContext; reason: string };
-  'ratelimit:exceeded': { context: RequestContext; limit: RateLimitInfo };
+  'request:start': { context: HttpRequestContext };
+  'request:complete': { context: HttpRequestContext; metadata: HttpResponseMetadata };
+  'request:error': { context: HttpRequestContext; error: HttpErrorInfo };
+  'auth:success': { context: HttpRequestContext; auth: HttpAuthContext };
+  'auth:failure': { context: HttpRequestContext; reason: string };
+  'ratelimit:exceeded': { context: HttpRequestContext; limit: HttpRateLimitInfo };
   'health:check': { result: HealthCheckResult };
 }
 
 /**
  * Server configuration validation result
  */
-export interface ConfigValidationResult {
+export interface HttpConfigValidationResult {
   /** Whether configuration is valid */
   valid: boolean;
   /** Validation errors */
@@ -295,14 +295,14 @@ export interface EndpointRegistry {
     path: string,
     methods: string[],
     handler: RouteHandler,
-    info?: Partial<EndpointInfo>,
+    info?: Partial<HttpEndpointInfo>,
   ): void;
 
   /** Unregister endpoint */
   unregister(path: string, method?: string): boolean;
 
   /** Get registered endpoints */
-  getEndpoints(): EndpointInfo[];
+  getEndpoints(): HttpEndpointInfo[];
 
   /** Find handler for request */
   findHandler(
@@ -311,14 +311,14 @@ export interface EndpointRegistry {
   ): {
     handler: RouteHandler;
     params: Record<string, string>;
-    info: EndpointInfo;
+    info: HttpEndpointInfo;
   } | null;
 }
 
 /**
  * Request/response logging configuration
  */
-export interface LoggingConfig {
+export interface HttpLoggingConfig {
   /** Log level for requests */
   level: 'debug' | 'info' | 'warn' | 'error';
   /** Include request headers */
@@ -388,7 +388,7 @@ export interface CompleteServerConfig {
   };
 
   /** Logging configuration */
-  logging?: LoggingConfig;
+  logging?: HttpLoggingConfig;
 
   /** Security configuration */
   security?: SecurityConfig;

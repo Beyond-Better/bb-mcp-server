@@ -127,7 +127,7 @@ export function createMockSdkMcpServer(config: BeyondMcpServerConfig): MockSdkMc
     },
     {
       capabilities: config.capabilities || { tools: {}, logging: {} },
-      instructions: config.instructions,
+      instructions: config.mcpServerInstructions,
     },
   );
 }
@@ -173,8 +173,8 @@ export function createTestBeyondMcpServerConfig(
   };
 
   // Only add instructions if they exist (exactOptionalPropertyTypes compliance)
-  if (overrides.instructions !== undefined) {
-    config.instructions = overrides.instructions;
+  if (overrides.mcpServerInstructions !== undefined) {
+    config.mcpServerInstructions = overrides.mcpServerInstructions;
   }
 
   return config;

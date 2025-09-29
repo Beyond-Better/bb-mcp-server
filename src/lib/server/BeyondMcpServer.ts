@@ -30,7 +30,6 @@ import { KVManager } from '../storage/KVManager.ts';
 import { OAuthProvider } from '../auth/OAuthProvider.ts';
 import { RequestContextManager } from './RequestContextManager.ts';
 import { BeyondMcpSDKHelpers } from './MCPSDKHelpers.ts';
-import { loadInstructions, validateInstructions } from '../utils/InstructionsLoader.ts';
 
 // Import types
 import {
@@ -60,14 +59,14 @@ export class BeyondMcpServer {
   protected config: BeyondMcpServerConfig;
   protected configManager: ConfigManager;
 
-  protected sdkMcpServer?: SdkMcpServer;
+  protected sdkMcpServer: SdkMcpServer;
   protected workflowRegistry: WorkflowRegistry;
   protected toolRegistry: ToolRegistry;
-  protected coreTools?: CoreTools;
+  protected coreTools: CoreTools;
   protected workflowTools: WorkflowTools;
 
   protected requestContextManager: RequestContextManager;
-  protected mcpSDKHelpers?: BeyondMcpSDKHelpers;
+  protected mcpSDKHelpers: BeyondMcpSDKHelpers;
   protected errorHandler: ErrorHandler;
   protected auditLogger: AuditLogger;
   protected transportManager: TransportManager;
@@ -111,6 +110,45 @@ export class BeyondMcpServer {
       );
     }
 
+    // Use provided SDK MCP server for testing or create real one
+    if (sdkMcpServer) {
+      this.sdkMcpServer = sdkMcpServer;
+    } else {
+      // Create MCP server with official SDK
+      const serverOptions: {
+        capabilities?: {
+          tools?: {};
+          logging?: {};
+          prompts?: {};
+          resources?: { subscribe?: boolean };
+          completions?: {};
+        };
+        instructions?: string;
+      } = {
+        capabilities: config.capabilities || {
+          tools: {},
+          logging: {},
+        },
+      };
+
+      // Only add instructions if they exist (exactOptionalPropertyTypes compliance)
+      if (config.mcpServerInstructions) {
+        serverOptions.instructions = config.mcpServerInstructions;
+      }
+
+      this.sdkMcpServer = new SdkMcpServer(
+        {
+          name: config.server.name,
+          version: config.server.version,
+          title: config.server.title || config.server.name,
+          description: config.server.description,
+        },
+        serverOptions,
+      );
+    }
+
+    this.mcpSDKHelpers = new BeyondMcpSDKHelpers(this.sdkMcpServer, this.logger);
+
     // Initialize tool registration configuration
     this.toolRegistrationConfig = config.toolRegistration || {
       workflowTools: {
@@ -122,8 +160,15 @@ export class BeyondMcpServer {
       defaultHandlerMode: ToolHandlerMode.MANAGED,
     };
 
-    // Initialize components that don't depend on sdkMcpServer
-    this.requestContextManager = new RequestContextManager(this.logger);
+    // Initialize components
+
+    this.toolRegistry.sdkMcpServer = this.sdkMcpServer;
+
+    this.coreTools = new CoreTools({
+      sdkMcpServer: this.sdkMcpServer,
+      logger: this.logger,
+      auditLogger: this.auditLogger,
+    });
 
     this.workflowTools = new WorkflowTools({
       workflowRegistry: this.workflowRegistry,
@@ -131,55 +176,7 @@ export class BeyondMcpServer {
       auditLogger: this.auditLogger,
     });
 
-    // Store provided SDK MCP server for testing or defer creation until initialize()
-    if (sdkMcpServer) {
-      this.sdkMcpServer = sdkMcpServer;
-    }
-    // SDK MCP server will be created in initialize() after instructions are loaded
-
-    // Components that depend on sdkMcpServer will be initialized in initialize() method
-    // after instructions are loaded and sdkMcpServer is created
-  }
-
-  /**
-   * Get the underlying SDK MCP Server instance
-   */
-  getSdkMcpServer(): SdkMcpServer {
-    if (!this.sdkMcpServer) {
-      throw new Error('BeyondMcpServer not initialized. Call initialize() first.');
-    }
-    return this.sdkMcpServer;
-  }
-
-  /**
-   * Execute an operation within the context of an authenticated user
-   */
-  async executeWithAuthContext<T>(
-    context: BeyondMcpRequestContext,
-    operation: () => Promise<T>,
-  ): Promise<T> {
-    this.logger.debug('MCPServer: Executing with auth context', {
-      authenticatedUserId: context.authenticatedUserId,
-      clientId: context.clientId,
-      requestId: context.requestId,
-    });
-
-    return BeyondMcpServer.contextStorage.run(context, operation);
-  }
-
-  /**
-   * Get the current authenticated user context from AsyncLocalStorage
-   */
-  protected getAuthContext(): BeyondMcpRequestContext | null {
-    return BeyondMcpServer.contextStorage.getStore() || null;
-  }
-
-  /**
-   * Get the current authenticated user ID (backward compatibility)
-   */
-  getAuthenticatedUserId(): string | null {
-    const context = this.getAuthContext();
-    return context?.authenticatedUserId || null;
+    this.requestContextManager = new RequestContextManager(this.logger);
   }
 
   /**
@@ -193,17 +190,6 @@ export class BeyondMcpServer {
     this.logger.info('MCPServer: Initializing MCP server...');
 
     try {
-      // Load instructions using flexible loading system
-      const instructions = await this.loadInstructions();
-
-      // Create SDK MCP server with loaded instructions (if not provided for testing)
-      if (!this.sdkMcpServer) {
-        await this.createSdkMcpServer(instructions);
-      }
-
-      // Initialize components that depend on sdkMcpServer
-      await this.initializeDependentComponents();
-
       // Register core tools
       await this.registerCoreTools();
 
@@ -238,127 +224,41 @@ export class BeyondMcpServer {
   }
 
   /**
-   * Load instructions using flexible loading system
+   * Get the underlying SDK MCP Server instance
    */
-  private async loadInstructions(): Promise<string> {
-    try {
-      const instructions = await loadInstructions({
-        logger: this.logger,
-        instructionsConfig: this.configManager.get('MCP_SERVER_INSTRUCTIONS'),
-        instructionsFilePath: this.configManager.get('MCP_INSTRUCTIONS_FILE'),
-        defaultFileName: 'mcp_server_instructions.md',
-        basePath: Deno.cwd(),
-      });
-
-      // Validate the loaded instructions
-      if (!validateInstructions(instructions, this.logger)) {
-        this.logger.warn(
-          'BeyondMcpServer: Loaded instructions failed validation but will be used anyway',
-        );
-      }
-
-      this.logger.info('BeyondMcpServer: Instructions loaded successfully', {
-        source: this.getInstructionsSource(),
-        contentLength: instructions.length,
-        hasWorkflowContent: instructions.includes('workflow'),
-      });
-
-      // Store instructions in config for future reference
-      this.config.instructions = instructions;
-
-      return instructions;
-    } catch (error) {
-      this.logger.error(
-        'BeyondMcpServer: Failed to load instructions:',
-        error instanceof Error ? error : new Error(String(error)),
-      );
-      throw ErrorHandler.wrapError(error, 'INSTRUCTIONS_LOADING_FAILED');
-    }
+  getSdkMcpServer(): SdkMcpServer {
+    return this.sdkMcpServer;
   }
 
   /**
-   * Create SDK MCP server with loaded instructions
+   * Execute an operation within the context of an authenticated user
    */
-  private async createSdkMcpServer(instructions: string): Promise<void> {
-    const serverOptions: {
-      capabilities?: {
-        tools?: {};
-        logging?: {};
-        prompts?: {};
-        resources?: { subscribe?: boolean };
-        completions?: {};
-      };
-      instructions?: string;
-    } = {
-      capabilities: this.config.capabilities || {
-        tools: {},
-        logging: {},
-      },
-      instructions: instructions, // Now we can properly set the instructions!
-    };
-
-    this.sdkMcpServer = new SdkMcpServer(
-      {
-        name: this.config.server.name,
-        version: this.config.server.version,
-        title: this.config.server.title || this.config.server.name,
-        description: this.config.server.description,
-      },
-      serverOptions,
-    );
-
-    this.logger.debug('BeyondMcpServer: SDK MCP server created with instructions', {
-      instructionsLength: instructions.length,
-    });
-  }
-
-  /**
-   * Initialize components that depend on sdkMcpServer
-   */
-  private async initializeDependentComponents(): Promise<void> {
-    if (!this.sdkMcpServer) {
-      throw new Error('SDK MCP server must be created before initializing dependent components');
-    }
-
-    // Initialize tool registry with sdkMcpServer
-    this.toolRegistry.sdkMcpServer = this.sdkMcpServer;
-
-    // Initialize core tools with sdkMcpServer
-    this.coreTools = new CoreTools({
-      sdkMcpServer: this.sdkMcpServer,
-      logger: this.logger,
-      auditLogger: this.auditLogger,
+  async executeWithAuthContext<T>(
+    context: BeyondMcpRequestContext,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    this.logger.debug('MCPServer: Executing with auth context', {
+      authenticatedUserId: context.authenticatedUserId,
+      clientId: context.clientId,
+      requestId: context.requestId,
     });
 
-    // Initialize MCP SDK helpers
-    this.mcpSDKHelpers = new BeyondMcpSDKHelpers(this.sdkMcpServer, this.logger);
-
-    this.logger.debug('BeyondMcpServer: Dependent components initialized');
+    return BeyondMcpServer.contextStorage.run(context, operation);
   }
 
   /**
-   * Get the source of instructions for logging purposes
+   * Get the current authenticated user context from AsyncLocalStorage
    */
-  private getInstructionsSource(): string {
-    const configInstructions = this.configManager.get('MCP_SERVER_INSTRUCTIONS') as
-      | string
-      | undefined;
-    const filePath = this.configManager.get('MCP_INSTRUCTIONS_FILE') as string | undefined;
+  protected getAuthContext(): BeyondMcpRequestContext | null {
+    return BeyondMcpServer.contextStorage.getStore() || null;
+  }
 
-    if (configInstructions && typeof configInstructions === 'string' && configInstructions.trim()) {
-      return 'configuration';
-    } else if (filePath && typeof filePath === 'string') {
-      return `file: ${filePath}`;
-    } else {
-      // Check if default file exists
-      try {
-        const defaultPath = `${Deno.cwd()}/mcp_server_instructions.md`;
-        Deno.statSync(defaultPath);
-        return `default file: ${defaultPath}`;
-      } catch {
-        return 'embedded fallback';
-      }
-    }
+  /**
+   * Get the current authenticated user ID (backward compatibility)
+   */
+  getAuthenticatedUserId(): string | null {
+    const context = this.getAuthContext();
+    return context?.authenticatedUserId || null;
   }
 
   /**
@@ -405,12 +305,10 @@ export class BeyondMcpServer {
       });
 
       // Close SDK MCP connections
-      if (this.sdkMcpServer) {
-        if (this.config.transport?.type === 'stdio') {
-          await this.sdkMcpServer.close();
-        } else if (this.config.transport?.type === 'http') {
-          await this.transportManager.cleanup();
-        }
+      if (this.config.transport?.type === 'stdio') {
+        await this.sdkMcpServer.close();
+      } else if (this.config.transport?.type === 'http') {
+        await this.transportManager.cleanup();
       }
 
       this.initialized = false;

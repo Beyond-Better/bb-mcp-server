@@ -182,17 +182,17 @@ export interface WorkflowRegistration {
 /**
  * Workflow validation result with Zod integration
  */
-export interface ValidationResult<T = any> {
+export interface WorkflowValidationResult<T = any> {
   valid: boolean;
   data?: T;
-  errors: ValidationError[];
+  errors: WorkflowValidationError[];
   warnings?: string[];
 }
 
 /**
  * Enhanced validation error
  */
-export interface ValidationError {
+export interface WorkflowValidationError {
   path: string;
   message: string;
   code: string;
@@ -225,7 +225,7 @@ export interface WorkflowBase {
   readonly parameterSchema: ZodSchema<any>;
 
   executeWithValidation(params: unknown, context: WorkflowContext): Promise<WorkflowResult>;
-  validateParameters(params: unknown): Promise<ValidationResult<any>>;
+  validateParameters(params: unknown): Promise<WorkflowValidationResult<any>>;
   getRegistration(): WorkflowRegistration;
   getOverview(): string;
 }

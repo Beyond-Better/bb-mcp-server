@@ -13,14 +13,14 @@ import type { ErrorHandler } from '../utils/ErrorHandler.ts';
 import type {
   BaseWorkflowParameters,
   FailedStep,
-  ValidationError,
-  ValidationResult,
   WorkflowContext,
   WorkflowError,
   WorkflowRegistration,
   WorkflowResource,
   WorkflowResult,
   WorkflowStep,
+  WorkflowValidationError,
+  WorkflowValidationResult,
 } from '../types/WorkflowTypes.ts';
 
 import type { PluginCategory, RateLimitConfig } from '../types/PluginTypes.ts';
@@ -138,7 +138,7 @@ export abstract class WorkflowBase {
   /**
    * Enhanced parameter validation with Zod
    */
-  async validateParameters(params: unknown): Promise<ValidationResult<any>> {
+  async validateParameters(params: unknown): Promise<WorkflowValidationResult<any>> {
     try {
       const validatedParams = await this.parameterSchema.parseAsync(params);
       return {
@@ -147,7 +147,7 @@ export abstract class WorkflowBase {
         errors: [],
       };
     } catch (error) {
-      const errors: ValidationError[] = [];
+      const errors: WorkflowValidationError[] = [];
 
       if (error instanceof z.ZodError) {
         for (const issue of error.errors) {
@@ -186,7 +186,7 @@ export abstract class WorkflowBase {
   /**
    * Create validation error result
    */
-  protected createValidationErrorResult(errors: ValidationError[]): WorkflowResult {
+  protected createValidationErrorResult(errors: WorkflowValidationError[]): WorkflowResult {
     const errorMessages = errors.map((e) => `${e.path}: ${e.message}`).join(', ');
 
     return {

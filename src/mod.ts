@@ -76,7 +76,6 @@ export { ToolValidationHelper } from './lib/utils/ToolValidationHelper.ts';
 //export type { JsonSchema } from './lib/utils/ZodToJsonSchema.ts';
 export {
   getAllDependencies,
-  getAllDependenciesAsync,
   getAuditLogger,
   getConfigManager,
   getCredentialStore,
@@ -165,8 +164,6 @@ export type {
 export type {
   BaseWorkflowParameters,
   FailedStep,
-  ValidationError as WorkflowValidationError,
-  ValidationResult as WorkflowValidationResult,
   //WorkflowCategory,
   WorkflowContext,
   WorkflowError,
@@ -175,6 +172,8 @@ export type {
   WorkflowResource,
   WorkflowResult,
   WorkflowStep,
+  WorkflowValidationError,
+  WorkflowValidationResult,
 } from './lib/types/WorkflowTypes.ts';
 //export { DEFAULT_WORKFLOW_CATEGORIES } from './lib/types/WorkflowTypes.ts';
 
@@ -208,6 +207,8 @@ export type {
   TransportEvent,
   TransportMetrics,
   TransportType,
+  TransportValidationError,
+  TransportValidationResult,
 } from './lib/transport/TransportTypes.ts';
 
 // HTTP Server types - with alias exports to avoid conflicts
@@ -218,9 +219,16 @@ export type {
   CORSConfig,
   EndpointRegistry,
   HealthCheckResult,
+  HttpAuthContext,
+  HttpConfigValidationResult,
+  HttpEndpointInfo,
+  HttpErrorInfo,
+  HttpLoggingConfig,
+  HttpRateLimitInfo,
+  HttpRequestContext,
+  HttpResponseMetadata,
   HttpServerConfig,
   HttpServerDependencies,
-  RateLimitInfo,
   RouteHandler,
   SecurityConfig,
   ServerEvents,
@@ -229,17 +237,6 @@ export type {
   ServerMetrics,
   ServerMiddleware,
   ServerStatus,
-} from './lib/server/ServerTypes.ts';
-
-// HTTP Server types with aliases to avoid conflicts
-export type {
-  AuthContext as HttpAuthContext,
-  ConfigValidationResult as HttpConfigValidationResult,
-  EndpointInfo as HttpEndpointInfo,
-  ErrorInfo as HttpErrorInfo,
-  LoggingConfig as HttpLoggingConfig,
-  RequestContext as HttpRequestContext,
-  ResponseMetadata as HttpResponseMetadata,
 } from './lib/server/ServerTypes.ts';
 
 // Beyond MCP Server types
@@ -251,14 +248,14 @@ export type {
   BeyondMcpRequestContext,
   BeyondMcpServerConfig,
   BeyondMcpServerDependencies,
-  ConfigValidationResult as MCPConfigValidationResult,
   CoreToolsDependencies,
   CreateContextData,
   CreateMessageRequest,
   CreateMessageResult,
   ElicitInputRequest,
   ElicitInputResult,
-  RateLimitInfo as MCPRateLimitInfo,
+  MCPConfigValidationResult,
+  MCPRateLimitInfo,
   RegisteredTool,
   SchemaValidationError,
   SchemaValidationResult,

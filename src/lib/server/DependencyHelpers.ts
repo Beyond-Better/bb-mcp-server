@@ -29,6 +29,7 @@ import type {
   DependenciesHealthCheck,
 } from '../types/AppServerTypes.ts';
 import type { HttpServerConfig } from './ServerTypes.ts';
+import { loadInstructions, validateInstructions } from '../utils/InstructionsLoader.ts';
 
 /**
  * Create standard configManager instance
@@ -293,6 +294,70 @@ export function getHttpServerConfig(configManager: ConfigManager): HttpServerCon
   };
 }
 
+/**
+ * Load instructions using flexible loading system
+ */
+export async function getMcpServerInstructions(
+  configManager: ConfigManager,
+  logger: Logger,
+): Promise<string> {
+  try {
+    const instructions = await loadInstructions({
+      logger,
+      instructionsConfig: configManager.get('MCP_SERVER_INSTRUCTIONS'),
+      instructionsFilePath: configManager.get('MCP_INSTRUCTIONS_FILE'),
+      defaultFileName: 'mcp_server_instructions.md',
+      basePath: Deno.cwd(),
+    });
+
+    // Validate the loaded instructions
+    if (!validateInstructions(instructions, logger)) {
+      logger.warn(
+        'BeyondMcpServer: Loaded instructions failed validation but will be used anyway',
+      );
+    }
+
+    logger.info('BeyondMcpServer: Instructions loaded successfully', {
+      source: getInstructionsSource(configManager),
+      contentLength: instructions.length,
+      hasWorkflowContent: instructions.includes('workflow'),
+    });
+
+    return instructions;
+  } catch (error) {
+    logger.error(
+      'BeyondMcpServer: Failed to load instructions:',
+      toError(error),
+    );
+    throw ErrorHandler.wrapError(error, 'INSTRUCTIONS_LOADING_FAILED');
+  }
+}
+
+/**
+ * Get the source of instructions for logging purposes
+ */
+function getInstructionsSource(configManager: ConfigManager): string {
+  const configInstructions = configManager.get('MCP_SERVER_INSTRUCTIONS') as
+    | string
+    | undefined;
+  const filePath = configManager.get('MCP_INSTRUCTIONS_FILE') as string | undefined;
+
+  if (configInstructions && typeof configInstructions === 'string' && configInstructions.trim()) {
+    return 'configuration';
+  } else if (filePath && typeof filePath === 'string') {
+    return `file: ${filePath}`;
+  } else {
+    // Check if default file exists
+    try {
+      const defaultPath = `${Deno.cwd()}/mcp_server_instructions.md`;
+      Deno.statSync(defaultPath);
+      return `default file: ${defaultPath}`;
+    } catch {
+      return 'embedded fallback';
+    }
+  }
+}
+
 // =============================================================================
 // VALIDATION AND HEALTH CHECK FUNCTIONS
 // =============================================================================
@@ -533,42 +598,36 @@ export async function performHealthChecks(
 /**
  * Main dependency injection function - creates all dependencies with overrides
  */
-export function getAllDependencies(overrides: AppServerOverrides = {}): AppServerDependencies {
+export async function getAllDependencies(
+  overrides: AppServerOverrides = {},
+): Promise<AppServerDependencies> {
   // Get or create configManager first
-  const configManager = overrides.configManager || (() => {
-    throw new Error('Config Manager must be provided or created asynchronously');
-  })();
-
-  // Load configuration if not already loaded
-  if (!configManager.getAll().server) {
-    // Note: This is sync, but configManager.loadConfig() is async
-    // We'll need to handle this in AppServer constructor
-  }
+  const configManager = overrides.configManager || await getConfigManager();
 
   // Create standard library dependencies
   const logger = overrides.logger || getLogger(configManager);
+
   const auditLogger = overrides.auditLogger || getAuditLogger(configManager, logger);
 
-  // Note: KV Manager is async, we'll need special handling
-  const kvManager = overrides.kvManager || (() => {
-    throw new Error('KV Manager must be provided or created asynchronously');
-  })();
-
+  const kvManager = overrides.kvManager || await getKvManager(configManager, logger);
   const sessionStore = overrides.sessionStore || getSessionStore(kvManager, logger);
   const eventStore = overrides.eventStore || getTransportEventStore(kvManager, logger);
   const credentialStore = overrides.credentialStore || getCredentialStore(kvManager, logger);
   const errorHandler = overrides.errorHandler || getErrorHandler();
   const workflowRegistry = overrides.workflowRegistry || getWorkflowRegistry(logger, errorHandler);
   const toolRegistry = overrides.toolRegistry || getToolRegistry(logger, errorHandler);
-  const oauthProvider = overrides.oauthProvider ||
-    getOAuthProvider(configManager, logger, kvManager, credentialStore);
+  const oauthProvider = overrides.oauthProvider || getOAuthProvider(
+    configManager,
+    logger,
+    kvManager,
+    credentialStore,
+  );
   const transportManager = overrides.transportManager || getTransportManager(
     configManager,
     logger,
     kvManager,
     sessionStore,
     eventStore,
-    //workflowRegistry,
   );
 
   // Create HTTP server config if needed
@@ -611,6 +670,8 @@ export function getAllDependencies(overrides: AppServerOverrides = {}): AppServe
     ...consumerDeps,
   };
 
+  const mcpServerInstructions = await getMcpServerInstructions(configManager, logger);
+
   // Use pre-built MCP server instance if it exists
   const beyondMcpServer = overrides.beyondMcpServer || (() => {
     // Fallback: create generic MCP server if no consumer server provided
@@ -632,7 +693,7 @@ export function getAllDependencies(overrides: AppServerOverrides = {}): AppServe
         tools: {},
         logging: {},
       },
-      instructions: configManager.get('MCP_SERVER_INSTRUCTIONS'),
+      mcpServerInstructions,
       transport: configManager.getTransportConfig() || { type: 'stdio' as const },
     }, allDeps);
 
@@ -646,45 +707,19 @@ export function getAllDependencies(overrides: AppServerOverrides = {}): AppServe
     return server;
   })();
 
+  // Initialize Beyond MCP server
+  await beyondMcpServer.initialize();
+
+  await registerPluginsInRegistries(
+    allDeps.toolRegistry,
+    allDeps.workflowRegistry,
+    allDeps,
+  );
+
   return {
     ...allDeps,
     beyondMcpServer,
   };
-}
-
-/**
- * Async version of getAllDependencies that properly handles async initialization
- */
-export async function getAllDependenciesAsync(
-  overrides: AppServerOverrides = {},
-): Promise<AppServerDependencies> {
-  // Get or create configManager first
-  const configManager = overrides.configManager || await getConfigManager();
-
-  // Load configuration
-  await configManager.loadConfig();
-
-  // Create logger early
-  const logger = overrides.logger || getLogger(configManager);
-
-  // Create KV manager (async)
-  const kvManager = overrides.kvManager || await getKvManager(configManager, logger);
-
-  const allDependencies = getAllDependencies({
-    configManager,
-    logger,
-    kvManager,
-    ...overrides,
-  });
-
-  await registerPluginsInRegistries(
-    allDependencies.toolRegistry,
-    allDependencies.workflowRegistry,
-    allDependencies,
-  );
-
-  // Now call the sync version with kvManager and workflowRegistry ready
-  return allDependencies;
 }
 
 /**
@@ -702,7 +737,7 @@ export async function createTestDependencies(): Promise<Partial<AppServerDepende
   testConfigManager.set('MCP_TRANSPORT', 'stdio');
 
   // Create dependencies with test configuration
-  return await getAllDependenciesAsync({
+  return await getAllDependencies({
     configManager: testConfigManager,
     logger: testLogger,
     kvManager: testKvManager,
