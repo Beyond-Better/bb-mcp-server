@@ -1,6 +1,6 @@
 {
   "name": "@beyondbetter/bb-mcp-server",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Comprehensive library for building Deno-based MCP servers",
   "license": "MIT",
   "copyright": "2025 - Beyond Better <charlie@beyondbetter.app>",
