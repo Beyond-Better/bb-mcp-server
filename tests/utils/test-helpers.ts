@@ -12,13 +12,14 @@ import { TransportManager } from '../../src/lib/transport/TransportManager.ts';
 import { OAuthProvider } from '../../src/lib/auth/OAuthProvider.ts';
 
 // Import types
-import type { 
-  BeyondMcpServerConfig, 
-  BeyondMcpServerDependencies, 
+import type {
+  AuditEvent,
   BeyondMcpRequestContext,
+  BeyondMcpServerConfig,
+  BeyondMcpServerDependencies,
   LogLevel,
-  AuditEvent 
 } from '../../src/lib/types/BeyondMcpTypes.ts';
+import { ToolRegistry } from '../../src/lib/tools/ToolRegistry.ts';
 
 /**
  * Create mock logger for testing
@@ -62,26 +63,32 @@ export function createMockErrorHandler(): ErrorHandler {
 }
 
 /**
- * Create mock workflow registry for testing
+ * Create real workflow registry for testing
  */
 export function createMockWorkflowRegistry(): WorkflowRegistry {
-  // Use type casting to create WorkflowRegistry since constructor is private
-  return {
-    getWorkflowNames: () => [],
-    register: () => {},
-    getWorkflow: () => undefined,
-    listWorkflows: () => [],
-    validateWorkflow: () => ({ valid: true }),
-    getWorkflowCount: () => 0,
-    clearWorkflows: () => {},
-  } as unknown as WorkflowRegistry;
+  // Create real WorkflowRegistry instance for testing
+  return WorkflowRegistry.getInstance({
+    logger: createMockLogger(),
+    errorHandler: createMockErrorHandler(),
+  });
+}
+
+/**
+ * Create real tool registry for testing
+ */
+export function createMockToolRegistry(): ToolRegistry {
+  // Create real ToolRegistry instance for testing
+  return new ToolRegistry({
+    logger: createMockLogger(),
+    errorHandler: createMockErrorHandler(),
+  });
 }
 
 /**
  * Create mock transport manager for testing
  */
 export function createMockTransportManager(): TransportManager {
-  // Use type casting to create TransportManager mock
+  // Use type casting to create TransportManager mock for unit tests
   return {
     start: async () => {},
     cleanup: async () => {},
@@ -121,7 +128,7 @@ export function createMockSdkMcpServer(config: BeyondMcpServerConfig): MockSdkMc
     {
       capabilities: config.capabilities || { tools: {}, logging: {} },
       instructions: config.instructions,
-    }
+    },
   );
 }
 
@@ -134,6 +141,7 @@ export function createMockBeyondMcpServerDependencies(): BeyondMcpServerDependen
     auditLogger: createMockAuditLogger(),
     configManager: createMockConfigManager(),
     errorHandler: createMockErrorHandler(),
+    toolRegistry: createMockToolRegistry(),
     workflowRegistry: createMockWorkflowRegistry(),
     transportManager: createMockTransportManager(),
     oauthProvider: createMockOAuthProvider(),
@@ -143,7 +151,9 @@ export function createMockBeyondMcpServerDependencies(): BeyondMcpServerDependen
 /**
  * Create test MCP server configuration
  */
-export function createTestBeyondMcpServerConfig(overrides: Partial<BeyondMcpServerConfig> = {}): BeyondMcpServerConfig {
+export function createTestBeyondMcpServerConfig(
+  overrides: Partial<BeyondMcpServerConfig> = {},
+): BeyondMcpServerConfig {
   const config: BeyondMcpServerConfig = {
     server: {
       name: 'test-mcp-server',
@@ -161,25 +171,27 @@ export function createTestBeyondMcpServerConfig(overrides: Partial<BeyondMcpServ
       ...overrides.capabilities,
     },
   };
-  
+
   // Only add instructions if they exist (exactOptionalPropertyTypes compliance)
   if (overrides.instructions !== undefined) {
     config.instructions = overrides.instructions;
   }
-  
+
   return config;
 }
 
 /**
  * Create test request context
  */
-export function createTestRequestContext(overrides: Partial<BeyondMcpRequestContext> = {}): BeyondMcpRequestContext {
+export function createTestRequestContext(
+  overrides: Partial<BeyondMcpRequestContext> = {},
+): BeyondMcpRequestContext {
   return {
     authenticatedUserId: 'test-user',
     clientId: 'test-client',
     scopes: ['read', 'write'],
     requestId: 'test-request',
-    startTime: Date.now(),
+    startTime: performance.now(),
     metadata: {},
     ...overrides,
   };
@@ -187,6 +199,7 @@ export function createTestRequestContext(overrides: Partial<BeyondMcpRequestCont
 
 /**
  * Mock MCP Server for testing
+ * Comprehensive mock that satisfies McpServer interface
  */
 export class MockSdkMcpServer {
   public name: string;
@@ -195,9 +208,23 @@ export class MockSdkMcpServer {
   public description: string;
   public capabilities: any;
   public instructions?: string;
-  
-  private registeredTools = new Map<string, any>();
-  
+
+  // MCP SDK required properties
+  public _registeredResources = new Map();
+  public _registeredResourceTemplates = new Map();
+  public _registeredTools = new Map<string, any>();
+  public _registeredPrompts = new Map();
+  public _handlerMap = new Map();
+  public _onRequest: any;
+  public _onNotification: any;
+  public _onOpen: any;
+  public _onClose: any;
+  public _onError: any;
+  public _requestHandlers = new Map();
+  public _notificationHandlers = new Map();
+  public _transport: any = null;
+  public _isConnected = false;
+
   constructor(info: any, options: any) {
     this.name = info.name;
     this.version = info.version;
@@ -206,26 +233,74 @@ export class MockSdkMcpServer {
     this.capabilities = options.capabilities;
     this.instructions = options.instructions;
   }
-  
+
   registerTool(name: string, definition: any, handler: any) {
-    this.registeredTools.set(name, { name, definition, handler });
+    this._registeredTools.set(name, { name, definition, handler });
   }
-  
+
   getRegisteredTool(name: string) {
-    return this.registeredTools.get(name);
+    return this._registeredTools.get(name);
   }
-  
+
   getRegisteredTools() {
-    return Array.from(this.registeredTools.values());
+    return Array.from(this._registeredTools.values());
   }
-  
+
   clearTools() {
-    this.registeredTools.clear();
+    this._registeredTools.clear();
   }
-  
+
+  // Additional MCP SDK required methods
+  registerPrompt(name: string, definition: any, handler: any) {
+    this._registeredPrompts.set(name, { name, definition, handler });
+  }
+
+  registerResource(name: string, definition: any, handler: any) {
+    this._registeredResources.set(name, { name, definition, handler });
+  }
+
+  registerResourceTemplate(name: string, definition: any, handler: any) {
+    this._registeredResourceTemplates.set(name, { name, definition, handler });
+  }
+
+  setRequestHandler(method: string, handler: any) {
+    this._requestHandlers.set(method, handler);
+  }
+
+  setNotificationHandler(method: string, handler: any) {
+    this._notificationHandlers.set(method, handler);
+  }
+
+  request(params: any) {
+    return Promise.resolve({ result: 'mock-response' });
+  }
+
+  notification(params: any) {
+    return Promise.resolve();
+  }
+
+  onRequest(handler: any) {
+    this._onRequest = handler;
+  }
+
+  onNotification(handler: any) {
+    this._onNotification = handler;
+  }
+
+  onOpen(handler: any) {
+    this._onOpen = handler;
+  }
+
+  onClose(handler: any) {
+    this._onClose = handler;
+  }
+
+  onError(handler: any) {
+    this._onError = handler;
+  }
+
   // Mock server for MCP SDK integration
-  private _isConnected = false;
-  
+
   server = {
     createMessage: async (request: any) => {
       if (!this._isConnected) {
@@ -250,13 +325,13 @@ export class MockSdkMcpServer {
       };
     },
   };
-  
+
   // Mock connection methods
   async connect() {
     // Mock STDIO transport connection - enables server methods after connection
     this._isConnected = true;
   }
-  
+
   async close() {
     // Mock server shutdown - disables server methods
     this._isConnected = false;
@@ -272,37 +347,37 @@ export class SpyLogger extends Logger {
   public warnCalls: any[][] = [];
   public errorCalls: any[][] = [];
   public logCalls: any[][] = [];
-  
+
   constructor() {
     // Initialize with silent configuration for testing
     super({ level: 'debug', format: 'json', colorize: false });
   }
-  
+
   override debug(message: string, data?: unknown): void {
     this.debugCalls.push([message, data]);
     // Don't call super to avoid console output during tests
   }
-  
+
   override info(message: string, data?: unknown): void {
     this.infoCalls.push([message, data]);
     // Don't call super to avoid console output during tests
   }
-  
+
   override warn(message: string, data?: unknown): void {
     this.warnCalls.push([message, data]);
     // Don't call super to avoid console output during tests
   }
-  
+
   override error(message: string, error?: Error, data?: unknown): void {
     this.errorCalls.push([message, error, data]);
     // Don't call super to avoid console output during tests
   }
-  
+
   // Add a log method that's not in the base Logger class
   log(level: LogLevel, message: string, ...args: any[]) {
     this.logCalls.push([level, message, ...args]);
   }
-  
+
   reset() {
     this.debugCalls = [];
     this.infoCalls = [];
@@ -310,7 +385,7 @@ export class SpyLogger extends Logger {
     this.errorCalls = [];
     this.logCalls = [];
   }
-  
+
   getAllCalls() {
     return {
       debug: this.debugCalls,
@@ -330,15 +405,15 @@ export class SpyAuditLogger extends AuditLogger {
   public workflowOperations: any[] = [];
   public securityEvents: any[] = [];
   public performanceEvents: any[] = [];
-  
+
   constructor() {
     // Initialize with disabled configuration for testing
     super(
       { enabled: false, logAllApiCalls: false },
-      new SpyLogger()
+      new SpyLogger(),
     );
   }
-  
+
   override async logSystemEvent(event: Omit<AuditEvent, 'timestamp'>) {
     this.systemEvents.push({
       ...event,
@@ -346,34 +421,34 @@ export class SpyAuditLogger extends AuditLogger {
     });
     // Don't call super to avoid file operations during tests
   }
-  
+
   override async logWorkflowOperation(operation: any) {
     this.workflowOperations.push(operation);
     // Don't call super to avoid file operations during tests
   }
-  
+
   // Add method to match AuditLogger interface
   override async logAuthEvent(event: any) {
     this.securityEvents.push(event);
     // Don't call super to avoid file operations during tests
   }
-  
+
   // Add method to match expected test usage
   async logSecurityEvent(event: any) {
     this.securityEvents.push(event);
   }
-  
+
   async logPerformanceEvent(event: any) {
     this.performanceEvents.push(event);
   }
-  
+
   reset() {
     this.systemEvents = [];
     this.workflowOperations = [];
     this.securityEvents = [];
     this.performanceEvents = [];
   }
-  
+
   getAllEvents() {
     return {
       system: this.systemEvents,
@@ -390,14 +465,14 @@ export class SpyAuditLogger extends AuditLogger {
 export async function waitFor(
   condition: () => boolean,
   timeout = 1000,
-  interval = 10
+  interval = 10,
 ): Promise<void> {
-  const startTime = Date.now();
-  
-  while (!condition() && Date.now() - startTime < timeout) {
-    await new Promise(resolve => setTimeout(resolve, interval));
+  const startTime = performance.now();
+
+  while (!condition() && performance.now() - startTime < timeout) {
+    await new Promise((resolve) => setTimeout(resolve, interval));
   }
-  
+
   if (!condition()) {
     throw new Error(`Condition not met within ${timeout}ms`);
   }
@@ -407,7 +482,7 @@ export async function waitFor(
  * Create a promise that resolves after specified milliseconds
  */
 export function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -422,26 +497,26 @@ export function generateTestId(prefix = 'test'): string {
  */
 export async function assertAsyncThrows(
   fn: () => Promise<any>,
-  expectedErrorMessage?: string
+  expectedErrorMessage?: string,
 ): Promise<Error> {
   let error: Error | undefined;
-  
+
   try {
     await fn();
   } catch (e) {
     error = e instanceof Error ? e : new Error(String(e));
   }
-  
+
   if (!error) {
     throw new Error('Expected function to throw an error, but it did not');
   }
-  
+
   if (expectedErrorMessage && !error.message.includes(expectedErrorMessage)) {
     throw new Error(
-      `Expected error message to contain "${expectedErrorMessage}", but got: "${error.message}"`
+      `Expected error message to contain "${expectedErrorMessage}", but got: "${error.message}"`,
     );
   }
-  
+
   return error;
 }
 
@@ -473,7 +548,7 @@ export const TestData = {
     },
     ...overrides,
   }),
-  
+
   /**
    * Generate test request context
    */
@@ -482,11 +557,11 @@ export const TestData = {
     clientId: 'test-client-' + Math.random().toString(36).substr(2, 8),
     scopes: ['read', 'write'],
     requestId: 'test-request-' + Math.random().toString(36).substr(2, 8),
-    startTime: Date.now(),
+    startTime: performance.now(),
     metadata: {},
     ...overrides,
   }),
-  
+
   /**
    * Generate test MCP server config
    */
@@ -514,41 +589,41 @@ export const TestAssertions = {
     }
     return value;
   },
-  
+
   /**
    * Assert that an array contains specific values
    */
   arrayContains: <T>(array: T[], values: T[], message?: string): void => {
-    const missing = values.filter(value => !array.includes(value));
+    const missing = values.filter((value) => !array.includes(value));
     if (missing.length > 0) {
       throw new Error(
-        message || `Array missing expected values: ${missing.join(', ')}`
+        message || `Array missing expected values: ${missing.join(', ')}`,
       );
     }
   },
-  
+
   /**
    * Assert that an object has specific properties
    */
   hasProperties: (obj: any, properties: string[], message?: string): void => {
-    const missing = properties.filter(prop => !(prop in obj));
+    const missing = properties.filter((prop) => !(prop in obj));
     if (missing.length > 0) {
       throw new Error(
-        message || `Object missing expected properties: ${missing.join(', ')}`
+        message || `Object missing expected properties: ${missing.join(', ')}`,
       );
     }
   },
-  
+
   /**
    * Assert that two objects are deep equal
    */
   deepEqual: (actual: any, expected: any, message?: string): void => {
     const actualStr = JSON.stringify(actual, null, 2);
     const expectedStr = JSON.stringify(expected, null, 2);
-    
+
     if (actualStr !== expectedStr) {
       throw new Error(
-        message || `Objects not equal:\nActual: ${actualStr}\nExpected: ${expectedStr}`
+        message || `Objects not equal:\nActual: ${actualStr}\nExpected: ${expectedStr}`,
       );
     }
   },

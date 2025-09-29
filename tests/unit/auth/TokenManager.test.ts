@@ -1,8 +1,8 @@
 /**
  * TokenManager Unit Tests
- * 
+ *
  * 🔒 SECURITY-CRITICAL: Comprehensive tests for OAuth token operations
- * 
+ *
  * Test Coverage Requirements:
  * - 100% coverage for security-critical token operations
  * - RFC 6749 compliance validation
@@ -11,7 +11,7 @@
  * - Error handling and edge cases
  */
 
-import { assertEquals, assertExists, assert } from '@std/assert';
+import { assert, assertEquals, assertExists } from '@std/assert';
 import { TokenManager } from '../../../src/lib/auth/TokenManager.ts';
 import { KVManager } from '../../../src/lib/storage/KVManager.ts';
 import type { Logger } from '../../../src/types/library.types.ts';
@@ -37,7 +37,7 @@ Deno.test({
     // Setup
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -48,7 +48,11 @@ Deno.test({
     const userId = 'test_user_456';
     const includeRefreshToken = true;
 
-    const accessToken = await tokenManager.generateAccessToken(clientId, userId, includeRefreshToken);
+    const accessToken = await tokenManager.generateAccessToken(
+      clientId,
+      userId,
+      includeRefreshToken,
+    );
 
     // Validate token structure
     assertExists(accessToken.access_token);
@@ -63,7 +67,7 @@ Deno.test({
     // Validate token format (security requirement)
     assert(accessToken.access_token.startsWith('mcp_token_'));
     assertEquals(accessToken.access_token.length, 'mcp_token_'.length + 32);
-    
+
     if (accessToken.refresh_token) {
       assert(accessToken.refresh_token.startsWith('mcp_refresh_'));
       assertEquals(accessToken.refresh_token.length, 'mcp_refresh_'.length + 32);
@@ -84,7 +88,7 @@ Deno.test({
     // Setup
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -100,7 +104,7 @@ Deno.test({
       clientId,
       userId,
       redirectUri,
-      codeChallenge
+      codeChallenge,
     );
 
     // Validate authorization code format (security requirement)
@@ -126,7 +130,7 @@ Deno.test({
     // Setup
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -161,7 +165,7 @@ Deno.test({
     // Setup
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -171,13 +175,13 @@ Deno.test({
     const clientId = 'test_client_123';
     const userId = 'test_user_456';
     const initialToken = await tokenManager.generateAccessToken(clientId, userId, true);
-    
+
     assertExists(initialToken.refresh_token);
 
     // Test refresh token exchange
     const refreshResult = await tokenManager.refreshAccessToken(
       initialToken.refresh_token!,
-      clientId
+      clientId,
     );
 
     // Validate refresh success
@@ -196,7 +200,7 @@ Deno.test({
     // Validate old refresh token is invalidated
     const oldRefreshResult = await tokenManager.refreshAccessToken(
       initialToken.refresh_token!,
-      clientId
+      clientId,
     );
     assertEquals(oldRefreshResult.success, false);
 
@@ -210,7 +214,7 @@ Deno.test({
     // Setup
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -220,11 +224,11 @@ Deno.test({
     const clientId = 'test_client_123';
     const userId = 'test_user_456';
     const redirectUri = 'https://client.example.com/callback';
-    
+
     const authCode = await tokenManager.generateAuthorizationCode(
       clientId,
       userId,
-      redirectUri
+      redirectUri,
     );
 
     // First retrieval should succeed
@@ -249,7 +253,7 @@ Deno.test({
     // Setup
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -258,11 +262,15 @@ Deno.test({
     // Generate test tokens
     await tokenManager.generateAccessToken('client1', 'user1', true);
     await tokenManager.generateAccessToken('client2', 'user2', false);
-    await tokenManager.generateAuthorizationCode('client3', 'user3', 'https://example.com/callback');
+    await tokenManager.generateAuthorizationCode(
+      'client3',
+      'user3',
+      'https://example.com/callback',
+    );
 
     // Test statistics
     const stats = await tokenManager.getTokenStats();
-    
+
     assertEquals(stats.totalAccessTokens, 2);
     assertEquals(stats.totalRefreshTokens, 1); // Only first token included refresh
     assertEquals(stats.totalAuthorizationCodes, 1);
@@ -277,7 +285,7 @@ Deno.test({
     // Setup
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -289,7 +297,7 @@ Deno.test({
       const token = await tokenManager.generateAccessToken(
         `client_${i}`,
         `user_${i}`,
-        false
+        false,
       );
       tokens.push(token.access_token);
     }
@@ -313,7 +321,7 @@ Deno.test({
   async fn() {
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -322,7 +330,7 @@ Deno.test({
     const accessToken = await tokenManager.generateAccessToken(
       'test_client',
       'test_user',
-      false // No refresh token
+      false, // No refresh token
     );
 
     assertExists(accessToken.access_token);
@@ -339,13 +347,13 @@ Deno.test({
   async fn() {
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const customConfig = {
       accessTokenExpiryMs: 30 * 60 * 1000, // 30 minutes
       refreshTokenExpiryMs: 7 * 24 * 60 * 60 * 1000, // 7 days
       authorizationCodeExpiryMs: 5 * 60 * 1000, // 5 minutes
     };
-    
+
     const tokenManager = new TokenManager(customConfig, {
       kvManager,
       logger: mockLogger,
@@ -368,7 +376,7 @@ Deno.test({
   async fn() {
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -398,14 +406,14 @@ Deno.test({
   async fn() {
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     // Use very short expiry for testing
     const shortExpiryConfig = {
       accessTokenExpiryMs: 100, // 100ms
       refreshTokenExpiryMs: 1000,
       authorizationCodeExpiryMs: 100,
     };
-    
+
     const tokenManager = new TokenManager(shortExpiryConfig, {
       kvManager,
       logger: mockLogger,
@@ -416,7 +424,7 @@ Deno.test({
     assertExists(accessToken.access_token);
 
     // Wait for expiry
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 150));
 
     // Validation should fail and clean up expired token
     const validation = await tokenManager.validateAccessToken(accessToken.access_token);
@@ -432,14 +440,14 @@ Deno.test({
   async fn() {
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     // Use short expiry for testing
     const shortExpiryConfig = {
       accessTokenExpiryMs: 3600 * 1000,
       refreshTokenExpiryMs: 30 * 24 * 3600 * 1000,
       authorizationCodeExpiryMs: 100, // 100ms
     };
-    
+
     const tokenManager = new TokenManager(shortExpiryConfig, {
       kvManager,
       logger: mockLogger,
@@ -449,13 +457,13 @@ Deno.test({
     const authCode = await tokenManager.generateAuthorizationCode(
       'client_expiry',
       'user_expiry',
-      'https://example.com/callback'
+      'https://example.com/callback',
     );
 
     assertExists(authCode);
 
     // Wait for expiry
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 150));
 
     // Retrieval should return null for expired code
     const retrievedCode = await tokenManager.getAuthorizationCode(authCode);
@@ -470,7 +478,7 @@ Deno.test({
   async fn() {
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -481,11 +489,11 @@ Deno.test({
       'pkce_client',
       'pkce_user',
       'https://example.com/callback',
-      codeChallenge
+      codeChallenge,
     );
 
     const retrievedCode = await tokenManager.getAuthorizationCode(authCode);
-    
+
     assertExists(retrievedCode);
     assertEquals(retrievedCode.client_id, 'pkce_client');
     assertEquals(retrievedCode.user_id, 'pkce_user');
@@ -501,7 +509,7 @@ Deno.test({
   async fn() {
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -511,15 +519,15 @@ Deno.test({
     const initialToken = await tokenManager.generateAccessToken(
       'correct_client',
       'test_user',
-      true
+      true,
     );
-    
+
     assertExists(initialToken.refresh_token);
 
     // Attempt refresh with wrong client ID
     const refreshResult = await tokenManager.refreshAccessToken(
       initialToken.refresh_token!,
-      'wrong_client' // Different client ID
+      'wrong_client', // Different client ID
     );
 
     assertEquals(refreshResult.success, false);
@@ -534,14 +542,14 @@ Deno.test({
   async fn() {
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     // Use short refresh token expiry
     const shortRefreshConfig = {
       accessTokenExpiryMs: 3600 * 1000,
       refreshTokenExpiryMs: 100, // 100ms
       authorizationCodeExpiryMs: 10 * 60 * 1000,
     };
-    
+
     const tokenManager = new TokenManager(shortRefreshConfig, {
       kvManager,
       logger: mockLogger,
@@ -551,18 +559,18 @@ Deno.test({
     const initialToken = await tokenManager.generateAccessToken(
       'client_refresh_expiry',
       'user_refresh_expiry',
-      true
+      true,
     );
-    
+
     assertExists(initialToken.refresh_token);
 
     // Wait for refresh token expiry
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 150));
 
     // Attempt to use expired refresh token
     const refreshResult = await tokenManager.refreshAccessToken(
       initialToken.refresh_token!,
-      'client_refresh_expiry'
+      'client_refresh_expiry',
     );
 
     assertEquals(refreshResult.success, false);
@@ -577,7 +585,7 @@ Deno.test({
   async fn() {
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -608,7 +616,7 @@ Deno.test({
   async fn() {
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -637,7 +645,7 @@ Deno.test({
   async fn() {
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -666,7 +674,7 @@ Deno.test({
   async fn() {
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -696,7 +704,7 @@ Deno.test({
   async fn() {
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     const tokenManager = new TokenManager(testTokenConfig, {
       kvManager,
       logger: mockLogger,
@@ -719,13 +727,13 @@ Deno.test({
   async fn() {
     const kvManager = new KVManager({ kvPath: ':memory:' });
     await kvManager.initialize();
-    
+
     // Test with partial configuration (should use defaults)
     const partialConfig = {
       accessTokenExpiryMs: 1800 * 1000, // 30 minutes
       // Missing refreshTokenExpiryMs and authorizationCodeExpiryMs
     } as any;
-    
+
     const tokenManager = new TokenManager(partialConfig, {
       kvManager,
       logger: mockLogger,

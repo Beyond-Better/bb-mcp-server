@@ -1,8 +1,8 @@
 /**
  * ClientRegistry Unit Tests
- * 
+ *
  * 🔒 SECURITY-CRITICAL: Comprehensive tests for OAuth client management
- * 
+ *
  * Test Coverage Requirements:
  * - 100% coverage for security-critical client operations
  * - RFC 7591 Dynamic Client Registration compliance
@@ -12,14 +12,14 @@
  * - Error handling and edge cases
  */
 
-import { assertEquals, assertExists, assert } from '@std/assert';
+import { assert, assertEquals, assertExists } from '@std/assert';
 import { ClientRegistry } from '../../../src/lib/auth/ClientRegistry.ts';
 import { KVManager } from '../../../src/lib/storage/KVManager.ts';
 import type { Logger } from '../../../src/types/library.types.ts';
-import type { 
+import type {
   ClientRegistrationRequest,
   ClientRegistrationResponse,
-  OAuthClient 
+  OAuthClient,
 } from '../../../src/lib/auth/OAuthTypes.ts';
 
 // Mock logger for testing
@@ -49,7 +49,7 @@ Deno.test({
   name: 'ClientRegistry - Initialize with Configuration',
   async fn() {
     const { kvManager } = await createTestDependencies();
-    
+
     const clientRegistry = new ClientRegistry(testClientConfig, {
       kvManager,
       logger: mockLogger,
@@ -66,7 +66,7 @@ Deno.test({
   name: 'ClientRegistry - Register Client (RFC 7591 CRITICAL)',
   async fn() {
     const { kvManager } = await createTestDependencies();
-    
+
     const clientRegistry = new ClientRegistry(testClientConfig, {
       kvManager,
       logger: mockLogger,
@@ -84,15 +84,23 @@ Deno.test({
     // Validate registration response
     assertExists(registration.client_id);
     assert(registration.client_id.startsWith('mcp_'), 'Client ID should have mcp_ prefix');
-    assertEquals(registration.client_id.length, 'mcp_'.length + 16, 'Client ID should be correct length');
-    
+    assertEquals(
+      registration.client_id.length,
+      'mcp_'.length + 16,
+      'Client ID should be correct length',
+    );
+
     // Public clients should not have client_secret (PKCE-only)
-    assertEquals(registration.client_secret, undefined, 'Public clients should not have client_secret');
-    
+    assertEquals(
+      registration.client_secret,
+      undefined,
+      'Public clients should not have client_secret',
+    );
+
     assertEquals(registration.redirect_uris, ['http://localhost:3000/callback']);
     assertEquals(registration.client_name, 'Test OAuth Client');
     assertEquals(registration.client_uri, 'https://test.example.com');
-    
+
     // Validate timestamps
     assertExists(registration.client_id_issued_at);
     assert(registration.client_id_issued_at <= Date.now(), 'Issue timestamp should be in the past');
@@ -105,7 +113,7 @@ Deno.test({
   name: 'ClientRegistry - Validate Client Existence (SECURITY CRITICAL)',
   async fn() {
     const { kvManager } = await createTestDependencies();
-    
+
     const clientRegistry = new ClientRegistry(testClientConfig, {
       kvManager,
       logger: mockLogger,
@@ -120,7 +128,7 @@ Deno.test({
     // Test valid client validation
     const validResult = await clientRegistry.validateClient(
       registration.client_id,
-      'http://localhost:3000/callback'
+      'http://localhost:3000/callback',
     );
 
     assertEquals(validResult.valid, true);
@@ -130,7 +138,7 @@ Deno.test({
     // Test invalid client validation
     const invalidResult = await clientRegistry.validateClient(
       'invalid_client_id',
-      'http://localhost:3000/callback'
+      'http://localhost:3000/callback',
     );
 
     assertEquals(invalidResult.valid, false);
@@ -144,7 +152,7 @@ Deno.test({
   name: 'ClientRegistry - Redirect URI Validation (SECURITY CRITICAL)',
   async fn() {
     const { kvManager } = await createTestDependencies();
-    
+
     const clientRegistry = new ClientRegistry(testClientConfig, {
       kvManager,
       logger: mockLogger,
@@ -159,21 +167,21 @@ Deno.test({
     // Test valid redirect URI
     const validRedirectResult = await clientRegistry.validateClient(
       registration.client_id,
-      'http://localhost:3000/callback'
+      'http://localhost:3000/callback',
     );
     assertEquals(validRedirectResult.valid, true);
 
     // Test second valid redirect URI
     const validRedirectResult2 = await clientRegistry.validateClient(
       registration.client_id,
-      'http://localhost:3000/auth'
+      'http://localhost:3000/auth',
     );
     assertEquals(validRedirectResult2.valid, true);
 
     // Test invalid redirect URI
     const invalidRedirectResult = await clientRegistry.validateClient(
       registration.client_id,
-      'http://localhost:3000/malicious'
+      'http://localhost:3000/malicious',
     );
     assertEquals(invalidRedirectResult.valid, false);
     assertEquals(invalidRedirectResult.error, 'Invalid redirect URI for client');
@@ -186,7 +194,7 @@ Deno.test({
   name: 'ClientRegistry - Validate Redirect URI Host Security (SECURITY CRITICAL)',
   async fn() {
     const { kvManager } = await createTestDependencies();
-    
+
     // Create registry with strict host validation
     const strictClientRegistry = new ClientRegistry(
       {
@@ -194,7 +202,7 @@ Deno.test({
         requireHTTPS: false, // For testing
         allowedRedirectHosts: ['localhost'], // Only localhost allowed
       },
-      { kvManager, logger: mockLogger }
+      { kvManager, logger: mockLogger },
     );
 
     // Test registration with allowed host
@@ -214,8 +222,8 @@ Deno.test({
     } catch (error) {
       assert(error instanceof Error);
       assert(
-        error.message.includes('not allowed') || error.message.includes('HTTPS requirement'), 
-        `Error should mention host not allowed or HTTPS requirement. Got: ${error.message}`
+        error.message.includes('not allowed') || error.message.includes('HTTPS requirement'),
+        `Error should mention host not allowed or HTTPS requirement. Got: ${error.message}`,
       );
     }
 
@@ -227,7 +235,7 @@ Deno.test({
   name: 'ClientRegistry - Get Client Information',
   async fn() {
     const { kvManager } = await createTestDependencies();
-    
+
     const clientRegistry = new ClientRegistry(testClientConfig, {
       kvManager,
       logger: mockLogger,
@@ -264,7 +272,7 @@ Deno.test({
   name: 'ClientRegistry - Update Client Information',
   async fn() {
     const { kvManager } = await createTestDependencies();
-    
+
     const clientRegistry = new ClientRegistry(testClientConfig, {
       kvManager,
       logger: mockLogger,
@@ -298,7 +306,7 @@ Deno.test({
   name: 'ClientRegistry - Revoke Client (SECURITY CRITICAL)',
   async fn() {
     const { kvManager } = await createTestDependencies();
-    
+
     const clientRegistry = new ClientRegistry(testClientConfig, {
       kvManager,
       logger: mockLogger,
@@ -313,7 +321,7 @@ Deno.test({
     // Verify client exists
     const validationBefore = await clientRegistry.validateClient(
       registration.client_id,
-      'http://localhost:3000/callback'
+      'http://localhost:3000/callback',
     );
     assertEquals(validationBefore.valid, true);
 
@@ -323,7 +331,7 @@ Deno.test({
     // Verify client is revoked
     const validationAfter = await clientRegistry.validateClient(
       registration.client_id,
-      'http://localhost:3000/callback'
+      'http://localhost:3000/callback',
     );
     assertEquals(validationAfter.valid, false);
     assertEquals(validationAfter.error, 'Client not found');
@@ -340,13 +348,13 @@ Deno.test({
   name: 'ClientRegistry - Client Statistics',
   async fn() {
     const { kvManager } = await createTestDependencies();
-    
+
     // Use unique test config to avoid interference from other tests
     const uniqueTestConfig = {
       ...testClientConfig,
       // No additional config needed, the ClientRegistry will use its own unique key prefix
     };
-    
+
     const clientRegistry = new ClientRegistry(uniqueTestConfig, {
       kvManager,
       logger: mockLogger,
@@ -392,7 +400,7 @@ Deno.test({
   name: 'ClientRegistry - Cryptographic Security Validation',
   async fn() {
     const { kvManager } = await createTestDependencies();
-    
+
     const clientRegistry = new ClientRegistry(testClientConfig, {
       kvManager,
       logger: mockLogger,
@@ -427,7 +435,7 @@ Deno.test({
   name: 'ClientRegistry - Multiple Redirect URIs Support',
   async fn() {
     const { kvManager } = await createTestDependencies();
-    
+
     const clientRegistry = new ClientRegistry(testClientConfig, {
       kvManager,
       logger: mockLogger,
@@ -448,14 +456,14 @@ Deno.test({
     // Test validation with each redirect URI
     const uris = [
       'http://localhost:3000/callback',
-      'http://localhost:3000/auth/callback', 
+      'http://localhost:3000/auth/callback',
       'http://test.example.com/oauth/callback',
     ];
 
     for (const uri of uris) {
       const validation = await clientRegistry.validateClient(
         registration.client_id,
-        uri
+        uri,
       );
       assertEquals(validation.valid, true, `Should validate URI: ${uri}`);
     }
@@ -463,7 +471,7 @@ Deno.test({
     // Test with invalid URI
     const invalidValidation = await clientRegistry.validateClient(
       registration.client_id,
-      'http://malicious.com/callback'
+      'http://malicious.com/callback',
     );
     assertEquals(invalidValidation.valid, false);
 
@@ -475,7 +483,7 @@ Deno.test({
   name: 'ClientRegistry - Dynamic Registration Disabled',
   async fn() {
     const { kvManager } = await createTestDependencies();
-    
+
     // Create registry with dynamic registration disabled
     const noRegClientRegistry = new ClientRegistry(
       {
@@ -483,7 +491,7 @@ Deno.test({
         requireHTTPS: false,
         allowedRedirectHosts: ['localhost'],
       },
-      { kvManager, logger: mockLogger }
+      { kvManager, logger: mockLogger },
     );
 
     // Attempt to register client should fail
@@ -495,8 +503,10 @@ Deno.test({
       assert(false, 'Should have thrown error when dynamic registration disabled');
     } catch (error) {
       assert(error instanceof Error);
-      assert(error.message.includes('Dynamic client registration is disabled'), 
-             'Error should mention dynamic registration disabled');
+      assert(
+        error.message.includes('Dynamic client registration is disabled'),
+        'Error should mention dynamic registration disabled',
+      );
     }
 
     await kvManager.close();
@@ -507,7 +517,7 @@ Deno.test({
   name: 'ClientRegistry - HTTPS Requirement Security',
   async fn() {
     const { kvManager } = await createTestDependencies();
-    
+
     // Create registry with HTTPS requirement
     const httpsClientRegistry = new ClientRegistry(
       {
@@ -515,7 +525,7 @@ Deno.test({
         requireHTTPS: true,
         allowedRedirectHosts: ['secure.example.com'],
       },
-      { kvManager, logger: mockLogger }
+      { kvManager, logger: mockLogger },
     );
 
     // HTTPS redirect URI should work
@@ -535,8 +545,8 @@ Deno.test({
     } catch (error) {
       assert(error instanceof Error);
       assert(
-        error.message.includes('HTTPS') || error.message.includes('https'), 
-        `Error should mention HTTPS requirement. Got: ${error.message}`
+        error.message.includes('HTTPS') || error.message.includes('https'),
+        `Error should mention HTTPS requirement. Got: ${error.message}`,
       );
     }
 
@@ -548,7 +558,7 @@ Deno.test({
   name: 'ClientRegistry - Error Handling and Edge Cases',
   async fn() {
     const { kvManager } = await createTestDependencies();
-    
+
     const clientRegistry = new ClientRegistry(testClientConfig, {
       kvManager,
       logger: mockLogger,

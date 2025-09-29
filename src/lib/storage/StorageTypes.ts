@@ -1,6 +1,6 @@
 /**
  * Storage-related type definitions for the bb-mcp-server library
- * 
+ *
  * Defines interfaces for session management, credential storage, and KV operations.
  */
 
@@ -75,28 +75,28 @@ export interface KVPrefixes {
   AUTH: readonly string[];
   AUTH_USER_CREDENTIALS: readonly string[];
   AUTH_REQUESTS: readonly string[];
-  
+
   // OAuth client registration data
   OAUTH_CLIENTS: readonly string[];
   OAUTH_CLIENT_REGISTRATIONS: readonly string[];
-  
+
   // MCP OAuth flow data
   MCP_AUTH: readonly string[];
   MCP_AUTH_REQUESTS: readonly string[];
   MCP_AUTH_CODES: readonly string[];
   MCP_ACCESS_TOKENS: readonly string[];
   MCP_REFRESH_TOKENS: readonly string[];
-  
+
   // Transport session data
   TRANSPORT: readonly string[];
   TRANSPORT_SESSIONS: readonly string[];
   TRANSPORT_USER_INDEX: readonly string[];
-  
+
   // EventStore data
   EVENTS: readonly string[];
   EVENT_STREAMS: readonly string[];
   EVENT_METADATA: readonly string[];
-  
+
   // Application metadata
   APP: readonly string[];
   APP_METRICS: readonly string[];
@@ -111,28 +111,28 @@ export const DEFAULT_KV_PREFIXES: KVPrefixes = {
   AUTH: ['auth'] as const,
   AUTH_USER_CREDENTIALS: ['auth', 'user_credentials'] as const,
   AUTH_REQUESTS: ['auth', 'auth_request'] as const,
-  
+
   // OAuth client registration data
   OAUTH_CLIENTS: ['oauth_clients'] as const,
   OAUTH_CLIENT_REGISTRATIONS: ['oauth_clients', 'registrations'] as const,
-  
+
   // MCP OAuth flow data
   MCP_AUTH: ['mcp_auth'] as const,
   MCP_AUTH_REQUESTS: ['mcp_auth', 'requests'] as const,
   MCP_AUTH_CODES: ['mcp_auth', 'codes'] as const,
   MCP_ACCESS_TOKENS: ['mcp_auth', 'tokens'] as const,
   MCP_REFRESH_TOKENS: ['mcp_auth', 'refresh_tokens'] as const,
-  
+
   // Transport session data
   TRANSPORT: ['transport'] as const,
   TRANSPORT_SESSIONS: ['transport', 'session'] as const,
   TRANSPORT_USER_INDEX: ['transport', 'session_by_user'] as const,
-  
+
   // EventStore data
   EVENTS: ['events'] as const,
   EVENT_STREAMS: ['events', 'stream'] as const,
   EVENT_METADATA: ['events', 'stream_metadata'] as const,
-  
+
   // Application metadata
   APP: ['app'] as const,
   APP_METRICS: ['app', 'metrics'] as const,

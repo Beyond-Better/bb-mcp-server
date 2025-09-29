@@ -1,13 +1,20 @@
 /**
  * Request Context Management for Transport Layer
- * 
+ *
  * Maintains context across async operations in transport layer
  * Uses AsyncLocalStorage for thread-safe context management
  * Preserved patterns from MCPRequestHandler.ts
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type { RequestContextData, RequestContextLogData, MCPRequest, TransportType, SessionData, BeyondMcpAuthContext } from './TransportTypes.ts';
+import type {
+  BeyondMcpAuthContext,
+  MCPRequest,
+  RequestContextData,
+  RequestContextLogData,
+  SessionData,
+  TransportType,
+} from './TransportTypes.ts';
 
 /**
  * Request context for MCP requests
@@ -20,31 +27,31 @@ export class RequestContext {
   public readonly transport: TransportType;
   public readonly startTime: number;
   public readonly mcpRequest: MCPRequest;
-  
+
   // Authentication context (preserved from MCPRequestHandler)
   public authenticatedUserId?: string;
   public clientId?: string;
   public scopes: string[] = [];
-  
+
   // Request metadata
   public metadata: Record<string, any> = {};
   public traceId?: string;
   public parentSpanId?: string;
-  
+
   // Transport-specific data
   public httpRequest?: Request;
   public sessionData?: SessionData;
-  
+
   // Performance tracking
   public performanceMarks: Map<string, number> = new Map();
-  
+
   constructor(data: RequestContextData) {
     this.requestId = data.requestId ?? crypto.randomUUID();
     this.sessionId = data.sessionId ?? undefined;
     this.transport = data.transport;
-    this.startTime = Date.now();
+    this.startTime = performance.now();
     this.mcpRequest = data.mcpRequest;
-    
+
     // Set authentication context if provided
     if (data.authenticatedUserId) {
       this.authenticatedUserId = data.authenticatedUserId;
@@ -55,7 +62,7 @@ export class RequestContext {
     if (data.scopes) {
       this.scopes = data.scopes;
     }
-    
+
     // Set additional context data
     if (data.httpRequest) {
       this.httpRequest = data.httpRequest;
@@ -66,11 +73,11 @@ export class RequestContext {
     if (data.metadata) {
       this.metadata = { ...data.metadata };
     }
-    
+
     // Set initial performance mark
     this.performanceMarks.set('request_start', this.startTime);
   }
-  
+
   /**
    * Create context from MCP auth context (from MCPRequestHandler patterns)
    */
@@ -83,7 +90,7 @@ export class RequestContext {
       httpRequest?: Request;
       sessionData?: SessionData;
       metadata?: Record<string, any>;
-    }
+    },
   ): RequestContext {
     return new RequestContext({
       requestId: beyondMcpAuthContext.requestId,
@@ -98,7 +105,7 @@ export class RequestContext {
       metadata: additionalData?.metadata ?? undefined,
     });
   }
-  
+
   /**
    * Set authentication context
    */
@@ -107,65 +114,63 @@ export class RequestContext {
     this.clientId = clientId;
     this.scopes = [...scopes];
   }
-  
+
   /**
    * Update authentication scopes
    */
   updateScopes(scopes: string[]): void {
     this.scopes = [...scopes];
   }
-  
+
   /**
    * Set metadata value
    */
   setMetadata(key: string, value: any): void {
     this.metadata[key] = value;
   }
-  
+
   /**
    * Get metadata value
    */
   getMetadata<T>(key: string): T | undefined {
     return this.metadata[key] as T;
   }
-  
+
   /**
    * Set multiple metadata values
    */
   setMultipleMetadata(metadata: Record<string, any>): void {
     Object.assign(this.metadata, metadata);
   }
-  
+
   /**
    * Performance timing helpers
    */
   mark(name: string): void {
-    this.performanceMarks.set(name, Date.now());
+    this.performanceMarks.set(name, performance.now());
   }
-  
+
   /**
    * Get duration between performance marks
    */
   getDuration(startMark: string, endMark?: string): number | null {
     const startTime = this.performanceMarks.get(startMark);
     if (!startTime) return null;
-    
-    const endTime = endMark 
-      ? this.performanceMarks.get(endMark)
-      : Date.now();
-    
+
+    const endTime = endMark ? this.performanceMarks.get(endMark) : performance.now();
+
     if (!endTime) return null;
-    
+
     return endTime - startTime;
   }
-  
+
   /**
    * Get total elapsed time since request start
    */
   getElapsedMs(): number {
-    return Date.now() - this.startTime;
+    return performance.now() - this.startTime;
   }
-  
+
   /**
    * Get elapsed time with better precision
    */
@@ -176,42 +181,42 @@ export class RequestContext {
   } {
     const ms = this.getElapsedMs();
     const seconds = ms / 1000;
-    
+
     return {
       milliseconds: ms,
       seconds: parseFloat(seconds.toFixed(3)),
       formatted: seconds < 1 ? `${ms}ms` : `${seconds.toFixed(3)}s`,
     };
   }
-  
+
   /**
    * Authentication state checks
    */
   isAuthenticated(): boolean {
     return !!this.authenticatedUserId;
   }
-  
+
   /**
    * Check if context has specific scope
    */
   hasScope(scope: string): boolean {
     return this.scopes.includes(scope);
   }
-  
+
   /**
    * Check if context has all required scopes
    */
   hasAllScopes(requiredScopes: string[]): boolean {
-    return requiredScopes.every(scope => this.hasScope(scope));
+    return requiredScopes.every((scope) => this.hasScope(scope));
   }
-  
+
   /**
    * Check if context has any of the required scopes
    */
   hasAnyScope(requiredScopes: string[]): boolean {
-    return requiredScopes.some(scope => this.hasScope(scope));
+    return requiredScopes.some((scope) => this.hasScope(scope));
   }
-  
+
   /**
    * Get authentication info summary
    */
@@ -230,14 +235,14 @@ export class RequestContext {
       scopeCount: this.scopes.length,
     };
   }
-  
+
   /**
    * Session context helpers
    */
   hasSession(): boolean {
     return !!this.sessionId;
   }
-  
+
   /**
    * Get session info summary
    */
@@ -252,14 +257,14 @@ export class RequestContext {
       sessionData: this.sessionData,
     };
   }
-  
+
   /**
    * MCP request helpers
    */
   getMCPMethod(): string {
     return this.mcpRequest.method;
   }
-  
+
   /**
    * Get MCP request info summary
    */
@@ -270,9 +275,10 @@ export class RequestContext {
     paramsCount: number;
   } {
     const params = this.mcpRequest.params;
-    const paramsCount = params ? 
-      (Array.isArray(params) ? params.length : Object.keys(params).length) : 0;
-    
+    const paramsCount = params
+      ? (Array.isArray(params) ? params.length : Object.keys(params).length)
+      : 0;
+
     return {
       id: this.mcpRequest.id,
       method: this.mcpRequest.method,
@@ -280,7 +286,7 @@ export class RequestContext {
       paramsCount,
     };
   }
-  
+
   /**
    * Create logging data structure
    * Preserved pattern from MCPRequestHandler.ts
@@ -297,7 +303,7 @@ export class RequestContext {
       metadata: { ...this.metadata },
     };
   }
-  
+
   /**
    * Create detailed logging data with performance marks
    */
@@ -317,7 +323,7 @@ export class RequestContext {
     };
   } {
     const baseLogData = this.toLogData();
-    
+
     return {
       ...baseLogData,
       mcpRequest: {
@@ -335,15 +341,17 @@ export class RequestContext {
       },
     };
   }
-  
+
   /**
    * Clone context with updates
    */
-  clone(updates: Partial<{
-    metadata: Record<string, any>;
-    scopes: string[];
-    sessionData: SessionData;
-  }>): RequestContext {
+  clone(
+    updates: Partial<{
+      metadata: Record<string, any>;
+      scopes: string[];
+      sessionData: SessionData;
+    }>,
+  ): RequestContext {
     const cloned = new RequestContext({
       requestId: this.requestId,
       sessionId: this.sessionId ?? undefined,
@@ -356,7 +364,7 @@ export class RequestContext {
       sessionData: this.sessionData ?? undefined,
       metadata: this.metadata,
     });
-    
+
     // Apply updates
     if (updates.metadata) {
       cloned.setMultipleMetadata(updates.metadata);
@@ -367,13 +375,13 @@ export class RequestContext {
     if (updates.sessionData) {
       cloned.sessionData = updates.sessionData;
     }
-    
+
     // Copy performance marks
     cloned.performanceMarks = new Map(this.performanceMarks);
-    
+
     return cloned;
   }
-  
+
   /**
    * Get context summary for debugging
    */
@@ -396,7 +404,7 @@ export class RequestContext {
       scopeCount: this.scopes.length,
     };
   }
-  
+
   /**
    * Execute operation within this context using AsyncLocalStorage
    * Preserved pattern from MCPRequestHandler.ts
@@ -404,7 +412,7 @@ export class RequestContext {
   async executeWithContext<T>(operation: () => Promise<T>): Promise<T> {
     return await requestContextStorage.run(this, operation);
   }
-  
+
   /**
    * Static method to get current context from AsyncLocalStorage
    * Preserved pattern from MCPRequestHandler.ts
@@ -412,25 +420,27 @@ export class RequestContext {
   static getCurrentContext(): RequestContext | null {
     return requestContextStorage.getStore() || null;
   }
-  
+
   /**
    * Static method to check if we're currently in a request context
    */
   static hasCurrentContext(): boolean {
     return !!requestContextStorage.getStore();
   }
-  
+
   /**
    * Static method to get current context or throw error
    */
   static requireCurrentContext(): RequestContext {
     const context = requestContextStorage.getStore();
     if (!context) {
-      throw new Error('No request context available - operation must be called within request context');
+      throw new Error(
+        'No request context available - operation must be called within request context',
+      );
     }
     return context;
   }
-  
+
   /**
    * Static helper to create context for testing
    */
@@ -472,7 +482,7 @@ export { requestContextStorage };
  */
 export async function executeWithRequestContext<T>(
   context: RequestContext,
-  operation: () => Promise<T>
+  operation: () => Promise<T>,
 ): Promise<T> {
   return await context.executeWithContext(operation);
 }

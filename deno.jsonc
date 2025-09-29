@@ -1,24 +1,30 @@
 {
-  "name": "@bb/mcp-server",
+  "name": "@beyondbetter/bb-mcp-server",
   "version": "0.1.0",
   "description": "Comprehensive library for building Deno-based MCP servers",
   "license": "MIT",
   "copyright": "2025 - Beyond Better <charlie@beyondbetter.app>",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/mod.ts"
   },
   "tasks": {
     "test": "deno test --allow-all --unstable-kv tests/",
+    "test:all": "deno test --allow-all --unstable-kv tests/ examples/*/tests/",
     "test:file": "deno test --allow-all --unstable-kv ",
     "test:coverage": "deno test --allow-all --unstable-kv --coverage=coverage tests/",
     "test:unit": "deno test --allow-all --unstable-kv tests/unit/",
     "test:integration": "deno test --allow-all --unstable-kv tests/integration/",
-    "check": "deno check src/index.ts",
-    "update-deps": "deno cache src/index.ts",
+    "check": "deno check src/mod.ts",
+    "check:all": "deno check src/mod.ts tests/**/*.ts examples/*/main.ts examples/*/tests/**/*.ts",
+    "update-deps": "deno cache src/mod.ts",
     "lint": "deno lint src/",
     "fmt": "deno fmt src/ tests/",
     "tool:check-types": "deno check --all src/**/*.ts tests/**/*.ts",
+    "tool:check-types:all": "deno check --all src/**/*.ts tests/**/*.ts examples/*/main.ts examples/*/tests/**/*.ts",
+    "tool:check-types:apps": "deno check --all examples/*/main.ts examples/*/tests/**/*.ts",
     "tool:test": "deno test --allow-all --unstable-kv --coverage=coverage tests/",
+    "tool:test:all": "deno test --allow-all --unstable-kv --coverage=coverage tests/ examples/*/tests/",
+    "tool:test:apps": "deno test --allow-all --unstable-kv --coverage=coverage examples/*/tests/",
     "tool:test:file": "deno test --allow-all --unstable-kv --coverage=coverage ",
     "tool:format": "deno fmt src/ tests/"
   },
@@ -37,6 +43,7 @@
     "mcp/types.js": "npm:@modelcontextprotocol/sdk@1.17.5/types.js",
     "json-schema": "https://esm.sh/v135/@types/json-schema@7.0.15/index.d.ts",
     "zod": "npm:zod@^3.22.4",
+    "zod-to-json-schema": "npm:zod-to-json-schema@^3.24.6",
 
     "@std/assert": "jsr:@std/assert@^1.0.12",
     "@std/async": "jsr:@std/async@^1.0.12",
@@ -71,6 +78,7 @@
     "version.ts": "./version.ts"
   },
   "compilerOptions": {
+    "lib": ["deno.window", "deno.unstable"],
     "strict": true,
     "exactOptionalPropertyTypes": true,
     "noImplicitReturns": true,

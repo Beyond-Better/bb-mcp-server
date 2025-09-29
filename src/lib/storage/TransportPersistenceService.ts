@@ -4,7 +4,7 @@
  * Manages persistence of MCP HTTP transport session information using Deno KV.
  * Enables restoration of transport configurations after server restarts,
  * though actual connections must be re-established by clients.
- * 
+ *
  * Extracted and generalized from ActionStep MCP Server for use in bb-mcp-server library.
  */
 
@@ -60,9 +60,9 @@ export class TransportPersistenceService {
   private logger: Logger | undefined;
 
   constructor(
-    kv: Deno.Kv, 
-    keyPrefix: readonly string[] = ['transport'], 
-    logger?: Logger
+    kv: Deno.Kv,
+    keyPrefix: readonly string[] = ['transport'],
+    logger?: Logger,
   ) {
     this.kv = kv;
     this.keyPrefix = keyPrefix;
@@ -113,7 +113,9 @@ export class TransportPersistenceService {
         throw new Error('Failed to persist session in KV transaction');
       }
 
-      this.logger?.info(`TransportPersistenceService: Persisted session ${sessionId} for user ${userId}`);
+      this.logger?.info(
+        `TransportPersistenceService: Persisted session ${sessionId} for user ${userId}`,
+      );
     } catch (error) {
       this.logger?.error('TransportPersistenceService: Failed to persist session', toError(error), {
         sessionId,
@@ -132,9 +134,12 @@ export class TransportPersistenceService {
       const existing = await this.kv.get<PersistedSessionInfo>(sessionKey);
 
       if (!existing.value) {
-        this.logger?.warn('TransportPersistenceService: Attempted to update activity for unknown session', {
-          sessionId,
-        });
+        this.logger?.warn(
+          'TransportPersistenceService: Attempted to update activity for unknown session',
+          {
+            sessionId,
+          },
+        );
         return;
       }
 
@@ -145,9 +150,13 @@ export class TransportPersistenceService {
 
       await this.kv.set(sessionKey, updated);
     } catch (error) {
-      this.logger?.error('TransportPersistenceService: Failed to update session activity', toError(error), {
-        sessionId,
-      });
+      this.logger?.error(
+        'TransportPersistenceService: Failed to update session activity',
+        toError(error),
+        {
+          sessionId,
+        },
+      );
     }
   }
 
@@ -175,9 +184,13 @@ export class TransportPersistenceService {
         sessionId,
       });
     } catch (error) {
-      this.logger?.error('TransportPersistenceService: Failed to mark session inactive', toError(error), {
-        sessionId,
-      });
+      this.logger?.error(
+        'TransportPersistenceService: Failed to mark session inactive',
+        toError(error),
+        {
+          sessionId,
+        },
+      );
     }
   }
 
@@ -186,12 +199,20 @@ export class TransportPersistenceService {
    */
   async getSessionInfo(sessionId: string): Promise<PersistedSessionInfo | null> {
     try {
-      const result = await this.kv.get<PersistedSessionInfo>([...this.keyPrefix, 'session', sessionId]);
+      const result = await this.kv.get<PersistedSessionInfo>([
+        ...this.keyPrefix,
+        'session',
+        sessionId,
+      ]);
       return result.value;
     } catch (error) {
-      this.logger?.error('TransportPersistenceService: Failed to get session info', toError(error), {
-        sessionId,
-      });
+      this.logger?.error(
+        'TransportPersistenceService: Failed to get session info',
+        toError(error),
+        {
+          sessionId,
+        },
+      );
       return null;
     }
   }
@@ -217,9 +238,13 @@ export class TransportPersistenceService {
 
       return sessions;
     } catch (error) {
-      this.logger?.error('TransportPersistenceService: Failed to get user sessions', toError(error), {
-        userId,
-      });
+      this.logger?.error(
+        'TransportPersistenceService: Failed to get user sessions',
+        toError(error),
+        {
+          userId,
+        },
+      );
       return [];
     }
   }
@@ -241,7 +266,10 @@ export class TransportPersistenceService {
 
       return sessions;
     } catch (error) {
-      this.logger?.error('TransportPersistenceService: Failed to get active sessions', toError(error));
+      this.logger?.error(
+        'TransportPersistenceService: Failed to get active sessions',
+        toError(error),
+      );
       return [];
     }
   }
@@ -278,9 +306,13 @@ export class TransportPersistenceService {
           result.failedCount++;
           result.errors.push(`Session ${sessionInfo.sessionId}: ${errorMsg}`);
 
-          this.logger?.error('TransportPersistenceService: Failed to restore session', toError(error), {
-            sessionId: sessionInfo.sessionId,
-          });
+          this.logger?.error(
+            'TransportPersistenceService: Failed to restore session',
+            toError(error),
+            {
+              sessionId: sessionInfo.sessionId,
+            },
+          );
         }
       }
 
@@ -291,7 +323,10 @@ export class TransportPersistenceService {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       result.errors.push(`Restoration process failed: ${errorMsg}`);
-      this.logger?.error('TransportPersistenceService: Transport restoration failed', toError(error));
+      this.logger?.error(
+        'TransportPersistenceService: Transport restoration failed',
+        toError(error),
+      );
     }
 
     return result;
@@ -324,9 +359,13 @@ export class TransportPersistenceService {
     transport.onclose = () => {
       transportMap.delete(sessionInfo.sessionId);
       this.markSessionInactive(sessionInfo.sessionId).catch((error) => {
-        this.logger?.error('TransportPersistenceService: Failed to mark restored session inactive', error, {
-          sessionId: sessionInfo.sessionId,
-        });
+        this.logger?.error(
+          'TransportPersistenceService: Failed to mark restored session inactive',
+          error,
+          {
+            sessionId: sessionInfo.sessionId,
+          },
+        );
       });
       this.logger?.info('TransportPersistenceService: Restored MCP session closed', {
         sessionId: sessionInfo.sessionId,
@@ -405,7 +444,10 @@ export class TransportPersistenceService {
 
       return deletedCount;
     } catch (error) {
-      this.logger?.error('TransportPersistenceService: Failed to cleanup old sessions', toError(error));
+      this.logger?.error(
+        'TransportPersistenceService: Failed to cleanup old sessions',
+        toError(error),
+      );
       return 0;
     }
   }
@@ -459,7 +501,10 @@ export class TransportPersistenceService {
         newestSession: newestTime,
       };
     } catch (error) {
-      this.logger?.error('TransportPersistenceService: Failed to get session stats', toError(error));
+      this.logger?.error(
+        'TransportPersistenceService: Failed to get session stats',
+        toError(error),
+      );
       return {
         total: 0,
         active: 0,

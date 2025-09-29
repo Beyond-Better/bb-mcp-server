@@ -1,6 +1,6 @@
 /**
  * Validation Helpers - Generic validation utilities for MCP servers
- * 
+ *
  * Provides JSON schema validation, input sanitization, and common validation
  * patterns. Extracted from ActionStep MCP Server and generalized for broader use.
  */
@@ -51,7 +51,7 @@ export class ValidationHelpers {
   static validateSchema(
     data: unknown,
     schema: Record<string, unknown>,
-    path = ''
+    path = '',
   ): ValidationResult {
     try {
       const errors = this.validateValue(data, schema, path);
@@ -79,7 +79,7 @@ export class ValidationHelpers {
   private static validateValue(
     value: unknown,
     schema: Record<string, unknown>,
-    path: string
+    path: string,
   ): ValidationError[] {
     const errors: ValidationError[] = [];
     const type = schema.type as string;
@@ -171,7 +171,7 @@ export class ValidationHelpers {
   private static validateString(
     value: string,
     schema: Record<string, unknown>,
-    path: string
+    path: string,
   ): ValidationError[] {
     const errors: ValidationError[] = [];
 
@@ -224,7 +224,7 @@ export class ValidationHelpers {
   private static validateNumber(
     value: number,
     schema: Record<string, unknown>,
-    path: string
+    path: string,
   ): ValidationError[] {
     const errors: ValidationError[] = [];
 
@@ -255,7 +255,7 @@ export class ValidationHelpers {
   private static validateArray(
     value: unknown[],
     schema: Record<string, unknown>,
-    path: string
+    path: string,
   ): ValidationError[] {
     const errors: ValidationError[] = [];
 
@@ -296,7 +296,7 @@ export class ValidationHelpers {
   private static validateObject(
     value: Record<string, unknown>,
     schema: Record<string, unknown>,
-    path: string
+    path: string,
   ): ValidationError[] {
     const errors: ValidationError[] = [];
     const properties = schema.properties as Record<string, Record<string, unknown>> || {};
@@ -339,7 +339,7 @@ export class ValidationHelpers {
   private static validateFormat(
     value: string,
     format: string,
-    path: string
+    path: string,
   ): ValidationError | null {
     switch (format) {
       case 'email': {
@@ -383,7 +383,8 @@ export class ValidationHelpers {
       }
 
       case 'uuid': {
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const uuidRegex =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
         if (!uuidRegex.test(value)) {
           return {
             field: path,
@@ -396,7 +397,8 @@ export class ValidationHelpers {
       }
 
       case 'hostname': {
-        const hostnameRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+        const hostnameRegex =
+          /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
         if (!hostnameRegex.test(value)) {
           return {
             field: path,
@@ -409,7 +411,8 @@ export class ValidationHelpers {
       }
 
       case 'ipv4': {
-        const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        const ipv4Regex =
+          /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
         if (!ipv4Regex.test(value)) {
           return {
             field: path,
@@ -435,7 +438,7 @@ export class ValidationHelpers {
   static validateWithOptions(
     value: unknown,
     options: ValidationOptions,
-    fieldName = 'value'
+    fieldName = 'value',
   ): ValidationResult {
     const errors: ValidationError[] = [];
 
@@ -572,7 +575,7 @@ export class ValidationHelpers {
     }
 
     if (Array.isArray(obj)) {
-      return obj.map(item => this.deepClone(item)) as T;
+      return obj.map((item) => this.deepClone(item)) as T;
     }
 
     const cloned = {} as T;
@@ -594,7 +597,7 @@ export class ValidationHelpers {
     }
 
     return errors
-      .map(error => `${error.field}: ${error.message}`)
+      .map((error) => `${error.field}: ${error.message}`)
       .join('; ');
   }
 
@@ -621,18 +624,18 @@ export class ValidationHelpers {
    * Create a validation result from multiple validation results
    */
   static combineValidationResults(results: ValidationResult[]): ValidationResult {
-    const allErrors = results.flatMap(result => result.errors);
-    const allWarnings = results.flatMap(result => result.warnings || []);
-    
+    const allErrors = results.flatMap((result) => result.errors);
+    const allWarnings = results.flatMap((result) => result.warnings || []);
+
     const result: ValidationResult = {
       isValid: allErrors.length === 0,
       errors: allErrors,
     };
-    
+
     if (allWarnings.length > 0) {
       result.warnings = allWarnings;
     }
-    
+
     return result;
   }
 }

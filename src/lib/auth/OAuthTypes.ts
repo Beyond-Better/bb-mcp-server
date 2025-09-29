@@ -1,18 +1,18 @@
 /**
  * OAuth Type Definitions - Comprehensive OAuth 2.0 Type System
- * 
+ *
  * Consolidates all OAuth-related types and interfaces for the bb-mcp-server library.
  * These types maintain exact compatibility with the original OAuthClientService.ts and
  * AuthenticationService.ts implementations while providing a clean type system.
- * 
- * Extracted from: 
+ *
+ * Extracted from:
  * - actionstep-mcp-server/src/api/OAuthClientService.ts
  * - actionstep-mcp-server/src/api/AuthenticationService.ts
- * 
+ *
  * Standards Compliance:
  * - RFC 6749: OAuth 2.0 Authorization Framework
  * - RFC 7636: PKCE (Proof Key for Code Exchange)
- * - RFC 7591: Dynamic Client Registration Protocol  
+ * - RFC 7591: Dynamic Client Registration Protocol
  * - RFC 8414: OAuth 2.0 Authorization Server Metadata
  */
 
@@ -35,7 +35,7 @@ export interface OAuthProviderConfig {
   clientSecret: string;
   /** Default redirect URI (optional for server-to-server flows) */
   redirectUri?: string;
-  
+
   /** Token configuration */
   tokens: {
     /** Access token expiry in milliseconds (default: 3600000 = 1 hour) */
@@ -45,7 +45,7 @@ export interface OAuthProviderConfig {
     /** Authorization code expiry in milliseconds (default: 600000 = 10 minutes) */
     authorizationCodeExpiryMs: number;
   };
-  
+
   /** Client management configuration */
   clients: {
     /** Enable dynamic client registration (RFC 7591) */
@@ -55,7 +55,7 @@ export interface OAuthProviderConfig {
     /** Allowed redirect URI hosts for security */
     allowedRedirectHosts: string[];
   };
-  
+
   /** Authorization configuration */
   authorization: {
     /** Supported grant types */

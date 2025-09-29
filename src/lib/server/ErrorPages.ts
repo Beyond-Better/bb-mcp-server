@@ -13,38 +13,42 @@ import type { HttpServerConfig } from './HttpServer.ts';
 
 /**
  * Error page generation and error response handling
- * 
+ *
  * Provides comprehensive error handling for both API and browser clients
  * with security-conscious HTML generation and structured JSON responses.
  */
 export class ErrorPages {
   private config: HttpServerConfig;
   private logger: Logger | undefined;
-  
+
   constructor(config: HttpServerConfig, logger?: Logger) {
     this.config = config;
     this.logger = logger;
-    
+
     this.logger?.info('ErrorPages: Initialized', {
       serverName: this.config.name,
       serverVersion: this.config.version,
     });
   }
-  
+
   /**
    * Generate standard JSON error response
    */
   generateErrorResponse(error: Error | string, status = 500): Response {
     const errorMessage = error instanceof Error ? error.message : error;
     const errorStack = error instanceof Error ? error.stack : undefined;
-    
-    // Log error for monitoring  
-    this.logger?.error('ErrorPages: Generating error response', error instanceof Error ? error : new Error(errorMessage), {
-      status,
-      message: errorMessage,
-      stack: errorStack,
-    });
-    
+
+    // Log error for monitoring
+    this.logger?.error(
+      'ErrorPages: Generating error response',
+      error instanceof Error ? error : new Error(errorMessage),
+      {
+        status,
+        message: errorMessage,
+        stack: errorStack,
+      },
+    );
+
     const errorData = {
       error: {
         message: this.getPublicErrorMessage(status),
@@ -57,48 +61,55 @@ export class ErrorPages {
         },
       },
     };
-    
+
     return new Response(JSON.stringify(errorData, null, 2), {
       status,
       headers: { 'Content-Type': 'application/json' },
     });
   }
-  
+
   /**
    * Generate 404 Not Found response
    */
   generateNotFoundResponse(path: string): Response {
     this.logger?.warn('ErrorPages: 404 Not Found', { path });
-    
-    return new Response(JSON.stringify({
-      error: {
-        message: 'Not Found',
-        status: 404,
-        details: `Endpoint ${path} not found`,
-        timestamp: new Date().toISOString(),
-        server: {
-          name: this.config.name,
-          version: this.config.version,
+
+    return new Response(
+      JSON.stringify(
+        {
+          error: {
+            message: 'Not Found',
+            status: 404,
+            details: `Endpoint ${path} not found`,
+            timestamp: new Date().toISOString(),
+            server: {
+              name: this.config.name,
+              version: this.config.version,
+            },
+          },
         },
+        null,
+        2,
+      ),
+      {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
       },
-    }, null, 2), {
-      status: 404,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    );
   }
-  
+
   /**
    * Generate HTML error page for OAuth and browser flows
    */
   generateErrorPage(error: string, title?: string): Response {
     const pageTitle = title || 'Server Error';
     const serverName = this.config.name || 'MCP Server';
-    
+
     this.logger?.warn('ErrorPages: Generating HTML error page', {
       title: pageTitle,
       error,
     });
-    
+
     const errorPage = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -325,76 +336,94 @@ export class ErrorPages {
     </script>
 </body>
 </html>`;
-    
+
     return new Response(errorPage, {
       status: 500,
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
     });
   }
-  
+
   /**
    * Generate OAuth-specific error page
    */
   generateOAuthErrorPage(error: string): Response {
     return this.generateErrorPage(error, 'Authentication Error');
   }
-  
+
   /**
    * Generate method not allowed response
    */
-  generateMethodNotAllowedResponse(method: string, path: string, allowedMethods?: string[]): Response {
+  generateMethodNotAllowedResponse(
+    method: string,
+    path: string,
+    allowedMethods?: string[],
+  ): Response {
     this.logger?.warn('ErrorPages: Method not allowed', {
       method,
       path,
       allowedMethods,
     });
-    
+
     const headers: HeadersInit = { 'Content-Type': 'application/json' };
-    
+
     if (allowedMethods && allowedMethods.length > 0) {
       headers['Allow'] = allowedMethods.join(', ');
     }
-    
-    return new Response(JSON.stringify({
-      error: {
-        message: 'Method Not Allowed',
+
+    return new Response(
+      JSON.stringify(
+        {
+          error: {
+            message: 'Method Not Allowed',
+            status: 405,
+            details: `Method ${method} not allowed for ${path}`,
+            allowed_methods: allowedMethods,
+            timestamp: new Date().toISOString(),
+          },
+        },
+        null,
+        2,
+      ),
+      {
         status: 405,
-        details: `Method ${method} not allowed for ${path}`,
-        allowed_methods: allowedMethods,
-        timestamp: new Date().toISOString(),
+        headers,
       },
-    }, null, 2), {
-      status: 405,
-      headers,
-    });
+    );
   }
-  
+
   /**
    * Generate rate limit exceeded response
    */
   generateRateLimitResponse(retryAfter?: number): Response {
     this.logger?.warn('ErrorPages: Rate limit exceeded', { retryAfter });
-    
+
     const headers: HeadersInit = { 'Content-Type': 'application/json' };
-    
+
     if (retryAfter) {
       headers['Retry-After'] = retryAfter.toString();
     }
-    
-    return new Response(JSON.stringify({
-      error: {
-        message: 'Too Many Requests',
+
+    return new Response(
+      JSON.stringify(
+        {
+          error: {
+            message: 'Too Many Requests',
+            status: 429,
+            details: 'Rate limit exceeded. Please try again later.',
+            retry_after: retryAfter,
+            timestamp: new Date().toISOString(),
+          },
+        },
+        null,
+        2,
+      ),
+      {
         status: 429,
-        details: 'Rate limit exceeded. Please try again later.',
-        retry_after: retryAfter,
-        timestamp: new Date().toISOString(),
+        headers,
       },
-    }, null, 2), {
-      status: 429,
-      headers,
-    });
+    );
   }
-  
+
   /**
    * Get public error message based on status code
    */
@@ -424,7 +453,7 @@ export class ErrorPages {
         return status >= 400 && status < 500 ? 'Client Error' : 'Server Error';
     }
   }
-  
+
   /**
    * Escape HTML to prevent XSS attacks
    */
@@ -436,15 +465,16 @@ export class ErrorPages {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
   }
-  
+
   /**
    * Generate maintenance mode page
    */
   generateMaintenancePage(message?: string): Response {
-    const maintenanceMessage = message || 'The server is currently undergoing maintenance. Please try again later.';
-    
+    const maintenanceMessage = message ||
+      'The server is currently undergoing maintenance. Please try again later.';
+
     this.logger?.info('ErrorPages: Serving maintenance page');
-    
+
     const maintenancePage = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -493,7 +523,7 @@ export class ErrorPages {
     </div>
 </body>
 </html>`;
-    
+
     return new Response(maintenancePage, {
       status: 503,
       headers: {

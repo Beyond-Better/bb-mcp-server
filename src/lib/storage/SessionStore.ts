@@ -1,6 +1,6 @@
 /**
  * Session Store - Generic session management for MCP servers
- * 
+ *
  * Provides a clean interface for managing user sessions with automatic cleanup
  * and expiration handling. Extracted patterns from the ActionStep MCP Server
  * transport and authentication services.
@@ -42,7 +42,7 @@ export class SessionStore {
   constructor(
     kvManager: KVManager,
     config: SessionStoreConfig = {},
-    logger?: Logger
+    logger?: Logger,
   ) {
     this.kvManager = kvManager;
     this.keyPrefix = config.keyPrefix ?? ['sessions'];
@@ -62,7 +62,7 @@ export class SessionStore {
   async storeSession(sessionId: string, sessionData: Omit<SessionData, 'id'>): Promise<void> {
     const now = Date.now();
     const expiresAt = sessionData.expiresAt || (now + this.defaultExpirationMs);
-    
+
     const fullSessionData: SessionData = {
       id: sessionId,
       ...sessionData,
@@ -75,12 +75,12 @@ export class SessionStore {
 
     try {
       await this.kvManager.set([...this.keyPrefix, sessionId], fullSessionData);
-      
+
       // Also store by user ID if provided for easy lookup
       if (sessionData.userId) {
         await this.kvManager.set(
-          [...this.keyPrefix, 'by_user', sessionData.userId, sessionId], 
-          { sessionId, createdAt: now }
+          [...this.keyPrefix, 'by_user', sessionData.userId, sessionId],
+          { sessionId, createdAt: now },
         );
       }
 
@@ -97,7 +97,7 @@ export class SessionStore {
   async getSession(sessionId: string): Promise<SessionData | undefined> {
     try {
       const sessionData = await this.kvManager.get<SessionData>([...this.keyPrefix, sessionId]);
-      
+
       if (!sessionData) {
         return undefined;
       }
@@ -134,7 +134,7 @@ export class SessionStore {
       };
 
       await this.kvManager.set([...this.keyPrefix, sessionId], updatedSession);
-      
+
       this.logger?.debug('SessionStore: Updated session', { sessionId });
     } catch (error) {
       this.logger?.error('SessionStore: Failed to update session', toError(error), { sessionId });
@@ -156,10 +156,10 @@ export class SessionStore {
     try {
       // Get session info first to clean up user index
       const sessionData = await this.kvManager.get<SessionData>([...this.keyPrefix, sessionId]);
-      
+
       // Delete main session record
       await this.kvManager.delete([...this.keyPrefix, sessionId]);
-      
+
       // Clean up user index if session had a userId
       if (sessionData?.userId) {
         await this.kvManager.delete([...this.keyPrefix, 'by_user', sessionData.userId, sessionId]);
@@ -179,7 +179,7 @@ export class SessionStore {
     try {
       const sessions: SessionData[] = [];
       const userSessionRefs = await this.kvManager.list<{ sessionId: string; createdAt: number }>(
-        [...this.keyPrefix, 'by_user', userId]
+        [...this.keyPrefix, 'by_user', userId],
       );
 
       for (const { value } of userSessionRefs) {
@@ -212,7 +212,9 @@ export class SessionStore {
       this.logger?.info('SessionStore: Deleted user sessions', { userId, deletedCount });
       return deletedCount;
     } catch (error) {
-      this.logger?.error('SessionStore: Failed to delete user sessions', toError(error), { userId });
+      this.logger?.error('SessionStore: Failed to delete user sessions', toError(error), {
+        userId,
+      });
       return 0;
     }
   }
@@ -228,19 +230,19 @@ export class SessionStore {
       // Only look at direct session entries, not user index entries
       const sessionEntries = [];
       const allEntries = await this.kvManager.list<SessionData>(this.keyPrefix);
-      
+
       for (const entry of allEntries) {
         // Skip user index entries (they contain 'by_user' in the key path)
         const keyPath = entry.key as string[];
         if (keyPath.includes('by_user')) {
           continue;
         }
-        
+
         if (entry.value && typeof entry.value === 'object' && 'id' in entry.value) {
           sessionEntries.push(entry.value);
         }
       }
-      
+
       for (const session of sessionEntries) {
         if (session.expiresAt < cutoffTime) {
           await this.deleteSession(session.id);
@@ -275,14 +277,14 @@ export class SessionStore {
       let newestTime: number | null = null;
 
       const allEntries = await this.kvManager.list<SessionData>(this.keyPrefix);
-      
+
       for (const entry of allEntries) {
         // Skip user index entries (they contain 'by_user' in the key path)
         const keyPath = entry.key as string[];
         if (keyPath.includes('by_user')) {
           continue;
         }
-        
+
         const session = entry.value;
         if (session && typeof session === 'object' && 'id' in session) {
           total++;

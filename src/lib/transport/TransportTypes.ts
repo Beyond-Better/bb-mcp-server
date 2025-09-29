@@ -41,7 +41,7 @@ export interface HttpTransportConfig {
   maxRequestSize: number; // default: 1MB
   enableCORS: boolean; // default: true
   corsOrigins: string[]; // default: ['*']
-  
+
   // 🚨 Compatibility configuration - DO NOT DISABLE
   preserveCompatibilityMode: boolean; // default: true - CRITICAL FOR MCP SDK
   enableTransportPersistence?: boolean;
@@ -267,9 +267,9 @@ export interface TransportDependencies {
   kvManager: KVManager;
   sessionStore: SessionStore;
   eventStore: TransportEventStore;
-  
-  // From Phase 2 (if needed)
-  workflowRegistry?: WorkflowRegistry;
+
+  // // From Phase 2 (if needed)
+  // workflowRegistry?: WorkflowRegistry;
 }
 
 // Authentication result (from OAuth integration)

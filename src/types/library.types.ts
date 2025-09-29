@@ -1,6 +1,6 @@
 /**
  * Core library type definitions for bb-mcp-server
- * 
+ *
  * Defines internal types and interfaces used throughout the library.
  */
 
@@ -24,12 +24,12 @@ export interface LibraryConfig {
    * Logger instance for the library to use
    */
   logger?: Logger;
-  
+
   /**
    * Enable debug mode for additional logging
    */
   debug?: boolean;
-  
+
   /**
    * Custom key prefixes for KV storage
    */
@@ -58,12 +58,12 @@ export interface LibraryService {
    * Initialize the service
    */
   initialize(): Promise<void>;
-  
+
   /**
    * Clean up and close the service
    */
   close(): Promise<void>;
-  
+
   /**
    * Check if the service is initialized
    */
@@ -74,8 +74,14 @@ export interface LibraryService {
  * Event emitter interface for library components
  */
 export interface EventEmitter<T extends Record<string, unknown[]> = Record<string, unknown[]>> {
-  on<K extends keyof T>(event: K, listener: (...args: T[K] extends unknown[] ? T[K] : never) => void): void;
-  off<K extends keyof T>(event: K, listener: (...args: T[K] extends unknown[] ? T[K] : never) => void): void;
+  on<K extends keyof T>(
+    event: K,
+    listener: (...args: T[K] extends unknown[] ? T[K] : never) => void,
+  ): void;
+  off<K extends keyof T>(
+    event: K,
+    listener: (...args: T[K] extends unknown[] ? T[K] : never) => void,
+  ): void;
   emit<K extends keyof T>(event: K, ...args: T[K] extends unknown[] ? T[K] : never): boolean;
 }
 

@@ -1,8 +1,8 @@
 /**
  * AuthorizationHandler Unit Tests
- * 
+ *
  * 🔒 SECURITY-CRITICAL: Comprehensive tests for OAuth authorization code flow
- * 
+ *
  * Test Coverage Requirements:
  * - 100% coverage for security-critical authorization operations
  * - RFC 6749 Authorization Code Grant flow compliance
@@ -12,17 +12,17 @@
  * - Error handling and edge cases
  */
 
-import { assertEquals, assertExists, assert } from '@std/assert';
+import { assert, assertEquals, assertExists } from '@std/assert';
 import { AuthorizationHandler } from '../../../src/lib/auth/AuthorizationHandler.ts';
 import { KVManager } from '../../../src/lib/storage/KVManager.ts';
 import { PKCEHandler } from '../../../src/lib/auth/PKCEHandler.ts';
 import { ClientRegistry } from '../../../src/lib/auth/ClientRegistry.ts';
 import { TokenManager } from '../../../src/lib/auth/TokenManager.ts';
 import type { Logger } from '../../../src/types/library.types.ts';
-import type { 
-  AuthorizeRequest, 
+import type {
+  AuthorizationConfig,
+  AuthorizeRequest,
   MCPAuthorizationRequest,
-  AuthorizationConfig 
 } from '../../../src/lib/auth/OAuthTypes.ts';
 
 // Mock logger for testing
@@ -49,14 +49,14 @@ async function createTestDependencies() {
   await kvManager.initialize();
 
   const pkceHandler = new PKCEHandler(mockLogger);
-  
+
   const clientRegistry = new ClientRegistry(
     {
       enableDynamicRegistration: true,
       requireHTTPS: false, // Disable for testing
       allowedRedirectHosts: ['localhost', 'test.example.com'],
     },
-    { kvManager, logger: mockLogger }
+    { kvManager, logger: mockLogger },
   );
 
   const tokenManager = new TokenManager(
@@ -65,7 +65,7 @@ async function createTestDependencies() {
       refreshTokenExpiryMs: 30 * 24 * 3600 * 1000,
       authorizationCodeExpiryMs: 10 * 60 * 1000,
     },
-    { kvManager, logger: mockLogger }
+    { kvManager, logger: mockLogger },
   );
 
   return {
@@ -80,7 +80,7 @@ Deno.test({
   name: 'AuthorizationHandler - Initialize with Configuration',
   async fn() {
     const dependencies = await createTestDependencies();
-    
+
     const authHandler = new AuthorizationHandler(testAuthConfig, {
       ...dependencies,
       logger: mockLogger,
@@ -329,7 +329,7 @@ Deno.test({
       clientRegistration.client_id,
       'test_user_123',
       'http://localhost:3000/callback',
-      codeChallenge
+      codeChallenge,
     );
 
     // Test successful code exchange
@@ -337,7 +337,7 @@ Deno.test({
       authCode,
       clientRegistration.client_id,
       'http://localhost:3000/callback',
-      codeVerifier
+      codeVerifier,
     );
 
     assertEquals(exchangeResult.success, true);
@@ -347,7 +347,7 @@ Deno.test({
       authCode,
       clientRegistration.client_id,
       'http://localhost:3000/callback',
-      codeVerifier
+      codeVerifier,
     );
 
     assertEquals(secondExchange.success, false);
@@ -380,7 +380,7 @@ Deno.test({
       clientRegistration.client_id,
       'test_user_123',
       'http://localhost:3000/callback',
-      codeChallenge
+      codeChallenge,
     );
 
     // Test with wrong code verifier
@@ -388,7 +388,7 @@ Deno.test({
       authCode,
       clientRegistration.client_id,
       'http://localhost:3000/callback',
-      'wrong-code-verifier-that-should-fail'
+      'wrong-code-verifier-that-should-fail',
     );
 
     assertEquals(wrongVerifierResult.success, false);
@@ -418,14 +418,14 @@ Deno.test({
     const authCode = await dependencies.tokenManager.generateAuthorizationCode(
       clientRegistration.client_id,
       'test_user_123',
-      'http://localhost:3000/callback'
+      'http://localhost:3000/callback',
     );
 
     // Test with wrong client ID
     const wrongClientResult = await authHandler.exchangeAuthorizationCode(
       authCode,
       'wrong_client_id',
-      'http://localhost:3000/callback'
+      'http://localhost:3000/callback',
     );
 
     assertEquals(wrongClientResult.success, false);

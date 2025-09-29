@@ -1,6 +1,6 @@
 /**
  * Logger - Generic logging system for bb-mcp-server library
- * 
+ *
  * Provides structured logging with configurable levels and formats.
  * Extracted and generalized from ActionStep MCP Server's ConsoleLogger.
  */
@@ -75,15 +75,17 @@ export class Logger {
    */
   error(message: string, error?: Error, data?: unknown): void {
     if (this.shouldLog('error')) {
-      const errorData = error ? {
-        error: {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-        },
-        ...(typeof data === 'object' && data !== null ? data : {}),
-      } : data;
-      
+      const errorData = error
+        ? {
+          error: {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+          },
+          ...(typeof data === 'object' && data !== null ? data : {}),
+        }
+        : data;
+
       this.writeLog('error', message, errorData);
     }
   }
@@ -99,8 +101,8 @@ export class Logger {
       } else {
         // For text format, use stderr for consistency
         // Create a formatted debug message
-        const timestamp = this.config.includeTimestamp 
-          ? `[${format(new Date(), 'dd-MM-yyyy hh:mm:ss.SSS')}] ` 
+        const timestamp = this.config.includeTimestamp
+          ? `[${format(new Date(), 'dd-MM-yyyy hh:mm:ss.SSS')}] `
           : '';
         const colorizedDebug = this.config.colorize ? cyan('DEBUG') : 'DEBUG';
         console.error(`${timestamp}${colorizedDebug}: Debug object:`);
@@ -144,7 +146,7 @@ export class Logger {
    */
   private writeLog(level: LogLevel, message: string, data?: unknown): void {
     const logEntry = this.formatLogEntry(level, message, data);
-    
+
     // Use console.error for thread-safe stderr output (MCP compatible)
     // This avoids WritableStream locking issues with concurrent log calls
     console.error(logEntry);
@@ -186,7 +188,7 @@ export class Logger {
    */
   private formatTextEntry(level: LogLevel, message: string, data?: unknown): string {
     let formattedMessage = message;
-    
+
     if (this.config.colorize) {
       formattedMessage = this.colorMessage(message, level);
     }
@@ -204,7 +206,9 @@ export class Logger {
       if (sourceMatch) {
         const [, source, actualMessage] = sourceMatch;
         const coloredSource = this.config.colorize ? bold(blue(source ?? '')) : (source ?? '');
-        const coloredActualMessage = this.config.colorize ? this.colorMessage(actualMessage ?? '', level) : (actualMessage ?? '');
+        const coloredActualMessage = this.config.colorize
+          ? this.colorMessage(actualMessage ?? '', level)
+          : (actualMessage ?? '');
         formattedMessage = `${coloredSource}: ${coloredActualMessage}`;
       }
     }
@@ -250,8 +254,6 @@ export class Logger {
     }
     return 'info';
   }
-
-
 }
 
 /**

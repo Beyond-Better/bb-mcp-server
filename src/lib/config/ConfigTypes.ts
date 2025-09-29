@@ -1,6 +1,6 @@
 /**
  * Configuration type definitions for bb-mcp-server library
- * 
+ *
  * Defines interfaces for server configuration, transport options, and
  * third-party integrations. Extracted and generalized from ActionStep
  * MCP Server configuration.
@@ -112,6 +112,7 @@ export interface TransportConfig {
     enableCORS: boolean;
     corsOrigins: string[];
     preserveCompatibilityMode: boolean;
+    allowInsecure: boolean; // Allow HTTP transport without OAuth provider (development only)
     // Optional transport persistence settings
     enableTransportPersistence?: boolean;
     sessionRestoreEnabled?: boolean;

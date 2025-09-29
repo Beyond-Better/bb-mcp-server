@@ -1,10 +1,10 @@
 /**
  * Deno KV Implementation of EventStore for MCP Transport Resumability
- * 
+ *
  * This implementation provides persistent event storage for MCP transports,
  * enabling session resumability across server restarts. It replaces the
  * in-memory EventStore with a Deno KV-backed solution.
- * 
+ *
  * Extracted from ActionStep MCP Server for use in the bb-mcp-server library.
  */
 
@@ -42,9 +42,9 @@ export class TransportEventStore implements EventStore {
   private logger: Logger | undefined;
 
   constructor(
-    kv: Deno.Kv, 
-    keyPrefix: readonly string[] = ['events'], 
-    logger?: Logger
+    kv: Deno.Kv,
+    keyPrefix: readonly string[] = ['events'],
+    logger?: Logger,
   ) {
     this.kv = kv;
     this.keyPrefix = keyPrefix;
@@ -74,7 +74,7 @@ export class TransportEventStore implements EventStore {
       };
 
       await this.kv.set([...this.keyPrefix, 'transport_logs', event.type, eventId], logEntry);
-      
+
       // Also log to the logger if available
       if (this.logger) {
         const logMessage = `Transport: ${event.message}`;
@@ -85,7 +85,7 @@ export class TransportEventStore implements EventStore {
           sessionId: event.sessionId,
           data: event.data,
         };
-        
+
         switch (event.level) {
           case 'error':
             this.logger.error(logMessage, event.error, logData);
@@ -142,7 +142,7 @@ export class TransportEventStore implements EventStore {
   async storeEvent(streamId: string, message: JSONRPCMessage): Promise<string> {
     const eventId = this.generateEventId(streamId);
     const timestamp = Date.now();
-    
+
     const storedEvent: StoredEvent = {
       eventId,
       streamId,
@@ -164,17 +164,19 @@ export class TransportEventStore implements EventStore {
       try {
         await this.updateStreamMetadata(streamId, eventId);
       } catch (error) {
-        this.logger?.warn('TransportEventStore: Failed to update stream metadata', { 
-          streamId, 
-          eventId, 
-          error 
+        this.logger?.warn('TransportEventStore: Failed to update stream metadata', {
+          streamId,
+          eventId,
+          error,
         });
       }
 
       this.logger?.debug('TransportEventStore: Stored event', { streamId, eventId });
       return eventId;
     } catch (error) {
-      this.logger?.error('TransportEventStore: Failed to store event', toError(error), { streamId });
+      this.logger?.error('TransportEventStore: Failed to store event', toError(error), {
+        streamId,
+      });
       throw error;
     }
   }
@@ -185,7 +187,7 @@ export class TransportEventStore implements EventStore {
    */
   async replayEventsAfter(
     lastEventId: string,
-    { send }: { send: (eventId: string, message: JSONRPCMessage) => Promise<void> }
+    { send }: { send: (eventId: string, message: JSONRPCMessage) => Promise<void> },
   ): Promise<string> {
     if (!lastEventId) {
       return '';
@@ -205,9 +207,9 @@ export class TransportEventStore implements EventStore {
 
       // Iterate through events for the stream, ordered by eventId
       const prefix = [...this.keyPrefix, 'stream', streamId];
-      const iter = this.kv.list<StoredEvent>({ prefix }, { 
+      const iter = this.kv.list<StoredEvent>({ prefix }, {
         consistency: 'strong',
-        batchSize: 100 
+        batchSize: 100,
       });
 
       const events: Array<{ eventId: string; event: StoredEvent }> = [];
@@ -225,7 +227,7 @@ export class TransportEventStore implements EventStore {
 
       // Find the position of the last event and replay everything after it
       const lastEventIndex = events.findIndex(({ eventId }) => eventId === lastEventId);
-      
+
       if (lastEventIndex !== -1) {
         // Replay all events after the last event
         for (let i = lastEventIndex + 1; i < events.length; i++) {
@@ -239,17 +241,17 @@ export class TransportEventStore implements EventStore {
         foundLastEvent = true;
       }
 
-      this.logger?.info('TransportEventStore: Replayed events', { 
-        streamId, 
-        lastEventId, 
-        replayedCount 
+      this.logger?.info('TransportEventStore: Replayed events', {
+        streamId,
+        lastEventId,
+        replayedCount,
       });
 
       return streamId;
     } catch (error) {
-      this.logger?.error('TransportEventStore: Failed to replay events', toError(error), { 
-        streamId, 
-        lastEventId
+      this.logger?.error('TransportEventStore: Failed to replay events', toError(error), {
+        streamId,
+        lastEventId,
       });
       return '';
     }
@@ -260,10 +262,16 @@ export class TransportEventStore implements EventStore {
    */
   async getStreamMetadata(streamId: string): Promise<StreamMetadata | null> {
     try {
-      const result = await this.kv.get<StreamMetadata>([...this.keyPrefix, 'stream_metadata', streamId]);
+      const result = await this.kv.get<StreamMetadata>([
+        ...this.keyPrefix,
+        'stream_metadata',
+        streamId,
+      ]);
       return result.value;
     } catch (error) {
-      this.logger?.error('TransportEventStore: Failed to get stream metadata', toError(error), { streamId });
+      this.logger?.error('TransportEventStore: Failed to get stream metadata', toError(error), {
+        streamId,
+      });
       return null;
     }
   }
@@ -302,9 +310,9 @@ export class TransportEventStore implements EventStore {
       const iter = this.kv.list<StoredEvent>({ prefix });
       for await (const entry of iter) {
         if (entry.value) {
-          events.push({ 
-            key: entry.key, 
-            timestamp: entry.value.timestamp 
+          events.push({
+            key: entry.key,
+            timestamp: entry.value.timestamp,
           });
         }
       }
@@ -324,32 +332,34 @@ export class TransportEventStore implements EventStore {
       const batchSize = 10;
       for (let i = 0; i < toDelete.length; i += batchSize) {
         const batch = toDelete.slice(i, i + batchSize);
-        
+
         const atomic = this.kv.atomic();
         for (const { key } of batch) {
           atomic.delete(key);
         }
-        
+
         const result = await atomic.commit();
         if (result.ok) {
           deletedCount += batch.length;
         } else {
-          this.logger?.warn('TransportEventStore: Failed to delete batch of old events', { 
-            streamId, 
-            batchStart: i 
+          this.logger?.warn('TransportEventStore: Failed to delete batch of old events', {
+            streamId,
+            batchStart: i,
           });
         }
       }
 
-      this.logger?.info('TransportEventStore: Cleaned up old events', { 
-        streamId, 
-        deletedCount, 
-        remainingCount: events.length - deletedCount 
+      this.logger?.info('TransportEventStore: Cleaned up old events', {
+        streamId,
+        deletedCount,
+        remainingCount: events.length - deletedCount,
       });
 
       return deletedCount;
     } catch (error) {
-      this.logger?.error('TransportEventStore: Failed to cleanup old events', toError(error), { streamId });
+      this.logger?.error('TransportEventStore: Failed to cleanup old events', toError(error), {
+        streamId,
+      });
       return 0;
     }
   }
@@ -359,7 +369,7 @@ export class TransportEventStore implements EventStore {
    */
   private async updateStreamMetadata(streamId: string, lastEventId: string): Promise<void> {
     const metadataKey = [...this.keyPrefix, 'stream_metadata', streamId];
-    
+
     try {
       const existing = await this.kv.get<StreamMetadata>(metadataKey);
       const metadata: StreamMetadata = existing.value || {
@@ -375,7 +385,10 @@ export class TransportEventStore implements EventStore {
       await this.kv.set(metadataKey, metadata);
     } catch (error) {
       // Non-critical error, just log it
-      this.logger?.debug('TransportEventStore: Failed to update stream metadata', { streamId, error });
+      this.logger?.debug('TransportEventStore: Failed to update stream metadata', {
+        streamId,
+        error,
+      });
     }
   }
 }

@@ -1,10 +1,10 @@
 /**
  * OAuth Metadata - Authorization Server Metadata (RFC 8414)
- * 
- * 🔒 SECURITY-CRITICAL: This component generates OAuth 2.0 Authorization Server 
- * Metadata per RFC 8414. The metadata endpoint provides clients with information 
+ *
+ * 🔒 SECURITY-CRITICAL: This component generates OAuth 2.0 Authorization Server
+ * Metadata per RFC 8414. The metadata endpoint provides clients with information
  * about the authorization server's capabilities, endpoints, and supported features.
- * 
+ *
  * Extracted from: actionstep-mcp-server/src/server/HttpServer.ts (metadata endpoint)
  * Security Requirements:
  * - RFC 8414 full compliance for authorization server metadata
@@ -16,10 +16,7 @@
 
 import type { Logger } from '../../types/library.types.ts';
 import { toError } from '../utils/Error.ts';
-import type {
-  AuthorizationServerMetadata,
-  OAuthProviderConfig,
-} from './OAuthTypes.ts';
+import type { AuthorizationServerMetadata, OAuthProviderConfig } from './OAuthTypes.ts';
 
 /**
  * OAuth metadata configuration
@@ -57,11 +54,11 @@ export interface OAuthMetadataConfig {
 
 /**
  * 🔒 SECURITY-CRITICAL: OAuth 2.0 Authorization Server Metadata Generator
- * 
+ *
  * Implements RFC 8414 OAuth 2.0 Authorization Server Metadata specification.
  * Provides clients with standardized information about the authorization server's
  * capabilities, endpoints, and supported features.
- * 
+ *
  * Key Security Features:
  * - RFC 8414 compliant metadata generation
  * - Accurate capability advertisement to prevent client misconfigurations
@@ -102,14 +99,14 @@ export class OAuthMetadata {
 
   /**
    * 🔒 SECURITY-CRITICAL: Generate OAuth 2.0 Authorization Server Metadata
-   * 
+   *
    * Generates RFC 8414 compliant authorization server metadata that accurately
    * represents the server's capabilities and endpoints. This metadata is used
    * by OAuth clients for automatic configuration and capability discovery.
    */
   generateMetadata(): AuthorizationServerMetadata {
     const metadataId = Math.random().toString(36).substring(2, 15);
-    
+
     this.logger?.info(`OAuthMetadata: Generating authorization server metadata [${metadataId}]`, {
       metadataId,
       issuer: this.config.issuer,
@@ -122,22 +119,22 @@ export class OAuthMetadata {
         issuer: this.config.issuer,
         authorization_endpoint: this.buildEndpointUrl(this.config.authorizationEndpoint!),
         token_endpoint: this.buildEndpointUrl(this.config.tokenEndpoint!),
-        
+
         // Optional endpoints
         ...(this.config.enableDynamicRegistration && {
           registration_endpoint: this.buildEndpointUrl(this.config.registrationEndpoint!),
         }),
         // Always include revocation endpoint
         revocation_endpoint: this.buildEndpointUrl(this.config.revocationEndpoint!),
-        
+
         // Supported capabilities
         grant_types_supported: [...this.config.supportedGrantTypes],
         response_types_supported: [...this.config.supportedResponseTypes],
         scopes_supported: [...this.config.supportedScopes],
-        
+
         // Token endpoint authentication methods
         token_endpoint_auth_methods_supported: this.getTokenEndpointAuthMethods(),
-        
+
         // PKCE support (RFC 7636)
         code_challenge_methods_supported: this.getCodeChallengeMethods(),
       };
@@ -148,42 +145,48 @@ export class OAuthMetadata {
         server_version: '1.0.0',
         supported_workflows: ['oauth_authorization', 'session_management', 'token_validation'],
       };
-      
-      metadata.mcp_extensions = this.config.mcpExtensions 
+
+      metadata.mcp_extensions = this.config.mcpExtensions
         ? {
-            server_name: this.config.mcpExtensions.serverName,
-            server_version: this.config.mcpExtensions.serverVersion,
-            supported_workflows: [...this.config.mcpExtensions.supportedWorkflows],
-          }
+          server_name: this.config.mcpExtensions.serverName,
+          server_version: this.config.mcpExtensions.serverVersion,
+          supported_workflows: [...this.config.mcpExtensions.supportedWorkflows],
+        }
         : defaultMcpExtensions;
 
-      this.logger?.info(`OAuthMetadata: Generated authorization server metadata successfully [${metadataId}]`, {
-        metadataId,
-        endpoints: {
-          authorization: !!metadata.authorization_endpoint,
-          token: !!metadata.token_endpoint,
-          registration: !!metadata.registration_endpoint,
-          revocation: !!metadata.revocation_endpoint,
+      this.logger?.info(
+        `OAuthMetadata: Generated authorization server metadata successfully [${metadataId}]`,
+        {
+          metadataId,
+          endpoints: {
+            authorization: !!metadata.authorization_endpoint,
+            token: !!metadata.token_endpoint,
+            registration: !!metadata.registration_endpoint,
+            revocation: !!metadata.revocation_endpoint,
+          },
+          capabilities: {
+            grantTypes: metadata.grant_types_supported.length,
+            responseTypes: metadata.response_types_supported.length,
+            scopes: metadata.scopes_supported.length,
+            pkce: metadata.code_challenge_methods_supported.length > 0,
+            mcpExtensions: !!metadata.mcp_extensions,
+          },
         },
-        capabilities: {
-          grantTypes: metadata.grant_types_supported.length,
-          responseTypes: metadata.response_types_supported.length,
-          scopes: metadata.scopes_supported.length,
-          pkce: metadata.code_challenge_methods_supported.length > 0,
-          mcpExtensions: !!metadata.mcp_extensions,
-        },
-      });
+      );
 
       return metadata;
     } catch (error) {
-      this.logger?.error(`OAuthMetadata: Failed to generate metadata [${metadataId}]:`, toError(error));
+      this.logger?.error(
+        `OAuthMetadata: Failed to generate metadata [${metadataId}]:`,
+        toError(error),
+      );
       throw error;
     }
   }
 
   /**
    * Get supported token endpoint authentication methods
-   * 
+   *
    * Supports both public clients (PKCE) and confidential clients with secrets.
    */
   private getTokenEndpointAuthMethods(): string[] {
@@ -192,18 +195,18 @@ export class OAuthMetadata {
       'client_secret_basic', // Basic authentication with client credentials
       'client_secret_post', // POST body authentication with client credentials
     ];
-    
+
     this.logger?.debug('OAuthMetadata: Determined token endpoint auth methods', {
       methods,
       primaryMethod: 'Multiple methods supported',
     });
-    
+
     return methods;
   }
 
   /**
    * Get supported PKCE code challenge methods
-   * 
+   *
    * Returns the PKCE methods supported by the authorization server.
    * We only support S256 for security (plain method is insecure).
    */
@@ -212,21 +215,21 @@ export class OAuthMetadata {
       this.logger?.debug('OAuthMetadata: PKCE disabled, no code challenge methods');
       return [];
     }
-    
+
     // Only support S256 for security (RFC 7636 recommendation)
     const methods = ['S256'];
-    
+
     this.logger?.debug('OAuthMetadata: Determined PKCE code challenge methods', {
       methods,
       security: 'S256 only (plain method excluded for security)',
     });
-    
+
     return methods;
   }
 
   /**
    * Build complete endpoint URL from relative path
-   * 
+   *
    * Combines the issuer URL with the endpoint path to create complete URLs
    * for the authorization server metadata.
    */
@@ -234,23 +237,23 @@ export class OAuthMetadata {
     try {
       // Remove leading slash from endpoint path if present
       const cleanPath = endpointPath.startsWith('/') ? endpointPath.slice(1) : endpointPath;
-      
+
       // Remove trailing slash from issuer if present
-      const cleanIssuer = this.config.issuer.endsWith('/') 
-        ? this.config.issuer.slice(0, -1) 
+      const cleanIssuer = this.config.issuer.endsWith('/')
+        ? this.config.issuer.slice(0, -1)
         : this.config.issuer;
-      
+
       const fullUrl = `${cleanIssuer}/${cleanPath}`;
-      
+
       // Validate the resulting URL
       new URL(fullUrl); // Throws if invalid
-      
+
       this.logger?.debug('OAuthMetadata: Built endpoint URL', {
         endpointPath,
         issuer: this.config.issuer,
         fullUrl,
       });
-      
+
       return fullUrl;
     } catch (error) {
       this.logger?.error('OAuthMetadata: Failed to build endpoint URL:', toError(error), {
@@ -263,7 +266,7 @@ export class OAuthMetadata {
 
   /**
    * Validate metadata configuration
-   * 
+   *
    * Ensures that the metadata configuration is valid and complete.
    * This helps catch configuration errors early.
    */
@@ -297,14 +300,16 @@ export class OAuthMetadata {
     }
 
     // Validate PKCE configuration
-    if (this.config.enablePKCE && 
-        this.config.supportedGrantTypes.includes('authorization_code') &&
-        !this.config.supportedResponseTypes.includes('code')) {
+    if (
+      this.config.enablePKCE &&
+      this.config.supportedGrantTypes.includes('authorization_code') &&
+      !this.config.supportedResponseTypes.includes('code')
+    ) {
       errors.push('PKCE requires code response type support');
     }
 
     const isValid = errors.length === 0;
-    
+
     this.logger?.info('OAuthMetadata: Configuration validation completed', {
       valid: isValid,
       errorCount: errors.length,
@@ -319,13 +324,13 @@ export class OAuthMetadata {
 
   /**
    * Create OAuth metadata from OAuth provider config
-   * 
+   *
    * Utility method to create OAuthMetadata instance from OAuthProviderConfig.
    * This provides a convenient way to integrate with the main OAuth provider.
    */
   static fromProviderConfig(
     providerConfig: OAuthProviderConfig,
-    logger?: Logger
+    logger?: Logger,
   ): OAuthMetadata {
     const metadataConfig: OAuthMetadataConfig = {
       issuer: providerConfig.issuer,
@@ -341,7 +346,7 @@ export class OAuthMetadata {
 
   /**
    * Get the well-known metadata endpoint path
-   * 
+   *
    * Returns the standard RFC 8414 metadata endpoint path.
    */
   static getMetadataEndpointPath(): string {
@@ -350,7 +355,7 @@ export class OAuthMetadata {
 
   /**
    * Get metadata as JSON string
-   * 
+   *
    * Convenience method for HTTP responses.
    */
   getMetadataJSON(): string {
@@ -394,7 +399,7 @@ export class OAuthMetadata {
 
   /**
    * Update configuration
-   * 
+   *
    * Allows runtime configuration updates (useful for dynamic server configuration).
    */
   updateConfig(updates: Partial<OAuthMetadataConfig>): void {

@@ -1,6 +1,6 @@
 /**
  * Credential Store - Secure credential management for OAuth and API tokens
- * 
+ *
  * Provides encrypted storage and management of OAuth credentials, API keys,
  * and other sensitive authentication data. Extracted patterns from ActionStep
  * MCP Server's OAuth and authentication services.
@@ -39,7 +39,7 @@ export class CredentialStore {
   constructor(
     kvManager: KVManager,
     config: CredentialStoreConfig = {},
-    logger?: Logger
+    logger?: Logger,
   ) {
     this.kvManager = kvManager;
     this.keyPrefix = config.keyPrefix ?? ['credentials'];
@@ -51,13 +51,13 @@ export class CredentialStore {
    * Store OAuth credentials for a user and provider
    */
   async storeCredentials(
-    userId: string, 
-    provider: string, 
-    credentials: OAuthCredentials
+    userId: string,
+    provider: string,
+    credentials: OAuthCredentials,
   ): Promise<void> {
     try {
       const credentialKey = [...this.keyPrefix, provider, userId];
-      
+
       const credentialData = {
         ...credentials,
         storedAt: Date.now(),
@@ -65,7 +65,7 @@ export class CredentialStore {
       };
 
       await this.kvManager.set(credentialKey, credentialData);
-      
+
       // Store user index for easy lookup
       const userIndexKey = [...this.keyPrefix, 'by_user', userId, provider];
       await this.kvManager.set(userIndexKey, {
@@ -76,7 +76,10 @@ export class CredentialStore {
 
       this.logger?.debug('CredentialStore: Stored credentials', { userId, provider });
     } catch (error) {
-      this.logger?.error('CredentialStore: Failed to store credentials', toError(error), { userId, provider });
+      this.logger?.error('CredentialStore: Failed to store credentials', toError(error), {
+        userId,
+        provider,
+      });
       throw error;
     }
   }
@@ -85,16 +88,18 @@ export class CredentialStore {
    * Get OAuth credentials for a user and provider
    */
   async getCredentials(
-    userId: string, 
-    provider: string
+    userId: string,
+    provider: string,
   ): Promise<OAuthCredentials | null> {
     try {
       const credentialKey = [...this.keyPrefix, provider, userId];
-      const credentials = await this.kvManager.get<OAuthCredentials & { 
-        storedAt: number; 
-        lastUsedAt: number; 
-      }>(credentialKey);
-      
+      const credentials = await this.kvManager.get<
+        OAuthCredentials & {
+          storedAt: number;
+          lastUsedAt: number;
+        }
+      >(credentialKey);
+
       if (!credentials) {
         return null;
       }
@@ -102,11 +107,11 @@ export class CredentialStore {
       // Check if credentials are expired (with buffer)
       const now = Date.now();
       if (credentials.expiresAt <= now + this.tokenRefreshBuffer) {
-        this.logger?.debug('CredentialStore: Credentials expired or expiring soon', { 
-          userId, 
-          provider, 
+        this.logger?.debug('CredentialStore: Credentials expired or expiring soon', {
+          userId,
+          provider,
           expiresAt: credentials.expiresAt,
-          now 
+          now,
         });
         return null;
       }
@@ -118,7 +123,10 @@ export class CredentialStore {
       const { storedAt, lastUsedAt, ...publicCredentials } = credentials;
       return publicCredentials;
     } catch (error) {
-      this.logger?.error('CredentialStore: Failed to get credentials', toError(error), { userId, provider });
+      this.logger?.error('CredentialStore: Failed to get credentials', toError(error), {
+        userId,
+        provider,
+      });
       return null;
     }
   }
@@ -127,17 +135,19 @@ export class CredentialStore {
    * Update existing credentials (e.g., after token refresh)
    */
   async updateCredentials(
-    userId: string, 
-    provider: string, 
-    updates: Partial<OAuthCredentials>
+    userId: string,
+    provider: string,
+    updates: Partial<OAuthCredentials>,
   ): Promise<void> {
     try {
       const credentialKey = [...this.keyPrefix, provider, userId];
-      const existing = await this.kvManager.get<OAuthCredentials & { 
-        storedAt: number; 
-        lastUsedAt: number; 
-      }>(credentialKey);
-      
+      const existing = await this.kvManager.get<
+        OAuthCredentials & {
+          storedAt: number;
+          lastUsedAt: number;
+        }
+      >(credentialKey);
+
       if (!existing) {
         throw new Error(`Credentials not found for user ${userId} and provider ${provider}`);
       }
@@ -149,7 +159,7 @@ export class CredentialStore {
       };
 
       await this.kvManager.set(credentialKey, updatedCredentials);
-      
+
       // Update user index if expiration changed
       if (updates.expiresAt) {
         const userIndexKey = [...this.keyPrefix, 'by_user', userId, provider];
@@ -162,7 +172,10 @@ export class CredentialStore {
 
       this.logger?.debug('CredentialStore: Updated credentials', { userId, provider });
     } catch (error) {
-      this.logger?.error('CredentialStore: Failed to update credentials', toError(error), { userId, provider });
+      this.logger?.error('CredentialStore: Failed to update credentials', toError(error), {
+        userId,
+        provider,
+      });
       throw error;
     }
   }
@@ -174,13 +187,16 @@ export class CredentialStore {
     try {
       const credentialKey = [...this.keyPrefix, provider, userId];
       const userIndexKey = [...this.keyPrefix, 'by_user', userId, provider];
-      
+
       await this.kvManager.delete(credentialKey);
       await this.kvManager.delete(userIndexKey);
 
       this.logger?.debug('CredentialStore: Deleted credentials', { userId, provider });
     } catch (error) {
-      this.logger?.error('CredentialStore: Failed to delete credentials', toError(error), { userId, provider });
+      this.logger?.error('CredentialStore: Failed to delete credentials', toError(error), {
+        userId,
+        provider,
+      });
       throw error;
     }
   }
@@ -191,12 +207,14 @@ export class CredentialStore {
   async getUserProviders(userId: string): Promise<string[]> {
     try {
       const userIndexEntries = await this.kvManager.list<{ provider: string }>(
-        [...this.keyPrefix, 'by_user', userId]
+        [...this.keyPrefix, 'by_user', userId],
       );
-      
-      return userIndexEntries.map(entry => entry.value.provider);
+
+      return userIndexEntries.map((entry) => entry.value.provider);
     } catch (error) {
-      this.logger?.error('CredentialStore: Failed to get user providers', toError(error), { userId });
+      this.logger?.error('CredentialStore: Failed to get user providers', toError(error), {
+        userId,
+      });
       return [];
     }
   }
@@ -217,7 +235,9 @@ export class CredentialStore {
       this.logger?.info('CredentialStore: Deleted all user credentials', { userId, deletedCount });
       return deletedCount;
     } catch (error) {
-      this.logger?.error('CredentialStore: Failed to delete user credentials', toError(error), { userId });
+      this.logger?.error('CredentialStore: Failed to delete user credentials', toError(error), {
+        userId,
+      });
       return 0;
     }
   }
@@ -233,31 +253,33 @@ export class CredentialStore {
   /**
    * Get credentials that are expiring soon (for proactive refresh)
    */
-  async getExpiringCredentials(bufferMs: number = 15 * 60 * 1000): Promise<Array<{
-    userId: string;
-    provider: string;
-    expiresAt: number;
-  }>> {
+  async getExpiringCredentials(bufferMs: number = 15 * 60 * 1000): Promise<
+    Array<{
+      userId: string;
+      provider: string;
+      expiresAt: number;
+    }>
+  > {
     try {
       const expiringCredentials: Array<{
         userId: string;
         provider: string;
         expiresAt: number;
       }> = [];
-      
+
       const cutoffTime = Date.now() + bufferMs;
-      
+
       // Scan all user index entries
-      const userIndexEntries = await this.kvManager.list<{ 
-        provider: string; 
-        expiresAt: number; 
+      const userIndexEntries = await this.kvManager.list<{
+        provider: string;
+        expiresAt: number;
       }>([...this.keyPrefix, 'by_user']);
-      
+
       for (const { key, value } of userIndexEntries) {
         if (value.expiresAt <= cutoffTime) {
           // Extract userId from key: [...keyPrefix, 'by_user', userId, provider]
           const userId = key[key.length - 2] as string;
-          
+
           expiringCredentials.push({
             userId,
             provider: value.provider,
@@ -280,17 +302,17 @@ export class CredentialStore {
     try {
       const now = Date.now();
       let deletedCount = 0;
-      
-      const userIndexEntries = await this.kvManager.list<{ 
-        provider: string; 
-        expiresAt: number; 
+
+      const userIndexEntries = await this.kvManager.list<{
+        provider: string;
+        expiresAt: number;
       }>([...this.keyPrefix, 'by_user']);
-      
+
       for (const { key, value } of userIndexEntries) {
         if (value.expiresAt <= now) {
           // Extract userId from key
           const userId = key[key.length - 2] as string;
-          
+
           await this.deleteCredentials(userId, value.provider);
           deletedCount++;
         }
@@ -317,27 +339,27 @@ export class CredentialStore {
     try {
       const now = Date.now();
       const bufferTime = now + this.tokenRefreshBuffer;
-      
+
       let totalCredentials = 0;
       let expiredCredentials = 0;
       let expiringCredentials = 0;
-      
+
       const users = new Set<string>();
       const providers = new Set<string>();
-      
-      const userIndexEntries = await this.kvManager.list<{ 
-        provider: string; 
-        expiresAt: number; 
+
+      const userIndexEntries = await this.kvManager.list<{
+        provider: string;
+        expiresAt: number;
       }>([...this.keyPrefix, 'by_user']);
-      
+
       for (const { key, value } of userIndexEntries) {
         totalCredentials++;
-        
+
         // Extract userId from key
         const userId = key[key.length - 2] as string;
         users.add(userId);
         providers.add(value.provider);
-        
+
         if (value.expiresAt <= now) {
           expiredCredentials++;
         } else if (value.expiresAt <= bufferTime) {
@@ -371,7 +393,7 @@ export class CredentialStore {
     try {
       const credentialKey = [...this.keyPrefix, provider, userId];
       const existing = await this.kvManager.get<{ lastUsedAt: number }>(credentialKey);
-      
+
       if (existing) {
         await this.kvManager.set(credentialKey, {
           ...existing,
@@ -380,10 +402,10 @@ export class CredentialStore {
       }
     } catch (error) {
       // Non-critical operation, just log the error
-      this.logger?.debug('CredentialStore: Failed to update last used timestamp', { 
-        userId, 
-        provider, 
-        error 
+      this.logger?.debug('CredentialStore: Failed to update last used timestamp', {
+        userId,
+        provider,
+        error,
       });
     }
   }

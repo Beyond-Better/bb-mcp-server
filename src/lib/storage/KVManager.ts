@@ -1,9 +1,9 @@
 /**
  * KV Manager - Generic Deno KV abstraction for bb-mcp-server library
- * 
+ *
  * Provides a unified interface for Deno KV operations with organized key prefixes.
  * Extracted and generalized from ActionStep MCP Server's UnifiedKVManager.
- * 
+ *
  * Features:
  * - Configurable key prefixes for organized data storage
  * - Type-safe KV operations
@@ -12,11 +12,7 @@
  * - Cleanup utilities for maintenance
  */
 
-import type {
-  KVManagerConfig,
-  KVPrefixes,
-  KVStats,
-} from './StorageTypes.ts';
+import type { KVManagerConfig, KVPrefixes, KVStats } from './StorageTypes.ts';
 import { DEFAULT_KV_PREFIXES } from './StorageTypes.ts';
 import { toError } from '../utils/Error.ts';
 
@@ -42,7 +38,7 @@ export class KVManager {
     if (logger) {
       this.logger = logger;
     }
-    
+
     // Merge provided prefixes with defaults
     this.prefixes = {
       ...DEFAULT_KV_PREFIXES,
@@ -63,7 +59,7 @@ export class KVManager {
         kvPath: this.kvPath,
         currentWorkingDirectory: Deno.cwd(),
       });
-      
+
       // Create directory if it doesn't exist
       const kvDir = this.kvPath.substring(0, this.kvPath.lastIndexOf('/'));
       this.logger?.debug('KVManager: Creating directory', {
@@ -71,7 +67,7 @@ export class KVManager {
         kvDir,
         willCreateDir: !!kvDir,
       });
-      
+
       if (kvDir) {
         try {
           await Deno.mkdir(kvDir, { recursive: true });
@@ -89,7 +85,7 @@ export class KVManager {
       this.logger?.debug('KVManager: Opening KV database', { kvPath: this.kvPath });
       this.kv = await Deno.openKv(this.kvPath);
       this.initialized = true;
-      
+
       this.logger?.info('KVManager: Initialized KV connection', {
         kvPath: this.kvPath,
         prefixes: Object.keys(this.prefixes),
@@ -153,7 +149,7 @@ export class KVManager {
         // Note: Deno KV doesn't have built-in expiration, this is a placeholder
         // for future implementation or manual cleanup
       }
-      
+
       const result = await this.kv.set(key, value);
       if (!result.ok) {
         throw new Error('Failed to set KV value');
@@ -191,14 +187,14 @@ export class KVManager {
     try {
       const results: Array<{ key: string[]; value: T }> = [];
       const iter = this.kv.list<T>({ prefix });
-      
+
       for await (const entry of iter) {
         results.push({
           key: entry.key as string[],
           value: entry.value,
         });
       }
-      
+
       return results;
     } catch (error) {
       this.logger?.error('KVManager: Failed to list keys', toError(error), { prefix });
@@ -218,7 +214,7 @@ export class KVManager {
       this.kv.close();
       this.kv = undefined;
       this.initialized = false;
-      
+
       this.logger?.info('KVManager: Closed KV connection');
     } catch (error) {
       this.logger?.error('KVManager: Error closing KV connection', toError(error));
@@ -271,7 +267,7 @@ export class KVManager {
       };
 
       this.logger?.debug('KVManager: Generated KV stats', stats);
-      
+
       return stats;
     } catch (error) {
       this.logger?.error('KVManager: Failed to get KV stats', toError(error));
@@ -294,7 +290,7 @@ export class KVManager {
 
     try {
       const data: Record<string, unknown> = {};
-      
+
       // Export all data
       const iter = this.kv.list({ prefix: [] });
       for await (const entry of iter) {
@@ -329,7 +325,7 @@ export class KVManager {
   async cleanupKeysByPrefix(
     prefix: readonly string[],
     filter?: (entry: Deno.KvEntry<unknown>) => boolean,
-    batchSize: number = 10
+    batchSize: number = 10,
   ): Promise<number> {
     if (!this.kv || !this.initialized) {
       throw new Error('KVManager not initialized');
@@ -350,12 +346,12 @@ export class KVManager {
       // Delete in batches
       for (let i = 0; i < keysToDelete.length; i += batchSize) {
         const batch = keysToDelete.slice(i, i + batchSize);
-        
+
         const atomic = this.kv.atomic();
         for (const key of batch) {
           atomic.delete(key);
         }
-        
+
         const result = await atomic.commit();
         if (result.ok) {
           deletedCount += batch.length;
@@ -404,11 +400,11 @@ export class KVManager {
 
     let count = 0;
     const iter = this.kv.list({ prefix: [...prefix] });
-    
+
     for await (const _entry of iter) {
       count++;
     }
-    
+
     return count;
   }
 }

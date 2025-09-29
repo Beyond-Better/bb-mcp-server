@@ -1,7 +1,7 @@
 /**
  * MCP SDK Integration Helpers
  * Extracted from ActionStepMCPServer.ts - MCP SDK integration patterns
- * 
+ *
  * Utilities for MCP SDK integration with:
  * - Sampling API integration
  * - Elicitation API integration
@@ -17,12 +17,12 @@ import { Logger } from '../utils/Logger.ts';
 import { toError } from '../utils/Error.ts';
 
 // Import types
-import type { 
-  CreateMessageRequest, 
-  CreateMessageResult, 
-  ElicitInputRequest, 
+import type {
+  CreateMessageRequest,
+  CreateMessageResult,
+  ElicitInputRequest,
   ElicitInputResult,
-  RegisteredTool 
+  RegisteredTool,
 } from '../types/BeyondMcpTypes.ts';
 
 /**
@@ -32,12 +32,12 @@ import type {
 export class BeyondMcpSDKHelpers {
   private sdkMcpServer: SdkMcpServer;
   private logger: Logger;
-  
+
   constructor(sdkMcpServer: SdkMcpServer, logger: Logger) {
     this.sdkMcpServer = sdkMcpServer;
     this.logger = logger;
   }
-  
+
   /**
    * MCP Sampling API integration
    * PRESERVED: Exact sampling pattern from ActionStepMCPServer
@@ -49,30 +49,32 @@ export class BeyondMcpSDKHelpers {
       maxTokens: request.maxTokens,
       temperature: request.temperature,
     });
-    
+
     try {
       // Cast to MCP SDK expected type
       const mcpRequest = {
         ...request,
         maxTokens: request.maxTokens || 2000, // Ensure maxTokens is present
       } as any;
-      
+
       const result = await this.sdkMcpServer.server.createMessage(mcpRequest);
-      
+
       this.logger.debug('MCPSDKHelpers: Message created successfully', {
         model: request.model,
         hasContent: !!result?.content,
         contentLength: result?.content ? JSON.stringify(result.content).length : 0,
       });
-      
+
       // Cast result to expected type with unknown intermediate
       return result as unknown as CreateMessageResult;
     } catch (error) {
       this.logger.error('MCPSDKHelpers: MCP sampling failed:', toError(error));
-      throw new Error(`MCP sampling failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `MCP sampling failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
-  
+
   /**
    * MCP Elicitation API integration
    * PRESERVED: Exact elicitation pattern from ActionStepMCPServer
@@ -82,34 +84,36 @@ export class BeyondMcpSDKHelpers {
       messageLength: request.message.length,
       hasSchema: !!request.requestedSchema,
     });
-    
+
     try {
       // Cast to MCP SDK expected type
       const mcpRequest = {
         ...request,
         requestedSchema: request.requestedSchema as any,
       };
-      
+
       const result = await this.sdkMcpServer.server.elicitInput(mcpRequest as any);
-      
+
       this.logger.debug('MCPSDKHelpers: Input elicited successfully', {
         action: result.action,
         hasContent: !!result.content,
       });
-      
+
       // Cast result to expected type - handle action mapping
       const mappedResult = {
         ...result,
         action: result.action === 'decline' ? 'reject' : result.action,
       } as ElicitInputResult;
-      
+
       return mappedResult;
     } catch (error) {
       this.logger.error('MCPSDKHelpers: MCP elicitation failed:', toError(error));
-      throw new Error(`MCP elicitation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `MCP elicitation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
-  
+
   /**
    * Generate comprehensive tool overview text
    * EXTRACTED: From ActionStepMCPServer buildWorkflowOverviews pattern
@@ -118,24 +122,24 @@ export class BeyondMcpSDKHelpers {
     if (tools.length === 0) {
       return 'No tools available';
     }
-    
+
     return tools.map((tool, index) => {
       const overview = tool.definition.description || tool.definition.title;
       const category = tool.definition.category ? ` (${tool.definition.category})` : '';
       const tags = tool.definition.tags ? ` [${tool.definition.tags.join(', ')}]` : '';
       const version = tool.definition.version ? ` v${tool.definition.version}` : '';
-      
+
       return `${index + 1}. **${tool.name}**: ${overview}${category}${tags}${version}`;
     }).join('\n\n');
   }
-  
+
   /**
    * Generate tool schema documentation
    */
   generateToolSchemaDoc(tool: RegisteredTool): string {
     const { name, definition } = tool;
     const { title, description, category, tags, version } = definition;
-    
+
     const sections = [
       `# ${title || name}`,
       '',
@@ -150,10 +154,10 @@ export class BeyondMcpSDKHelpers {
       JSON.stringify(definition.inputSchema, null, 2),
       '```',
     ].filter(Boolean);
-    
+
     return sections.join('\n');
   }
-  
+
   /**
    * Validate SDK MCP server availability
    */
@@ -161,12 +165,12 @@ export class BeyondMcpSDKHelpers {
     if (!this.sdkMcpServer) {
       throw new Error('SDK MCP server not available - check dependency injection');
     }
-    
+
     if (!this.sdkMcpServer.server) {
       throw new Error('SDK MCP server.server not available - server may not be initialized');
     }
   }
-  
+
   /**
    * Create standardized tool response
    */
@@ -179,47 +183,51 @@ export class BeyondMcpSDKHelpers {
       _meta: meta,
     };
   }
-  
+
   /**
    * Create error tool response
    */
   createErrorResponse(error: Error | string, meta?: Record<string, unknown>): CallToolResult {
     const errorMessage = error instanceof Error ? error.message : error;
-    
+
     return {
       content: [{
         type: 'text' as const,
-        text: JSON.stringify({
-          error: errorMessage,
-          status: 'error',
-          timestamp: new Date().toISOString(),
-        }, null, 2),
+        text: JSON.stringify(
+          {
+            error: errorMessage,
+            status: 'error',
+            timestamp: new Date().toISOString(),
+          },
+          null,
+          2,
+        ),
       }],
       isError: true,
       _meta: meta,
     };
   }
-  
+
   /**
    * Merge tool metadata with existing metadata
    */
   mergeToolMetadata(
     existing?: Record<string, unknown>,
-    additional?: Record<string, unknown>
+    additional?: Record<string, unknown>,
   ): Record<string, unknown> {
     return {
       ...existing,
       ...additional,
     };
   }
-  
+
   /**
    * Create sampling request with defaults
    */
   createSamplingRequest(
     prompt: string,
     model: string,
-    options?: Partial<CreateMessageRequest>
+    options?: Partial<CreateMessageRequest>,
   ): CreateMessageRequest {
     return {
       model,
@@ -232,43 +240,45 @@ export class BeyondMcpSDKHelpers {
       ...options,
     };
   }
-  
+
   /**
    * Create elicitation request with schema validation
    */
   createElicitationRequest(
     message: string,
-    requestedSchema: unknown
+    requestedSchema: unknown,
   ): ElicitInputRequest {
     // Validate schema is an object
     if (typeof requestedSchema !== 'object' || requestedSchema === null) {
       throw new Error('requestedSchema must be a valid object');
     }
-    
+
     return {
       message,
       requestedSchema,
     };
   }
-  
+
   /**
    * Parse and validate JSON schema string
    */
   parseJsonSchema(schemaString: string): unknown {
     try {
       const parsed = JSON.parse(schemaString);
-      
+
       // Basic schema validation
       if (typeof parsed !== 'object' || parsed === null) {
         throw new Error('Schema must be a valid object');
       }
-      
+
       return parsed;
     } catch (error) {
-      throw new Error(`Invalid JSON schema: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Invalid JSON schema: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
-  
+
   /**
    * Get SDK MCP server capabilities
    */
@@ -279,7 +289,7 @@ export class BeyondMcpSDKHelpers {
   } {
     try {
       this.validateSdkMcpServer();
-      
+
       return {
         supportsSampling: typeof this.sdkMcpServer.server.createMessage === 'function',
         supportsElicitation: typeof this.sdkMcpServer.server.elicitInput === 'function',
@@ -293,13 +303,13 @@ export class BeyondMcpSDKHelpers {
       };
     }
   }
-  
+
   /**
    * Log MCP operation for debugging
    */
   logMCPOperation(
     operation: 'sampling' | 'elicitation',
-    details: Record<string, unknown>
+    details: Record<string, unknown>,
   ): void {
     this.logger.debug(`MCPSDKHelpers: ${operation} operation`, {
       operation,
@@ -307,14 +317,14 @@ export class BeyondMcpSDKHelpers {
       ...details,
     });
   }
-  
+
   /**
    * Create tool execution context
    */
   createToolContext(
     toolName: string,
     args: Record<string, unknown>,
-    extra?: Record<string, unknown>
+    extra?: Record<string, unknown>,
   ): {
     toolName: string;
     args: Record<string, unknown>;
@@ -331,22 +341,22 @@ export class BeyondMcpSDKHelpers {
     } = {
       toolName,
       args,
-      startTime: Date.now(),
+      startTime: performance.now(),
       requestId: crypto.randomUUID(),
     };
-    
+
     // Only include extra if it's defined (exactOptionalPropertyTypes compliance)
     if (extra !== undefined) {
       context.extra = extra;
     }
-    
+
     return context;
   }
-  
+
   /**
    * Calculate tool execution time
    */
   calculateExecutionTime(startTime: number): number {
-    return Date.now() - startTime;
+    return performance.now() - startTime;
   }
 }

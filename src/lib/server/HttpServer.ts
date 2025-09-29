@@ -68,7 +68,7 @@ export interface HttpServerDependencies {
 
 /**
  * Core HTTP server implementation
- * 
+ *
  * Orchestrates all HTTP endpoints and middleware while delegating business logic
  * to specialized handlers. This maintains clean separation between HTTP transport
  * concerns and business logic implementation.
@@ -79,34 +79,34 @@ export class HttpServer {
   private httpServerConfig: HttpServerConfig;
   private logger: Logger;
   private startTime: Date;
-  
+
   // Endpoint handlers (injected)
   private oauthEndpoints: OAuthEndpoints;
   private apiRouter: APIRouter;
   private statusEndpoints: StatusEndpoints;
   private corsHandler: CORSHandler;
   private errorPages: ErrorPages;
-  
+
   // Integration components
   private transportManager: TransportManager;
   private oauthProvider: OAuthProvider;
-  
+
   constructor(dependencies: HttpServerDependencies) {
     this.httpServerConfig = dependencies.httpServerConfig;
     this.logger = dependencies.logger;
     this.startTime = new Date();
-    
+
     // Initialize endpoint handlers
     this.oauthEndpoints = new OAuthEndpoints(dependencies.oauthProvider, dependencies.logger);
     this.apiRouter = new APIRouter(this.httpServerConfig.api, dependencies);
     this.statusEndpoints = new StatusEndpoints(dependencies, this.startTime);
     this.corsHandler = new CORSHandler(this.httpServerConfig.cors);
     this.errorPages = new ErrorPages(this.httpServerConfig);
-    
+
     // Integration components
     this.transportManager = dependencies.transportManager;
     this.oauthProvider = dependencies.oauthProvider;
-    
+
     this.logger.info('HttpServer: Initialized', {
       hostname: this.httpServerConfig.hostname,
       port: this.httpServerConfig.port,
@@ -114,7 +114,7 @@ export class HttpServer {
       version: this.httpServerConfig.version,
     });
   }
-  
+
   /**
    * Start the HTTP server
    */
@@ -127,10 +127,10 @@ export class HttpServer {
         this.logger.info(`HTTP server running on http://${hostname}:${port}`);
       },
     }, (request: Request) => this.handleRequest(request));
-    
+
     this.server.finished.then(() => this.logger.info('HTTP server closed'));
   }
-  
+
   /**
    * Stop the HTTP server
    */
@@ -141,7 +141,7 @@ export class HttpServer {
       this.logger.info('HTTP server stopped');
     }
   }
-  
+
   /**
    * Main request handler with routing
    */
@@ -149,29 +149,34 @@ export class HttpServer {
     const url = reconstructOriginalUrl(request);
     const path = url.pathname;
     const method = request.method;
-    
+
     this.logger.debug(`HTTP request: ${method} ${path}`);
-    
+
     try {
       // Handle CORS preflight
       if (method === 'OPTIONS') {
         return this.corsHandler.handlePreflight(request);
       }
-      
+
       // Route request to appropriate handler
       const response = await this.routeRequest(request, path, method);
-      
+
       // Add CORS headers
       return this.corsHandler.addCORSHeaders(response);
-      
     } catch (error) {
-      this.logger.error('HTTP request error:', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'HTTP request error:',
+        error instanceof Error ? error : new Error(String(error)),
+      );
       return this.corsHandler.addCORSHeaders(
-        this.errorPages.generateErrorResponse(error instanceof Error ? error : new Error(String(error)), 500)
+        this.errorPages.generateErrorResponse(
+          error instanceof Error ? error : new Error(String(error)),
+          500,
+        ),
       );
     }
   }
-  
+
   /**
    * Request routing
    */
@@ -180,57 +185,57 @@ export class HttpServer {
     if (this.isOAuthEndpoint(path)) {
       return await this.oauthEndpoints.handleRequest(request, path, method);
     }
-    
+
     // API endpoints
     if (path.startsWith('/api/v1/')) {
       return await this.apiRouter.handleRequest(request, path.slice(8), method);
     }
-    
+
     // Well-known endpoints
     if (path.startsWith('/.well-known/')) {
       return await this.oauthEndpoints.handleWellKnown(request, path.slice(13), method);
     }
-    
+
     // MCP transport endpoint
     if (path === '/mcp') {
       return await this.handleMCPEndpoint(request);
     }
-    
+
     // Root endpoint
     if (path === '/' && method === 'GET') {
       return await this.handleRoot();
     }
-    
+
     // Legacy health endpoint
     if (path === '/health' && method === 'GET') {
       return await this.handleLegacyHealth();
     }
-    
+
     // 404 for unknown endpoints
     return this.errorPages.generateNotFoundResponse(path);
   }
-  
+
   /**
    * Check if path is an OAuth endpoint
    */
   private isOAuthEndpoint(path: string): boolean {
     return [
       '/authorize',
-      '/token', 
+      '/token',
       '/register',
       '/callback',
       '/oauth/callback',
-      '/auth/callback'
+      '/auth/callback',
     ].includes(path);
   }
-  
+
   /**
    * MCP endpoint integration
    */
   private async handleMCPEndpoint(request: Request): Promise<Response> {
     return await this.transportManager.handleHttpRequest(request);
   }
-  
+
   /**
    * Handle root endpoint
    */
@@ -263,13 +268,13 @@ export class HttpServer {
         },
       },
     };
-    
+
     return new Response(JSON.stringify(info, null, 2), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   }
-  
+
   /**
    * Handle legacy health endpoint
    */
@@ -280,19 +285,19 @@ export class HttpServer {
       timestamp: new Date().toISOString(),
       version: this.httpServerConfig.version,
     };
-    
+
     return new Response(JSON.stringify(status, null, 2), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   }
-  
+
   /**
    * Get server metrics for monitoring
    */
   getMetrics() {
-    const uptime = Date.now() - this.startTime.getTime();
-    
+    const uptime = performance.now() - this.startTime.getTime();
+
     return {
       uptime: {
         seconds: Math.floor(uptime / 1000),
@@ -305,7 +310,7 @@ export class HttpServer {
       },
     };
   }
-  
+
   /**
    * Format uptime in human-readable format
    */
@@ -314,11 +319,10 @@ export class HttpServer {
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    
+
     if (days > 0) return `${days}d ${hours % 24}h ${minutes % 60}m`;
     if (hours > 0) return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
     if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
     return `${seconds}s`;
   }
-
 }
