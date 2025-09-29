@@ -105,12 +105,13 @@ Each example follows a consistent structure to aid learning:
 
 ```
 {N}-example-name/
-├── README.md             # Example-specific documentation
-├── main.ts               # Entry point with AppServer setup
-├── .env.example          # Environment configuration template
-├── .env                  # Local environment (gitignored)
-├── deno.jsonc            # Deno configuration
-├── instructions.md       # Step-by-step setup instructions
+├── README.md                    # Example-specific documentation
+├── main.ts                      # Entry point with AppServer setup
+├── .env.example                 # Environment configuration template
+├── .env                         # Local environment (gitignored)
+├── deno.jsonc                   # Deno configuration
+├── instructions.md              # Step-by-step setup instructions (for humans)
+├── mcp_server_instructions.md   # LLM context instructions (for AI models)
 │── src/
 │   ├── plugins/          # Self-contained plugin implementations
 │   │   ├── {Plugin}.ts   # Plugin definition and exports
@@ -124,6 +125,45 @@ Each example follows a consistent structure to aid learning:
 	├── tools/            # Tool testing demonstrations
 	└── workflows/        # Workflow testing demonstrations
 ```
+
+## 🤖 MCP Server Instructions (LLM Context)
+
+Each example includes `mcp_server_instructions.md` that provides essential context for AI models using the MCP server. These instructions are automatically loaded by the server and help LLMs understand:
+
+### **Purpose & Importance**
+- **Tool Usage**: When and how to use specific tools and workflows
+- **Parameter Requirements**: Required vs optional parameters and validation rules
+- **Authentication**: OAuth flows and security requirements (examples 3-4)
+- **Error Handling**: Common issues and recovery strategies
+- **Best Practices**: Optimal usage patterns for complex operations
+
+### **Instructions vs Documentation**
+- **`instructions.md`**: Step-by-step setup guide **for humans**
+- **`mcp_server_instructions.md`**: Usage context **for LLM models**
+
+### **Automatic Loading**
+The server automatically loads instructions using this priority order:
+1. `MCP_SERVER_INSTRUCTIONS` environment variable (direct content)
+2. `MCP_INSTRUCTIONS_FILE` environment variable (file path) 
+3. `mcp_server_instructions.md` in project root (default location)
+4. Built-in generic fallback instructions (always available)
+
+### **Customization**
+You can customize instructions for your specific use case:
+```bash
+# Option 1: Direct environment variable
+MCP_SERVER_INSTRUCTIONS="Custom instructions for your server..."
+
+# Option 2: Custom file path  
+MCP_INSTRUCTIONS_FILE="./config/custom-instructions.md"
+
+# Option 3: Default file (no configuration needed)
+# Just place your instructions in: ./mcp_server_instructions.md
+```
+
+**💡 Pro Tip**: Study each example's instructions to understand how complexity evolves from simple tools to OAuth-enabled workflows.
+
+---
 
 ## ⚠️ Critical Implementation Patterns
 

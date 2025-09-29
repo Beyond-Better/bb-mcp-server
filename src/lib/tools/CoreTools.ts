@@ -38,12 +38,21 @@ export class CoreTools {
   private sdkMcpServer: SdkMcpServer;
   private logger: Logger;
   private auditLogger: AuditLogger;
+  private enhancedStatusProvider?: () => Promise<CallToolResult>;
 
   constructor(dependencies: CoreToolsDependencies) {
     this.dependencies = dependencies;
     this.sdkMcpServer = dependencies.sdkMcpServer;
     this.logger = dependencies.logger;
     this.auditLogger = dependencies.auditLogger;
+  }
+
+  /**
+   * Set enhanced status provider (optional)
+   * Allows BeyondMcpServer to provide enhanced status including workflows
+   */
+  setEnhancedStatusProvider(provider: () => Promise<CallToolResult>): void {
+    this.enhancedStatusProvider = provider;
   }
 
   /**
@@ -173,11 +182,23 @@ export class CoreTools {
 
   /**
    * Handle server status tool execution
-   * EXTRACTED: Generic server status from ActionStepMCPServer
+   * Uses enhanced status provider if available (includes workflows), otherwise uses basic status
    */
   private async handleServerStatus(): Promise<CallToolResult> {
     this.logger.debug('CoreTools: Server status requested');
 
+    // Use enhanced status provider if available (e.g., from BeyondMcpServer)
+    if (this.enhancedStatusProvider) {
+      try {
+        return await this.enhancedStatusProvider();
+      } catch (error) {
+        this.logger.warn('CoreTools: Enhanced status provider failed, falling back to basic status', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    // Fallback to basic server status
     const status = {
       server: {
         name: 'MCP Server',

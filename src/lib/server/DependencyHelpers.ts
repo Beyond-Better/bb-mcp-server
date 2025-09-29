@@ -625,7 +625,7 @@ export function getAllDependencies(overrides: AppServerOverrides = {}): AppServe
         tools: {},
         logging: {},
       },
-      instructions: configManager.get('INSTRUCTIONS'),
+      instructions: configManager.get('MCP_SERVER_INSTRUCTIONS'),
       transport: configManager.getTransportConfig() || { type: 'stdio' as const },
     }, allDeps);
 

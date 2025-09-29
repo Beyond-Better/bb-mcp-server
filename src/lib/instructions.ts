@@ -8,7 +8,7 @@
  * overridden by server-specific instructions files.
  */
 
-export const DEFAULT_INSTRUCTIONS = `MCP Server built with bb-mcp-server library - Workflow-driven integration server.
+export const DEFAULT_INSTRUCTIONS = `MCP Server built with Beyond MCP Server (bb-mcp-server) library - Workflow-driven integration server.
 
 ## Overview
 
@@ -44,8 +44,8 @@ Configurable authentication and security features:
 **CRITICAL**: Always discover available workflows and their schemas before execution:
 
 1. **Workflow Discovery**: 
-   - Use \`get_server_status\` to discover available workflows
-   - Use \`get_schema_for_workflow\` to understand parameter requirements
+   - Use \`get_server_status\` to see available workflow names
+   - Use \`get_schema_for_workflow\` to understand parameter requirements and details
    - Review workflow categories, tags, and estimated duration
 2. **Parameter Preparation**: Prepare parameters according to the schema validation rules
 3. **Workflow Execution**: Use \`execute_workflow\` with validated parameters
@@ -78,7 +78,7 @@ Configurable authentication and security features:
 ### Server Management
 - **get_server_status**: Monitor server health and discover available workflows
   - Shows server configuration, transport type, and initialization status
-  - Lists all available workflows with names and categories
+  - Lists available workflow names (use get_schema_for_workflow for details)
   - Provides tool registration information and system metrics
 - **echo**: Simple connectivity test tool
 - **test_sampling**: Test LLM sampling capabilities (if configured)

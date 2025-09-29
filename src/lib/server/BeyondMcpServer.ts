@@ -30,6 +30,7 @@ import { KVManager } from '../storage/KVManager.ts';
 import { OAuthProvider } from '../auth/OAuthProvider.ts';
 import { RequestContextManager } from './RequestContextManager.ts';
 import { BeyondMcpSDKHelpers } from './MCPSDKHelpers.ts';
+import { loadInstructions, validateInstructions } from '../utils/InstructionsLoader.ts';
 
 // Import types
 import {
@@ -131,10 +132,9 @@ export class BeyondMcpServer {
         },
       };
 
-      // Only add instructions if they exist (exactOptionalPropertyTypes compliance)
-      if (config.instructions) {
-        serverOptions.instructions = config.instructions;
-      }
+      // Load instructions using flexible loading system
+      // This will be done asynchronously in initialize() method
+      // to avoid blocking the constructor
 
       this.sdkMcpServer = new SdkMcpServer(
         {
@@ -229,6 +229,8 @@ export class BeyondMcpServer {
     this.logger.info('MCPServer: Initializing MCP server...');
 
     try {
+      // Load instructions using flexible loading system
+      await this.loadAndSetInstructions();
       // Register core tools
       await this.registerCoreTools();
 
@@ -259,6 +261,65 @@ export class BeyondMcpServer {
     } catch (error) {
       this.logger.error('BeyondMcpServer: Failed to initialize Beyond MCP server:', toError(error));
       throw ErrorHandler.wrapError(error, 'BEYOND_MCP_SERVER_INIT_FAILED');
+    }
+  }
+
+  /**
+   * Load and set instructions using flexible loading system
+   */
+  private async loadAndSetInstructions(): Promise<void> {
+    try {
+      const instructions = await loadInstructions({
+        logger: this.logger,
+        instructionsConfig: this.configManager.get('MCP_SERVER_INSTRUCTIONS'),
+        instructionsFilePath: this.configManager.get('MCP_INSTRUCTIONS_FILE'),
+        defaultFileName: 'mcp_server_instructions.md',
+        basePath: Deno.cwd(),
+      });
+
+      // Validate the loaded instructions
+      if (!validateInstructions(instructions, this.logger)) {
+        this.logger.warn('BeyondMcpServer: Loaded instructions failed validation but will be used anyway');
+      }
+
+      // Update the SDK MCP server with the loaded instructions
+      // Note: The MCP SDK doesn't provide a direct way to update instructions after creation
+      // So we'll need to store them for potential future use or logging
+      this.logger.info('BeyondMcpServer: Instructions loaded successfully', {
+        source: this.getInstructionsSource(),
+        contentLength: instructions.length,
+        hasWorkflowContent: instructions.includes('workflow'),
+      });
+
+      // For now, we'll store instructions in config for potential future use
+      // This could be enhanced later if the MCP SDK provides instruction update capabilities
+      this.config.instructions = instructions;
+    } catch (error) {
+      this.logger.error('BeyondMcpServer: Failed to load instructions:', error instanceof Error ? error : new Error(String(error)));
+      throw ErrorHandler.wrapError(error, 'INSTRUCTIONS_LOADING_FAILED');
+    }
+  }
+
+  /**
+   * Get the source of instructions for logging purposes
+   */
+  private getInstructionsSource(): string {
+    const configInstructions = this.configManager.get('MCP_SERVER_INSTRUCTIONS') as string | undefined;
+    const filePath = this.configManager.get('MCP_INSTRUCTIONS_FILE') as string | undefined;
+    
+    if (configInstructions && typeof configInstructions === 'string' && configInstructions.trim()) {
+      return 'configuration';
+    } else if (filePath && typeof filePath === 'string') {
+      return `file: ${filePath}`;
+    } else {
+      // Check if default file exists
+      try {
+        const defaultPath = `${Deno.cwd()}/mcp_server_instructions.md`;
+        Deno.statSync(defaultPath);
+        return `default file: ${defaultPath}`;
+      } catch {
+        return 'embedded fallback';
+      }
     }
   }
 
@@ -359,6 +420,9 @@ export class BeyondMcpServer {
    */
   protected async registerCoreTools(): Promise<void> {
     this.logger.debug('BeyondMcpServer: Registering core tools...');
+
+    // Set enhanced status provider to include workflow information
+    this.coreTools.setEnhancedStatusProvider(() => this.getServerStatus());
 
     // Register all core tools via CoreTools component
     this.coreTools.registerWith(this.toolRegistry);

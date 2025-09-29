@@ -101,6 +101,10 @@ DENO_KV_PATH=./data/app.db
 
 # Logging
 LOG_LEVEL=info                 # debug|info|warn|error
+
+# MCP Server Instructions (for LLM context)
+MCP_SERVER_INSTRUCTIONS="Custom instructions for LLM..."
+MCP_INSTRUCTIONS_FILE=./path/to/instructions.md
 ```
 
 ### **OAuth Integration**
@@ -116,6 +120,25 @@ OAUTH_CONSUMER_CLIENT_SECRET=third-party-secret
 ```
 
 **📚 For complete configuration details, see the [examples](examples/) - each shows different configuration patterns.**
+
+### **MCP Server Instructions**
+
+MCP Server Instructions provide essential context for LLMs to understand your server's capabilities, tools, and workflows. These instructions are automatically loaded by the server and made available to MCP clients.
+
+#### **Configuration Options** (in priority order):
+1. **Direct Configuration**: `MCP_SERVER_INSTRUCTIONS="Your instructions here..."`
+2. **File Path**: `MCP_INSTRUCTIONS_FILE="./path/to/instructions.md"`
+3. **Default File**: Place `mcp_server_instructions.md` in your project root
+4. **Automatic Fallback**: Library provides generic workflow-focused instructions
+
+#### **Why Instructions Matter**:
+- **LLM Context**: Help AI models understand your server's specific capabilities
+- **Tool Usage**: Provide guidance on when and how to use different tools
+- **Workflow Patterns**: Explain complex multi-step processes and error handling
+- **Authentication**: Document OAuth requirements and security considerations
+- **Best Practices**: Share optimal usage patterns and troubleshooting tips
+
+Each [example application](examples/) includes tailored instructions showing different complexity levels and use cases.
 
 ## 🏗️ Architecture Overview
 
