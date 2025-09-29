@@ -221,7 +221,7 @@ Parameters: api_endpoint, sync_criteria, transformation_rules
 The bb-mcp-server library automatically loads instructions during server initialization:
 
 ```typescript
-// In BeyondMcpServer.initialize()
+// In DependencyHelpers.getMcpServerInstructions()
 const instructions = await loadInstructions({
   logger: this.logger,
   instructionsConfig: this.configManager.get('MCP_SERVER_INSTRUCTIONS'),

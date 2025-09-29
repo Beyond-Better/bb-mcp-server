@@ -8,7 +8,7 @@
 
 import type { Logger } from './Logger.ts';
 import { toError } from './Error.ts';
-import { DEFAULT_INSTRUCTIONS } from '../instructions.ts';
+import { DEFAULT_INSTRUCTIONS } from './McpServerInstructions.ts';
 
 export interface InstructionsLoaderOptions {
   /**

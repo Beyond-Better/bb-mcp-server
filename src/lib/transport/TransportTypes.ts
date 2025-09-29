@@ -218,12 +218,12 @@ export interface StdioTransportMetrics extends TransportMetrics {
 }
 
 // Validation types
-export interface ValidationResult {
+export interface TransportValidationResult {
   valid: boolean;
-  errors: ValidationError[];
+  errors: TransportValidationError[];
 }
 
-export interface ValidationError {
+export interface TransportValidationError {
   field: string;
   message: string;
   code: string;

@@ -25,7 +25,7 @@ import type {
 } from '../types/AppServerTypes.ts';
 import type { TransportConfig } from '../transport/TransportTypes.ts';
 import {
-  getAllDependenciesAsync,
+  getAllDependencies,
   getConfigManager,
   getKvManager,
   getLogger,
@@ -97,7 +97,7 @@ export class AppServer {
     } else {
       appDependencies = dependenciesOrFunction || {};
     }
-    const resolvedDependencies: AppServerDependencies = await getAllDependenciesAsync(
+    const resolvedDependencies: AppServerDependencies = await getAllDependencies(
       appDependencies,
     );
 
@@ -135,6 +135,7 @@ export class AppServer {
     if (resolvedDependencies.thirdpartyApiClient) {
       componentsCreatedConsumer.push('ThirdPartyApiClient');
     }
+
     // Log successful initialization
     resolvedDependencies.logger.info(
       `${
@@ -171,9 +172,6 @@ export class AppServer {
     this._logger.info('AppServer: Starting application server...');
 
     try {
-      // Initialize Beyond MCP server first
-      await this.beyondMcpServer.initialize();
-
       // Get transport configuration
       const transportConfig = this._configManager.getTransportConfig();
 
