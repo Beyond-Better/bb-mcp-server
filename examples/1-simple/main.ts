@@ -69,7 +69,7 @@
  */
 
 // Import the bb-mcp-server library - handles ALL infrastructure
-import { AppServer } from "@beyondbetter/bb-mcp-server";
+import { AppServer } from '@beyondbetter/bb-mcp-server';
 
 /**
  * Simple main function - library handles all complexity
@@ -91,11 +91,11 @@ async function main(): Promise<void> {
     const appServer = await AppServer.create({
       // 🎯 Only required: basic server identification
       serverConfig: {
-        name: "simple-mcp-server",
-        version: "1.0.0",
-        title: "Simple MCP Server Example",
+        name: 'simple-mcp-server',
+        version: '1.0.0',
+        title: 'Simple MCP Server Example',
         description:
-          "Demonstrates basic plugin tools with minimal setup using bb-mcp-server library",
+          'Demonstrates basic plugin tools with minimal setup using bb-mcp-server library',
       },
     });
 
@@ -107,13 +107,13 @@ async function main(): Promise<void> {
     // - Complete application lifecycle management
     await appServer.start();
 
-    console.log("🎉 Simple MCP Server started successfully!");
+    console.log('🎉 Simple MCP Server started successfully!');
     console.log(
-      "📝 Available tools: current_datetime, get_system_info, validate_json",
+      '📝 Available tools: current_datetime, get_system_info, validate_json',
     );
-    console.log("🔄 Transport:", process.env.MCP_TRANSPORT || "stdio");
+    console.log('🔄 Transport:', process.env.MCP_TRANSPORT || 'stdio');
   } catch (error) {
-    console.error("❌ Failed to start Simple MCP Server:", error);
+    console.error('❌ Failed to start Simple MCP Server:', error);
     Deno.exit(1);
   }
 }

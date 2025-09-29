@@ -81,7 +81,6 @@ export interface BeyondMcpServerDependencies {
 
 /**
  * Beyond MCP Request Context
- * PRESERVED: Exact interface from ActionStepMCPServer
  */
 export interface BeyondMcpRequestContext {
   authenticatedUserId: string;
@@ -207,7 +206,6 @@ export interface CoreToolsDependencies {
 
 /**
  * MCP SDK API Types
- * PRESERVED: Exact interfaces from ActionStepMCPServer
  */
 export interface CreateMessageRequest {
   _meta?: Record<string, unknown>;

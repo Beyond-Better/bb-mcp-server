@@ -1,5 +1,5 @@
 /**
- * Test Helpers for Phase 6 MCP Server Tests
+ * Test Helpers for MCP Server Tests
  * Provides mock implementations and test utilities
  */
 

@@ -7,7 +7,7 @@ This guide walks you through running and understanding the **Plugin-Workflows** 
 By following this guide, you'll understand:
 
 - **Multi-Step Workflow Architecture**: How workflows differ from simple tools
-- **State Management**: How data flows and transforms between workflow steps  
+- **State Management**: How data flows and transforms between workflow steps
 - **Error Handling**: Advanced error recovery and continuation patterns
 - **Resource Tracking**: Performance monitoring and resource usage tracking
 - **Parameter Validation**: Comprehensive input validation with Zod schemas
@@ -27,6 +27,7 @@ deno run --allow-all main.ts
 ```
 
 You should see:
+
 ```
 [INFO] Starting MCP server: plugin-workflows-mcp-server v1.0.0
 [INFO] Plugin discovery found: WorkflowPlugin v1.0.0
@@ -50,19 +51,21 @@ deno test --allow-all tests/
 **Purpose**: Processes arrays of data objects through validation, transformation, analysis, and export steps.
 
 **Steps**:
+
 1. **Validate**: Ensures data is properly formatted
 2. **Transform**: Applies operations like normalize, filter, sort, deduplicate
 3. **Analyze**: Generates summaries, statistics, or detailed analysis
 4. **Export**: Outputs results in JSON or CSV format
 
 **Example Parameters**:
+
 ```json
 {
   "userId": "demo-user",
   "data": [
-    {"name": "Alice", "score": 95, "department": "Engineering"},
-    {"name": "Bob", "score": 87, "department": "Marketing"},
-    {"name": "Charlie", "score": 92, "department": "Engineering"}
+    { "name": "Alice", "score": 95, "department": "Engineering" },
+    { "name": "Bob", "score": 87, "department": "Marketing" },
+    { "name": "Charlie", "score": 92, "department": "Engineering" }
   ],
   "transformations": ["normalize", "sort"],
   "outputFormat": "json",
@@ -71,6 +74,7 @@ deno test --allow-all tests/
 ```
 
 **Key Learning Points**:
+
 - State management: `processedData` is modified by each transformation step
 - Error recovery: Failed transformations don't stop the pipeline
 - Performance tracking: Each step records timing and resource usage
@@ -80,12 +84,14 @@ deno test --allow-all tests/
 **Purpose**: Manages the complete lifecycle of a file from creation to archival.
 
 **Steps**:
+
 1. **Create**: Sets up file metadata and initial content
 2. **Validate**: Applies configurable validation rules
 3. **Process**: Formats, sanitizes, and adds metadata
 4. **Archive**: Stores the processed file with audit information
 
 **Example Parameters**:
+
 ```json
 {
   "userId": "demo-user",
@@ -101,6 +107,7 @@ deno test --allow-all tests/
 ```
 
 **Key Learning Points**:
+
 - File type detection and handling
 - Configurable validation rules
 - Content transformation and metadata injection
@@ -111,12 +118,14 @@ deno test --allow-all tests/
 **Purpose**: AI-powered content creation with planning, generation, review, and publishing.
 
 **Steps**:
+
 1. **Plan**: Creates content outline and structure
 2. **Generate**: Produces content based on requirements
 3. **Review**: Evaluates quality and applies improvements
 4. **Publish**: Finalizes content with metadata and preview
 
 **Example Parameters**:
+
 ```json
 {
   "userId": "demo-user",
@@ -132,6 +141,7 @@ deno test --allow-all tests/
 ```
 
 **Key Learning Points**:
+
 - Multi-phase content creation workflow
 - Quality metrics and automated improvements
 - Content type-specific processing (blog vs documentation vs report)
@@ -152,19 +162,19 @@ abstract class WorkflowBase {
   abstract readonly category: PluginCategory;
   abstract readonly tags: string[];
   abstract readonly parameterSchema: ZodSchema<any>;
-  
+
   // Main execution method with validation and error handling
-  async executeWithValidation(params: unknown, context: WorkflowContext): Promise<WorkflowResult>
-  
+  async executeWithValidation(params: unknown, context: WorkflowContext): Promise<WorkflowResult>;
+
   // Safe execution wrapper for individual steps
   protected async safeExecute<T>(
     operationName: string,
     operation: () => Promise<T>,
-    resourceType?: WorkflowResource['type']
-  ): Promise<{ success: boolean; data?: T; error?: FailedStep }>
-  
+    resourceType?: WorkflowResource['type'],
+  ): Promise<{ success: boolean; data?: T; error?: FailedStep }>;
+
   // Step result creation helpers
-  protected createStepResult(operation: string, success: boolean, data?: unknown): WorkflowStep
+  protected createStepResult(operation: string, success: boolean, data?: unknown): WorkflowStep;
 }
 ```
 
@@ -177,14 +187,14 @@ const WorkflowPlugin: AppPlugin = {
   name: 'workflow-plugin',
   version: '1.0.0',
   description: 'Multi-step workflow demonstrations',
-  
+
   // ✅ CORRECT: Populate arrays directly
   workflows: [
     new DataProcessingWorkflow(),
     new FileManagementWorkflow(),
     new ContentGenerationWorkflow(),
   ],
-  
+
   tools: [
     // Basic utility tools
   ],
@@ -192,6 +202,7 @@ const WorkflowPlugin: AppPlugin = {
 ```
 
 **Why This Works**:
+
 - PluginManager automatically discovers and registers workflows
 - No manual registration code needed in the plugin
 - Clean separation between plugin definition and workflow implementation
@@ -234,7 +245,7 @@ If you have an MCP client, you can test workflows directly:
        "name": "data_processing_pipeline",
        "arguments": {
          "userId": "test-user",
-         "data": [{"name": "test", "value": 100}],
+         "data": [{ "name": "test", "value": 100 }],
          "transformations": ["normalize"],
          "outputFormat": "json",
          "analysisType": "summary"
@@ -271,6 +282,7 @@ LOG_LEVEL=debug deno run --allow-all main.ts
 ```
 
 This shows detailed information about:
+
 - Plugin discovery and registration
 - Workflow execution steps
 - Parameter validation
@@ -279,32 +291,38 @@ This shows detailed information about:
 ### Common Issues and Solutions
 
 #### 1. Workflow Not Found
+
 ```
 Error: Workflow 'data_processing_pipeline' not registered
 ```
 
 **Solution**: Check that:
+
 - Plugin is exported as default: `export default WorkflowPlugin`
 - Workflow is included in plugin's `workflows` array
 - Workflow name matches exactly (case-sensitive)
 
 #### 2. Parameter Validation Failed
+
 ```
 Error: Parameter validation failed: data.required
 ```
 
-**Solution**: 
-- Review the workflow's `parameterSchema` 
+**Solution**:
+
+- Review the workflow's `parameterSchema`
 - Ensure all required fields are provided
 - Check data types match schema expectations
 - Use dry run mode to test parameters
 
 #### 3. Step Execution Errors
+
 ```
 Error in step 'validate_data': Data must be a non-empty array
 ```
 
 **Solution**:
+
 - Check input data format and structure
 - Review step-specific requirements in workflow code
 - Use smaller test datasets to isolate issues
@@ -316,12 +334,12 @@ Workflow results include detailed execution information:
 ```typescript
 interface WorkflowResult {
   success: boolean;
-  completed_steps: WorkflowStep[];      // Successful steps
-  failed_steps: FailedStep[];           // Failed steps with error details
-  data?: unknown;                       // Final workflow output
-  metadata: Record<string, unknown>;    // Workflow-specific metadata
-  duration?: number;                    // Total execution time
-  resources?: WorkflowResource[];       // Resource usage tracking
+  completed_steps: WorkflowStep[]; // Successful steps
+  failed_steps: FailedStep[]; // Failed steps with error details
+  data?: unknown; // Final workflow output
+  metadata: Record<string, unknown>; // Workflow-specific metadata
+  duration?: number; // Total execution time
+  resources?: WorkflowResource[]; // Resource usage tracking
 }
 ```
 
@@ -330,6 +348,7 @@ interface WorkflowResult {
 ### Resource Tracking
 
 Workflows automatically track:
+
 - **Execution Time**: Duration of each step and total workflow
 - **Resource Usage**: API calls, storage operations, file access
 - **Memory Usage**: Through Deno's built-in memory monitoring
@@ -344,14 +363,14 @@ Workflows automatically track:
 
 ## 🔄 Comparing with Simple Tools
 
-| Aspect | Simple Tools (1-simple) | Workflows (2-plugin-workflows) |
-|--------|--------------------------|--------------------------------|
-| **Complexity** | Single operation | Multi-step processes |
-| **State** | Stateless | Stateful with data flow |
-| **Error Handling** | Basic try/catch | Advanced recovery patterns |
-| **Monitoring** | Minimal | Comprehensive tracking |
-| **Use Cases** | Utility functions | Business processes |
-| **Testing** | Simple unit tests | Multi-step integration tests |
+| Aspect             | Simple Tools (1-simple) | Workflows (2-plugin-workflows) |
+| ------------------ | ----------------------- | ------------------------------ |
+| **Complexity**     | Single operation        | Multi-step processes           |
+| **State**          | Stateless               | Stateful with data flow        |
+| **Error Handling** | Basic try/catch         | Advanced recovery patterns     |
+| **Monitoring**     | Minimal                 | Comprehensive tracking         |
+| **Use Cases**      | Utility functions       | Business processes             |
+| **Testing**        | Simple unit tests       | Multi-step integration tests   |
 
 ## 🎓 Learning Exercises
 

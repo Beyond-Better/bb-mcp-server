@@ -1,6 +1,5 @@
 /**
  * Unit Tests for MCPSDKHelpers
- * Tests MCP SDK integration utilities extracted from ActionStepMCPServer
  */
 
 import { assert, assertEquals, assertExists } from '@std/assert';

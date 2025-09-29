@@ -9,15 +9,12 @@
  */
 
 // 🎯 Library imports - workflow infrastructure
-import { Logger, WorkflowBase } from "@beyondbetter/bb-mcp-server";
-import type {
-  WorkflowContext,
-  WorkflowResult,
-} from "@beyondbetter/bb-mcp-server";
-import { z } from "zod"; // Library provides Zod integration
+import { Logger, WorkflowBase } from '@beyondbetter/bb-mcp-server';
+import type { WorkflowContext, WorkflowResult } from '@beyondbetter/bb-mcp-server';
+import { z } from 'zod'; // Library provides Zod integration
 
 // 🎯 Consumer-specific imports
-import { ExampleApiClient } from "../../api/ExampleApiClient.ts";
+import { ExampleApiClient } from '../../api/ExampleApiClient.ts';
 
 export interface ExampleQueryWorkflowDependencies {
   apiClient: ExampleApiClient;
@@ -33,61 +30,60 @@ export interface ExampleQueryWorkflowDependencies {
  */
 export class ExampleQueryWorkflow extends WorkflowBase {
   // 🎯 Required workflow metadata (library enforces these)
-  readonly name = "example_query";
-  readonly version = "1.0.0";
-  readonly description =
-    "🔍 Query ExampleCorp data with advanced filtering and pagination";
-  readonly category = "query" as const;
-  override readonly tags = ["query", "search", "examplecorp", "data"];
+  readonly name = 'example_query';
+  readonly version = '1.0.0';
+  readonly description = '🔍 Query ExampleCorp data with advanced filtering and pagination';
+  readonly category = 'query' as const;
+  override readonly tags = ['query', 'search', 'examplecorp', 'data'];
 
   // 🎯 Library-enforced parameter validation schema
   readonly parameterSchema = z.object({
     // Required for all workflows
-    userId: z.string().describe("User ID for authentication and audit logging"),
+    userId: z.string().describe('User ID for authentication and audit logging'),
     requestId: z.string().optional().describe(
-      "Optional request ID for tracking",
+      'Optional request ID for tracking',
     ),
-    dryRun: z.boolean().optional().default(false).describe("Dry run mode"),
+    dryRun: z.boolean().optional().default(false).describe('Dry run mode'),
     // Query parameters
-    queryType: z.enum(["customers", "orders", "products", "analytics"])
-      .describe("Type of data to query"),
+    queryType: z.enum(['customers', 'orders', 'products', 'analytics'])
+      .describe('Type of data to query'),
     searchTerm: z.string().optional().describe(
-      "Search term for filtering results",
+      'Search term for filtering results',
     ),
 
     // Filtering options
     filters: z.object({
       dateRange: z.object({
-        startDate: z.string().optional().describe("Start date (ISO 8601)"),
-        endDate: z.string().optional().describe("End date (ISO 8601)"),
+        startDate: z.string().optional().describe('Start date (ISO 8601)'),
+        endDate: z.string().optional().describe('End date (ISO 8601)'),
       }).optional(),
-      status: z.string().optional().describe("Status filter"),
-      category: z.string().optional().describe("Category filter"),
-      region: z.string().optional().describe("Regional filter"),
-    }).optional().describe("Advanced filtering options"),
+      status: z.string().optional().describe('Status filter'),
+      category: z.string().optional().describe('Category filter'),
+      region: z.string().optional().describe('Regional filter'),
+    }).optional().describe('Advanced filtering options'),
 
     // Pagination and sorting
     pagination: z.object({
       page: z.number().int().min(1).optional().default(1).describe(
-        "Page number",
+        'Page number',
       ),
       limit: z.number().int().min(1).max(100).optional().default(20).describe(
-        "Items per page",
+        'Items per page',
       ),
-      sortBy: z.string().optional().describe("Field to sort by"),
-      sortOrder: z.enum(["asc", "desc"]).optional().default("asc").describe(
-        "Sort order",
+      sortBy: z.string().optional().describe('Field to sort by'),
+      sortOrder: z.enum(['asc', 'desc']).optional().default('asc').describe(
+        'Sort order',
       ),
-    }).optional().default({ page: 1, limit: 20, sortOrder: "asc" }).describe(
-      "Pagination and sorting options",
+    }).optional().default({ page: 1, limit: 20, sortOrder: 'asc' }).describe(
+      'Pagination and sorting options',
     ),
 
     // Output options
-    outputFormat: z.enum(["summary", "detailed", "raw"]).optional().default(
-      "summary",
-    ).describe("Output detail level"),
+    outputFormat: z.enum(['summary', 'detailed', 'raw']).optional().default(
+      'summary',
+    ).describe('Output detail level'),
     includeMetadata: z.boolean().optional().default(false).describe(
-      "Include query metadata in results",
+      'Include query metadata in results',
     ),
     // Note: userId, requestId, dryRun already defined above
   });
@@ -108,14 +104,14 @@ export class ExampleQueryWorkflow extends WorkflowBase {
   getRegistration() {
     return {
       name: this.name,
-      displayName: "ExampleCorp Query Workflow",
+      displayName: 'ExampleCorp Query Workflow',
       description: this.description,
       version: this.version,
       category: this.category,
       requiresAuth: this.requiresAuth,
       estimatedDuration: this.estimatedDuration || 30,
       tags: this.tags,
-      author: "ExampleCorp Integration Team",
+      author: 'ExampleCorp Integration Team',
       parameterSchema: this.parameterSchema, // Include parameter schema for get_schema_for_workflow tool
     };
   }
@@ -148,7 +144,7 @@ export class ExampleQueryWorkflow extends WorkflowBase {
 
     try {
       // 🎯 Library validates params against inputSchema before this method is called
-      this.logger.info("ExampleCorp query workflow started", {
+      this.logger.info('ExampleCorp query workflow started', {
         workflowName: this.name,
         queryType: params.queryType,
         userId: params.userId,
@@ -165,16 +161,16 @@ export class ExampleQueryWorkflow extends WorkflowBase {
       let queryResults: any;
 
       switch (params.queryType) {
-        case "customers":
+        case 'customers':
           queryResults = await this.queryCustomers(params);
           break;
-        case "orders":
+        case 'orders':
           queryResults = await this.queryOrders(params);
           break;
-        case "products":
+        case 'products':
           queryResults = await this.queryProducts(params);
           break;
-        case "analytics":
+        case 'analytics':
           queryResults = await this.queryAnalytics(params);
           break;
         default:
@@ -184,7 +180,7 @@ export class ExampleQueryWorkflow extends WorkflowBase {
       // 🎯 Format results based on requested output format
       const formattedResults = await this.formatResults(
         queryResults,
-        params.outputFormat || "summary",
+        params.outputFormat || 'summary',
         params.includeMetadata || false,
         params.queryType,
       );
@@ -194,7 +190,7 @@ export class ExampleQueryWorkflow extends WorkflowBase {
         Math.round(performance.now() - startTime),
       );
 
-      this.logger.info("ExampleCorp query workflow completed", {
+      this.logger.info('ExampleCorp query workflow completed', {
         workflowName: this.name,
         queryType: params.queryType,
         resultCount: queryResults.items?.length || 0,
@@ -229,7 +225,7 @@ export class ExampleQueryWorkflow extends WorkflowBase {
       );
 
       this.logger.error(
-        "ExampleCorp query workflow failed",
+        'ExampleCorp query workflow failed',
         error instanceof Error ? error : new Error(String(error)),
         {
           workflowName: this.name,
@@ -242,8 +238,8 @@ export class ExampleQueryWorkflow extends WorkflowBase {
       return {
         success: false,
         error: {
-          type: "system_error" as const,
-          message: error instanceof Error ? error.message : "Unknown error",
+          type: 'system_error' as const,
+          message: error instanceof Error ? error.message : 'Unknown error',
           details: error instanceof Error ? error.stack : undefined,
           code: undefined,
           stack: error instanceof Error ? error.stack : undefined,
@@ -252,11 +248,9 @@ export class ExampleQueryWorkflow extends WorkflowBase {
         completed_steps: [],
         failed_steps: [{
           operation: `query_${params.queryType}`,
-          error_type: "system_error" as const,
-          message: error instanceof Error ? error.message : "Unknown error",
-          ...(error instanceof Error && error.stack
-            ? { details: error.stack }
-            : {}),
+          error_type: 'system_error' as const,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          ...(error instanceof Error && error.stack ? { details: error.stack } : {}),
           timestamp: new Date().toISOString(),
         }],
         metadata: {
@@ -289,7 +283,7 @@ export class ExampleQueryWorkflow extends WorkflowBase {
     const apiStatus = await this.apiClient.healthCheck();
     //console.log('🔍 Query API Health Check:', apiStatus);
     if (!apiStatus.healthy) {
-      throw new Error("ExampleCorp API is not accessible");
+      throw new Error('ExampleCorp API is not accessible');
     }
 
     // Validate query parameters
@@ -305,7 +299,7 @@ export class ExampleQueryWorkflow extends WorkflowBase {
         queryPlan: this.buildQueryPlan(params),
       },
       completed_steps: [{
-        operation: "dry_run_validation",
+        operation: 'dry_run_validation',
         success: true,
         data: { validation: validationResults },
         duration_ms: 100,
@@ -314,7 +308,7 @@ export class ExampleQueryWorkflow extends WorkflowBase {
       failed_steps: [],
       metadata: {
         workflowName: this.name,
-        mode: "dry_run",
+        mode: 'dry_run',
         timestamp: new Date().toISOString(),
       },
     };
@@ -342,8 +336,8 @@ export class ExampleQueryWorkflow extends WorkflowBase {
       pagination: {
         page: params.pagination?.page || 1,
         limit: params.pagination?.limit || 20,
-        sortBy: params.pagination?.sortBy || "name",
-        sortOrder: params.pagination?.sortOrder || "asc",
+        sortBy: params.pagination?.sortBy || 'name',
+        sortOrder: params.pagination?.sortOrder || 'asc',
       },
       // OAuth handling is automatic via ExampleOAuthConsumer
       userId: params.userId,
@@ -375,8 +369,8 @@ export class ExampleQueryWorkflow extends WorkflowBase {
       pagination: {
         page: params.pagination?.page || 1,
         limit: params.pagination?.limit || 20,
-        sortBy: params.pagination?.sortBy || "createdDate",
-        sortOrder: params.pagination?.sortOrder || "desc",
+        sortBy: params.pagination?.sortBy || 'createdDate',
+        sortOrder: params.pagination?.sortOrder || 'desc',
       },
       userId: params.userId,
     };
@@ -389,8 +383,8 @@ export class ExampleQueryWorkflow extends WorkflowBase {
       params.filters?.dateRange?.startDate || params.filters?.dateRange?.endDate
     ) {
       queryParams.filters.dateRange = {
-        startDate: params.filters.dateRange.startDate || "",
-        endDate: params.filters.dateRange.endDate || "",
+        startDate: params.filters.dateRange.startDate || '',
+        endDate: params.filters.dateRange.endDate || '',
       };
     }
 
@@ -409,8 +403,8 @@ export class ExampleQueryWorkflow extends WorkflowBase {
       pagination: {
         page: params.pagination?.page || 1,
         limit: params.pagination?.limit || 20,
-        sortBy: params.pagination?.sortBy || "name",
-        sortOrder: params.pagination?.sortOrder || "asc",
+        sortBy: params.pagination?.sortBy || 'name',
+        sortOrder: params.pagination?.sortOrder || 'asc',
       },
       userId: params.userId,
     };
@@ -457,7 +451,7 @@ export class ExampleQueryWorkflow extends WorkflowBase {
    */
   private async formatResults(
     results: any,
-    format: "summary" | "detailed" | "raw",
+    format: 'summary' | 'detailed' | 'raw',
     includeMetadata: boolean,
     queryType?: string,
   ): Promise<any> {
@@ -470,10 +464,10 @@ export class ExampleQueryWorkflow extends WorkflowBase {
     // });
 
     switch (format) {
-      case "raw":
+      case 'raw':
         return results;
 
-      case "summary":
+      case 'summary':
         return {
           totalCount: results.totalCount || 0,
           itemCount: results.items?.length || 0,
@@ -481,7 +475,7 @@ export class ExampleQueryWorkflow extends WorkflowBase {
           ...(includeMetadata && { metadata: results.metadata }),
         };
 
-      case "detailed":
+      case 'detailed':
         const detailedResult = {
           query: results.query ||
             { queryType: results.queryType, executed: true },
@@ -545,16 +539,16 @@ export class ExampleQueryWorkflow extends WorkflowBase {
   ): Record<string, any> {
     const typeSpecific = (() => {
       switch (queryType) {
-        case "customers":
+        case 'customers':
           return {
-            customerTypes: this.countByField(items, "type"),
-            regions: this.countByField(items, "region"),
-            statuses: this.countByField(items, "status"),
+            customerTypes: this.countByField(items, 'type'),
+            regions: this.countByField(items, 'region'),
+            statuses: this.countByField(items, 'status'),
           };
 
-        case "orders":
+        case 'orders':
           return {
-            orderStatuses: this.countByField(items, "status"),
+            orderStatuses: this.countByField(items, 'status'),
             totalValue: items.reduce(
               (sum, item) => sum + (item.totalAmount || 0),
               0,
@@ -565,9 +559,9 @@ export class ExampleQueryWorkflow extends WorkflowBase {
               : 0,
           };
 
-        case "products":
+        case 'products':
           return {
-            categories: this.countByField(items, "category"),
+            categories: this.countByField(items, 'category'),
             averagePrice: items.length > 0
               ? items.reduce((sum, item) => sum + (item.price || 0), 0) /
                 items.length
@@ -602,14 +596,14 @@ export class ExampleQueryWorkflow extends WorkflowBase {
     if (params.filters?.dateRange) {
       const { startDate, endDate } = params.filters.dateRange;
       if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
-        validation.issues.push("Start date must be before end date");
+        validation.issues.push('Start date must be before end date');
         validation.valid = false;
       }
     }
 
     // Validate pagination limits
     if (params.pagination?.limit && params.pagination.limit > 100) {
-      validation.issues.push("Limit cannot exceed 100 items");
+      validation.issues.push('Limit cannot exceed 100 items');
       validation.valid = false;
     }
 
@@ -646,7 +640,7 @@ export class ExampleQueryWorkflow extends WorkflowBase {
       filtersApplied: Object.keys(params.filters || {}).length,
       pagination: params.pagination || { page: 1, limit: 20 },
       estimatedApiCalls: 1,
-      estimatedExecutionTime: "< 5 seconds",
+      estimatedExecutionTime: '< 5 seconds',
     };
   }
 
@@ -655,7 +649,7 @@ export class ExampleQueryWorkflow extends WorkflowBase {
    */
   private countByField(items: any[], field: string): Record<string, number> {
     return items.reduce((counts, item) => {
-      const value = item[field] || "unknown";
+      const value = item[field] || 'unknown';
       counts[value] = (counts[value] || 0) + 1;
       return counts;
     }, {});

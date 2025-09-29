@@ -5,7 +5,6 @@
  * that coordinates all OAuth components. It provides the complete OAuth 2.0 authorization
  * server functionality with RFC compliance and security preservation from OAuthClientService.ts.
  *
- * Extracted from: actionstep-mcp-server/src/api/OAuthClientService.ts
  * Security Requirements:
  * - RFC 6749 OAuth 2.0 Authorization Framework compliance
  * - RFC 7636 PKCE (Proof Key for Code Exchange) integration
@@ -265,7 +264,7 @@ export class OAuthProvider {
    * 🔒 SECURITY-CRITICAL: Validate MCP access token with session binding
    *
    * Preserves exact token validation logic from OAuthClientService.validateMCPAccessToken()
-   * with automatic ActionStep token refresh capability for MCP session binding.
+   * with automatic external token refresh capability for MCP session binding.
    */
   async validateMCPAccessToken(
     token: string,
@@ -494,17 +493,17 @@ export class OAuthProvider {
    * Store MCP authorization request for session binding
    */
   async storeMCPAuthRequest(
-    actionStepState: string,
+    externalState: string,
     request: MCPAuthorizationRequest,
   ): Promise<void> {
-    return await this.authorizationHandler.storeMCPAuthRequest(actionStepState, request);
+    return await this.authorizationHandler.storeMCPAuthRequest(externalState, request);
   }
 
   /**
-   * Retrieve MCP authorization request by ActionStep state
+   * Retrieve MCP authorization request by External state
    */
-  async getMCPAuthRequest(actionStepState: string): Promise<MCPAuthorizationRequest | null> {
-    return await this.authorizationHandler.getMCPAuthRequest(actionStepState);
+  async getMCPAuthRequest(externalState: string): Promise<MCPAuthorizationRequest | null> {
+    return await this.authorizationHandler.getMCPAuthRequest(externalState);
   }
 
   /**
@@ -614,14 +613,14 @@ export class OAuthProvider {
       if (!validation.valid) {
         return {
           mcpToken: null,
-          actionStepTokenExists: false,
+          externalTokenExists: false,
         };
       }
 
       // Check if third-party credentials exist
       const thirdPartyCredentials = await this.credentialStore.getCredentials(
         validation.userId!,
-        'actionstep', // Provider ID
+        'example', // Provider ID
       );
 
       return {
@@ -632,13 +631,13 @@ export class OAuthProvider {
           expires_at: 0, // Would need to get from token data
           created_at: 0, // Would need to get from token data
         },
-        actionStepTokenExists: !!thirdPartyCredentials,
+        externalTokenExists: !!thirdPartyCredentials,
       };
     } catch (error) {
       this.logger?.error('OAuthProvider: Failed to get token mapping:', toError(error));
       return {
         mcpToken: null,
-        actionStepTokenExists: false,
+        externalTokenExists: false,
       };
     }
   }

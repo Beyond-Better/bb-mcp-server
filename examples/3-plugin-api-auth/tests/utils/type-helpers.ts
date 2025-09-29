@@ -1,6 +1,6 @@
 /**
  * Type assertion helpers for tests
- * 
+ *
  * These helpers provide type-safe access to workflow result data
  * while maintaining test readability and avoiding repetitive type assertions.
  */

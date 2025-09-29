@@ -1,7 +1,7 @@
 /**
  * Enhanced workflow types for bb-mcp-server
  *
- * Comprehensive type definitions with Phase 1 integration and plugin support
+ * Comprehensive type definitions with integration and plugin support
  */
 
 import { z, type ZodSchema } from 'zod';
@@ -62,7 +62,7 @@ export interface BaseWorkflowParameters {
 }
 
 /**
- * Enhanced workflow context with Phase 1 integrations
+ * Enhanced workflow context with integrations
  */
 export interface WorkflowContext {
   userId: string;
@@ -70,7 +70,7 @@ export interface WorkflowContext {
   workflowName: string;
   startTime: Date;
 
-  // Services (from Phase 1)
+  // Services
   auditLogger: AuditLogger;
   logger: Logger | undefined;
   kvManager: KVManager | undefined;

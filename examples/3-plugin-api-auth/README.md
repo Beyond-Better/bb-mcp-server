@@ -16,6 +16,7 @@ This example teaches you how to:
 ## 🔧 Key Features
 
 ### 1. OAuth Consumer Integration (`ExampleOAuthConsumer`)
+
 **Extends Library OAuthConsumer for ExampleCorp API**
 
 ```typescript
@@ -32,70 +33,79 @@ const oAuthConsumer = new ExampleOAuthConsumer({
     apiBaseUrl: 'https://api.examplecorp.com',
     apiVersion: 'v1',
     customClaims: {
-      organization: process.env.EXAMPLECORP_ORGANIZATION
-    }
-  }
+      organization: process.env.EXAMPLECORP_ORGANIZATION,
+    },
+  },
 });
 ```
 
 **Demonstrates**:
+
 - Provider-specific OAuth configuration
 - Custom claims and scopes handling
 - Automatic token refresh and management
 - Secure credential storage with Deno KV
 
 ### 2. External API Client (`ExampleApiClient`)
+
 **Authenticated HTTP client with proper error handling**
 
 ```typescript
 // API client with OAuth authentication
-const apiClient = new ExampleApiClient({
-  baseUrl: 'https://api.examplecorp.com',
-  apiVersion: 'v1',
-  timeout: 30000,
-  retryAttempts: 3,
-  userAgent: 'ExampleCorp-MCP-Server/1.0'
-}, oAuthConsumer, logger);
+const apiClient = new ExampleApiClient(
+  {
+    baseUrl: 'https://api.examplecorp.com',
+    apiVersion: 'v1',
+    timeout: 30000,
+    retryAttempts: 3,
+    userAgent: 'ExampleCorp-MCP-Server/1.0',
+  },
+  oAuthConsumer,
+  logger,
+);
 ```
 
 **Demonstrates**:
+
 - OAuth header injection for authenticated requests
 - Intelligent retry logic with exponential backoff
 - Rate limiting and error response handling
 - Request/response validation and logging
 
 ### 3. Custom Dependency Creation (`ExampleDependencies.ts`)
+
 **Integrates library and custom components**
 
 ```typescript
 // Custom dependency factory function
 export async function createExampleDependencies(
-  { configManager, logger, kvManager }: CreateCustomAppServerDependencies
+  { configManager, logger, kvManager }: CreateCustomAppServerDependencies,
 ): Promise<Partial<AppServerDependencies>> {
   // Create OAuth consumer with environment configuration
   const oAuthConsumer = new ExampleOAuthConsumer(oauthConfig, logger, kvManager);
-  
+
   // Create API client with OAuth integration
   const thirdpartyApiClient = new ExampleApiClient(apiConfig, oAuthConsumer, logger);
-  
+
   return {
     // Library dependencies (provided by bb-mcp-server)
     configManager,
     logger,
-    
+
     // Custom dependencies (ExampleCorp-specific)
     thirdpartyApiClient,
     oAuthConsumer,
-    
+
     serverConfig: {
       name: 'examplecorp-mcp-server',
-      version: '1.0.0'
-    }
+      version: '1.0.0',
+    },
   };
 }
 ```
 
 **Demonstrates**:
+
 - Clean separation between library and custom dependencies
 - Proper dependency injection patterns
 - Configuration management with environment variables
@@ -104,6 +114,7 @@ export async function createExampleDependencies(
 ## 🏗️ Architecture Patterns
 
 ### OAuth Integration Architecture
+
 ```
 AppServer.create(custom dependencies)
 ├── Plugin Discovery System
@@ -121,6 +132,7 @@ AppServer.create(custom dependencies)
 ```
 
 ### Correct Dependency Injection Pattern
+
 ```typescript
 // main.ts - Simple setup with custom dependencies
 const appServer = await AppServer.create(createExampleDependencies);
@@ -128,24 +140,26 @@ await appServer.start();
 ```
 
 **Benefits**:
+
 - Library handles all infrastructure (transport, logging, storage)
 - Custom dependencies provide business-specific functionality
 - Plugin discovery automatically finds and registers components
 - OAuth integration works seamlessly with HTTP transport endpoints
 
 ### Plugin Structure with Custom Dependencies
+
 ```typescript
 const ExamplePlugin: AppPlugin = {
   name: 'example-api-auth-plugin',
   version: '1.0.0',
   description: 'OAuth-authenticated ExampleCorp API integration',
-  
+
   // Tools and workflows have access to injected dependencies
   workflows: [
     new ExampleQueryWorkflow(), // Uses thirdpartyApiClient internally
-    new ExampleOperationWorkflow() // OAuth authentication handled automatically
+    new ExampleOperationWorkflow(), // OAuth authentication handled automatically
   ],
-  
+
   tools: [
     // OAuth-authenticated tools
   ],
@@ -155,6 +169,7 @@ const ExamplePlugin: AppPlugin = {
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Deno 2.5.0 or later
 - ExampleCorp API credentials (OAuth client ID and secret)
 - Basic understanding of OAuth 2.0 authentication flows
@@ -178,7 +193,7 @@ const ExamplePlugin: AppPlugin = {
    ```bash
    # STDIO transport (default)
    deno run --allow-all main.ts
-   
+
    # HTTP transport with OAuth endpoints
    MCP_TRANSPORT=http deno run --allow-all main.ts
    ```
@@ -192,6 +207,7 @@ const ExamplePlugin: AppPlugin = {
 ### Configuration
 
 #### Required OAuth Configuration
+
 ```bash
 # OAuth Consumer Configuration (for ExampleCorp API)
 OAUTH_CONSUMER_CLIENT_ID=your-examplecorp-client-id
@@ -209,6 +225,7 @@ THIRDPARTY_DEPARTMENT=your-dept-id
 ```
 
 #### Optional Configuration
+
 ```bash
 # Transport Configuration
 MCP_TRANSPORT=stdio|http
@@ -231,6 +248,7 @@ LOG_FORMAT=json|text
 ## 📊 OAuth Flow Diagram
 
 ### Authorization Code Flow with PKCE
+
 ```
 MCP Client                    MCP Server                    ExampleCorp API
     │                             │                              │
@@ -257,6 +275,7 @@ MCP Client                    MCP Server                    ExampleCorp API
 ### OAuth-Authenticated Tools
 
 #### `query_customers_example`
+
 **Search ExampleCorp customer database with OAuth authentication**
 
 ```json
@@ -272,6 +291,7 @@ MCP Client                    MCP Server                    ExampleCorp API
 ```
 
 #### `create_order_example`
+
 **Create orders in ExampleCorp system with proper authentication**
 
 ```json
@@ -291,6 +311,7 @@ MCP Client                    MCP Server                    ExampleCorp API
 ### OAuth-Authenticated Workflows
 
 #### `example_query` Workflow
+
 **Multi-step data querying with authentication**
 
 ```json
@@ -312,6 +333,7 @@ MCP Client                    MCP Server                    ExampleCorp API
 ```
 
 #### `example_operation` Workflow
+
 **Complex business operations with OAuth security**
 
 ```json
@@ -339,6 +361,7 @@ MCP Client                    MCP Server                    ExampleCorp API
 ## 🧪 Testing OAuth Integration
 
 ### Test OAuth Flow
+
 ```bash
 # Test OAuth consumer functionality
 deno test --allow-all tests/auth/ExampleOAuthConsumer.test.ts
@@ -351,14 +374,15 @@ deno test --allow-all tests/integration/OAuthWorkflows.test.ts
 ```
 
 ### Mock OAuth Testing
+
 ```typescript
 // Create mock OAuth consumer for testing
 const mockOAuthConsumer = new MockExampleOAuthConsumer({
   mockTokens: {
     accessToken: 'mock-access-token',
     refreshToken: 'mock-refresh-token',
-    expiresAt: Date.now() + 3600000
-  }
+    expiresAt: Date.now() + 3600000,
+  },
 });
 
 // Test API client with mock authentication
@@ -422,14 +446,14 @@ If you're coming from the `2-plugin-workflows` example:
 
 ### Key Differences
 
-| Aspect | Plugin-Workflows | Plugin-API-Auth |
-|--------|-----------------|-----------------| 
-| **Authentication** | None required | OAuth 2.0 with external API |
-| **Dependencies** | Library defaults | Custom dependency injection |
-| **API Integration** | Mock/local data | Real external API calls |
-| **Setup Complexity** | Minimal configuration | OAuth credentials required |
-| **Security** | Basic | Production OAuth patterns |
-| **Error Handling** | Local workflow errors | Network + OAuth error handling |
+| Aspect               | Plugin-Workflows      | Plugin-API-Auth                |
+| -------------------- | --------------------- | ------------------------------ |
+| **Authentication**   | None required         | OAuth 2.0 with external API    |
+| **Dependencies**     | Library defaults      | Custom dependency injection    |
+| **API Integration**  | Mock/local data       | Real external API calls        |
+| **Setup Complexity** | Minimal configuration | OAuth credentials required     |
+| **Security**         | Basic                 | Production OAuth patterns      |
+| **Error Handling**   | Local workflow errors | Network + OAuth error handling |
 
 ### Migration Steps
 
@@ -448,16 +472,16 @@ If you're coming from the `2-plugin-workflows` example:
 
 ```typescript
 // Library OAuth Provider (server provides OAuth)
-oauthProvider: new OAuthProvider({ /* server config */ })
+oauthProvider: new OAuthProvider({/* server config */});
 
 // OAuth Consumer (server consumes external OAuth)
-oAuthConsumer: new ExampleOAuthConsumer({ /* external API config */ })
+oAuthConsumer: new ExampleOAuthConsumer({/* external API config */});
 ```
 
 ### Dependency Injection Benefits
 
 1. **Testability**: Easy to mock dependencies for testing
-2. **Configuration**: Environment-based dependency configuration  
+2. **Configuration**: Environment-based dependency configuration
 3. **Flexibility**: Swap implementations without code changes
 4. **Separation**: Clear boundary between library and business logic
 5. **Type Safety**: Full TypeScript support for all dependencies

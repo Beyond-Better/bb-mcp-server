@@ -2,42 +2,42 @@
 
 /**
  * Plugin-API-Auth MCP Server - OAuth and External API Integration
- * 
+ *
  * This demonstrates advanced capabilities with bb-mcp-server:
  * - OAuth authentication with external APIs
  * - Custom dependency injection for API clients
  * - Plugin discovery with authenticated workflows
  * - Secure credential management and token handling
  * - Integration patterns for third-party services
- * 
+ *
  * LEARNING FOCUS: "How to integrate with external APIs using OAuth"
- * 
+ *
  * FEATURES DEMONSTRATED:
  * ========================
- * 
+ *
  * ✅ OAuth Integration:
  *    - ExampleOAuthConsumer for secure authentication
  *    - Automatic token refresh and management
  *    - Secure credential storage with Deno KV
- * 
+ *
  * ✅ External API Client:
  *    - ExampleApiClient with authentication headers
  *    - Proper error handling and retry logic
  *    - Rate limiting and response validation
- * 
+ *
  * ✅ Custom Dependencies:
  *    - Pre-built instance injection pattern
  *    - Clean dependency creation with createExampleDependencies()
  *    - Type-safe configuration management
- * 
+ *
  * ✅ Plugin Architecture:
  *    - Automatic plugin discovery in src/plugins/
  *    - Tools and workflows bundled together
  *    - Clean separation of business logic and infrastructure
- * 
+ *
  * ARCHITECTURE:
  * =============
- * 
+ *
  * AppServer.create(custom dependencies)
  * ├── Plugin Discovery System
  * ├── ExamplePlugin
@@ -48,20 +48,20 @@
  * │   └── ExampleOAuthConsumer
  * └── Library Dependencies
  *     └── (ConfigManager, Logger, etc.)
- * 
+ *
  * USAGE:
  * ======
- * 
+ *
  * # STDIO transport:
  * deno run --allow-all main.ts
- * 
+ *
  * # HTTP transport with OAuth endpoints:
  * MCP_TRANSPORT=http deno run --allow-all main.ts
  * # Then access: http://localhost:3000
- * 
+ *
  * NEXT STEPS:
  * ===========
- * 
+ *
  * After mastering OAuth and API integration:
  * 1. Try 4-manual-deps for complete infrastructure control
  * 2. Build your own OAuth integrations for different providers
@@ -76,7 +76,7 @@ import { createExampleDependencies } from './src/config/ExampleDependencies.ts';
 
 /**
  * Advanced main function demonstrating OAuth and API integration
- * 
+ *
  * This builds on the simple setup pattern but adds custom dependencies
  * for OAuth authentication and external API integration.
  */
@@ -91,7 +91,7 @@ async function main(): Promise<void> {
     // - Configures transport (STDIO or HTTP based on MCP_TRANSPORT)
     // - Sets up OAuth endpoints (if HTTP transport)
     const appServer = await AppServer.create(createExampleDependencies);
-    
+
     // 🚀 Start the complete application stack
     // This single call handles:
     // - MCP server initialization with OAuth support
@@ -100,7 +100,7 @@ async function main(): Promise<void> {
     // - External API client initialization
     // - Complete application lifecycle management
     await appServer.start();
-    
+
     console.log('🎉 Plugin-API-Auth MCP Server started successfully!');
     console.log('🔐 OAuth integration enabled with ExampleCorp API');
     console.log('🛠️ Available tools: example_query, example_operation');
@@ -109,7 +109,6 @@ async function main(): Promise<void> {
     if (process.env.MCP_TRANSPORT === 'http') {
       console.log('🌐 OAuth endpoints: http://localhost:3000/oauth/authorize, /oauth/token');
     }
-    
   } catch (error) {
     console.error('❌ Failed to start Plugin-API-Auth MCP Server:', error);
     Deno.exit(1);

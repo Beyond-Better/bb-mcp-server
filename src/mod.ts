@@ -185,7 +185,7 @@ export type {
 } from './lib/types/PluginTypes.ts';
 export { DEFAULT_PLUGIN_CATEGORIES } from './lib/types/PluginTypes.ts';
 
-// Transport types (Phase 3)
+// Transport types
 export type {
   AuthenticationResult,
   CreateSessionData,

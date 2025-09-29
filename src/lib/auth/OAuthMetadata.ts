@@ -5,7 +5,6 @@
  * Metadata per RFC 8414. The metadata endpoint provides clients with information
  * about the authorization server's capabilities, endpoints, and supported features.
  *
- * Extracted from: actionstep-mcp-server/src/server/HttpServer.ts (metadata endpoint)
  * Security Requirements:
  * - RFC 8414 full compliance for authorization server metadata
  * - Accurate capability advertisement (grant types, response types, etc.)

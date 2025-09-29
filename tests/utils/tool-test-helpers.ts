@@ -13,6 +13,25 @@ import type { PluginCategory } from '../../src/lib/types/PluginTypes.ts';
 import { SpyAuditLogger, SpyLogger } from './test-helpers.ts';
 
 /**
+ * Type guard to check if a CallToolResult has valid text content
+ */
+function hasTextContent(result: CallToolResult): result is CallToolResult & {
+  content: Array<{ type: 'text'; text: string }>;
+} {
+  return (
+    !!result.content &&
+    Array.isArray(result.content) &&
+    result.content.length > 0 &&
+    !!result.content[0] &&
+    typeof result.content[0] === 'object' &&
+    'type' in result.content[0] &&
+    result.content[0].type === 'text' &&
+    'text' in result.content[0] &&
+    typeof result.content[0].text === 'string'
+  );
+}
+
+/**
  * Test data generators for ToolBase testing
  */
 export const ToolTestData = {
@@ -140,15 +159,12 @@ export const ToolAssertions = {
    * Assert that a tool result has the expected structure
    */
   hasValidToolResult: (result: CallToolResult, expectedContent?: string) => {
-    if (!result.content || !Array.isArray(result.content) || result.content.length === 0) {
-      throw new Error('Tool result must have content array with at least one item');
+    if (!hasTextContent(result)) {
+      throw new Error('Tool result must have valid text content');
     }
 
-    const firstContent = result.content[0];
-    if (!firstContent || firstContent.type !== 'text') {
-      throw new Error('First content item must be of type "text"');
-    }
-
+    // After type guard, we know result.content[0] exists and has text property
+    const firstContent = result.content[0]!; // Non-null assertion after type guard
     if (expectedContent && !firstContent.text.includes(expectedContent)) {
       throw new Error(
         `Expected content to include "${expectedContent}", got: ${firstContent.text}`,
@@ -164,7 +180,13 @@ export const ToolAssertions = {
       throw new Error('Expected result to have isError: true');
     }
 
-    if (expectedErrorText && !result.content[0].text.includes(expectedErrorText)) {
+    if (!hasTextContent(result)) {
+      throw new Error('Error result must have valid text content');
+    }
+
+    // After type guard, we know result.content[0] exists and has text property
+    const firstContent = result.content[0]!; // Non-null assertion after type guard
+    if (expectedErrorText && !firstContent.text.includes(expectedErrorText)) {
       throw new Error(`Expected error message to include "${expectedErrorText}"`);
     }
   },

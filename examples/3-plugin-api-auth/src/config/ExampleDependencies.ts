@@ -11,9 +11,9 @@
 // 🎯 Library imports - all infrastructure dependencies
 import {
   AppServerDependencies,
-  WorkflowToolNaming,
-  ToolHandlerMode,
   type CreateCustomAppServerDependencies,
+  ToolHandlerMode,
+  WorkflowToolNaming,
 } from '@beyondbetter/bb-mcp-server';
 
 // 🎯 Consumer-specific imports - business logic components
@@ -116,7 +116,6 @@ export async function createExampleDependencies(
       title: 'ExampleCorp API Integration',
       description: 'MCP server for ExampleCorp API integration with bb-mcp-server library',
     },
-
     // 🎯 Tool registration configuration - demonstrates new flexible system
     // NOTE: This would be used when creating BeyondMcpServer, not returned from dependencies
     // toolRegistrationConfig: {

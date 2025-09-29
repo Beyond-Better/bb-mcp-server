@@ -1,6 +1,6 @@
 /**
  * Unit Tests for ToolRegistry
- * Tests sophisticated tool registration and Zod validation extracted from ActionStepMCPServer
+ * Tests sophisticated tool registration and Zod validation
  */
 
 import { assert, assertEquals, assertExists, assertRejects } from '@std/assert';
@@ -301,13 +301,12 @@ describe('ToolRegistry', () => {
     });
 
     it('should work with workflow names pattern', () => {
-      const workflowNames = ['client_creation', 'patent_analysis', 'actionstep_query'];
+      const workflowNames = ['client_creation', 'patent_analysis', 'external_query'];
       const workflowEnum = ToolRegistry.createDynamicEnum(workflowNames);
 
-      // This pattern mirrors ActionStepMCPServer workflow registration
       const definition = {
         title: 'Execute Workflow',
-        description: 'Execute ActionStep workflows',
+        description: 'Execute External workflows',
         inputSchema: {
           workflow_name: workflowEnum,
           parameters: z.object({}).passthrough(),
@@ -559,8 +558,7 @@ describe('ToolRegistry Complex Zod Integration', () => {
     toolRegistry.sdkMcpServer = mockMcpServer as any;
   });
 
-  it('should handle complex nested Zod schema like ActionStep workflow registration', async () => {
-    // This mirrors the complex schema from ActionStepMCPServer executeWorkflow tool
+  it('should handle complex nested Zod schema like External workflow registration', async () => {
     const workflowNames = ['client_creation', 'patent_analysis'];
 
     const definition = {

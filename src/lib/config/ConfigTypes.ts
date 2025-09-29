@@ -2,8 +2,7 @@
  * Configuration type definitions for bb-mcp-server library
  *
  * Defines interfaces for server configuration, transport options, and
- * third-party integrations. Extracted and generalized from ActionStep
- * MCP Server configuration.
+ * third-party integrations.
  */
 
 /**

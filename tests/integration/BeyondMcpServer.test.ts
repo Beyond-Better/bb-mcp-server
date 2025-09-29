@@ -68,6 +68,7 @@ describe('MCP Server Complete Integration', () => {
     await mockSdkMcpServer.connect(); // Connect to enable MCP SDK functionality
 
     beyondMcpServer = new BeyondMcpServer(config, dependencies, mockSdkMcpServer as any);
+    await beyondMcpServer.initialize();
   });
 
   afterEach(async () => {
@@ -232,6 +233,7 @@ describe('MCP Server Complete Integration', () => {
         const statusData = JSON.parse(statusContent.text as string);
         assertExists(statusData.server);
         assertExists(statusData.tools);
+        assertExists(statusData.workflows);
         assertExists(statusData.health);
       });
     });
@@ -503,7 +505,7 @@ describe('MCP Server Complete Integration', () => {
 
       // Shutdown should complete without errors
       await beyondMcpServer.shutdown();
-      console.log('systemEvents', spyAuditLogger.systemEvents);
+      //console.log('systemEvents', spyAuditLogger.systemEvents);
 
       // Verify shutdown was logged
       assert(
@@ -620,10 +622,9 @@ describe('Example Consumer Simulation', () => {
 
     const dependencies = createMockBeyondMcpServerDependencies();
 
-    const actionStepServer = new BeyondMcpServerSimulation(config, dependencies);
-
+    const beyondMcpServer = new BeyondMcpServerSimulation(config, dependencies);
     try {
-      await actionStepServer.initialize();
+      await beyondMcpServer.initialize();
 
       const testContext = createTestRequestContext({
         authenticatedUserId: 'example-user',
@@ -631,12 +632,12 @@ describe('Example Consumer Simulation', () => {
         scopes: ['read', 'write'],
       });
 
-      const result = await actionStepServer.executeWithAuthContext(testContext, async () => {
-        const toolRegistry = actionStepServer['toolRegistry'];
-        const actionStepTool = toolRegistry.getTool('example_simulate');
-        assertExists(actionStepTool);
+      const result = await beyondMcpServer.executeWithAuthContext(testContext, async () => {
+        const toolRegistry = beyondMcpServer['toolRegistry'];
+        const externalTool = toolRegistry.getTool('example_simulate');
+        assertExists(externalTool);
 
-        const toolResult = await actionStepTool.handler({
+        const toolResult = await externalTool.handler({
           operation: 'get_participants',
           params: { search: 'test', role: 'attorney' },
         }, {});
@@ -647,7 +648,7 @@ describe('Example Consumer Simulation', () => {
 
         return {
           serverName: 'example-simulation-server', // Use config name directly
-          contextUserId: actionStepServer.getAuthenticatedUserId(),
+          contextUserId: beyondMcpServer.getAuthenticatedUserId(),
           toolResponse: responseData,
         };
       });
@@ -658,7 +659,7 @@ describe('Example Consumer Simulation', () => {
       assertEquals(result.toolResponse.contextUserId, 'example-user');
       assertEquals(result.toolResponse.simulation, true);
     } finally {
-      await actionStepServer.shutdown();
+      await beyondMcpServer.shutdown();
     }
   });
 });

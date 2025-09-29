@@ -1,6 +1,6 @@
 /**
  * Content Generation Workflow Test Suite
- * 
+ *
  * Tests the AI-powered content generation workflow including:
  * - Parameter validation for content requirements
  * - Multi-step execution (plan → generate → review → publish)
@@ -9,16 +9,16 @@
  * - Publication workflow with metadata
  */
 
-import { assertEquals, assert, assertExists } from 'https://deno.land/std@0.208.0/assert/mod.ts';
-import { describe, it, beforeEach, afterEach } from 'https://deno.land/std@0.208.0/testing/bdd.ts';
-import { spy, type Spy } from 'https://deno.land/std@0.208.0/testing/mock.ts';
+import { assert, assertEquals, assertExists } from 'https://deno.land/std@0.208.0/assert/mod.ts';
+import { afterEach, beforeEach, describe, it } from 'https://deno.land/std@0.208.0/testing/bdd.ts';
+import { type Spy, spy } from 'https://deno.land/std@0.208.0/testing/mock.ts';
 import WorkflowPlugin from '../../src/plugins/WorkflowPlugin.ts';
-import { createTestContext, createMockLogger } from '../utils/test-helpers.ts';
+import { createMockLogger, createTestContext } from '../utils/test-helpers.ts';
 import type { WorkflowContext } from '@beyondbetter/bb-mcp-server';
 
 // Extract the ContentGenerationWorkflow class for direct testing
 const contentGenerationWorkflow = WorkflowPlugin.workflows?.find(
-  workflow => workflow.name === 'content_generation_pipeline'
+  (workflow) => workflow.name === 'content_generation_pipeline',
 );
 
 describe('ContentGenerationWorkflow', () => {
@@ -30,10 +30,10 @@ describe('ContentGenerationWorkflow', () => {
   beforeEach(() => {
     assertExists(contentGenerationWorkflow, 'ContentGenerationWorkflow should be found in plugin');
     workflow = contentGenerationWorkflow;
-    
+
     mockLogger = createMockLogger();
     logSpy = spy(mockLogger, 'info');
-    
+
     context = createTestContext({
       logger: mockLogger,
     });
@@ -59,7 +59,7 @@ describe('ContentGenerationWorkflow', () => {
 
     it('should return proper registration info', () => {
       const registration = workflow.getRegistration();
-      
+
       assertEquals(registration.name, 'content_generation_pipeline');
       assertEquals(registration.displayName, 'Content Generation Pipeline');
       assertEquals(registration.version, '1.0.0');
@@ -71,7 +71,7 @@ describe('ContentGenerationWorkflow', () => {
 
     it('should provide comprehensive workflow overview', () => {
       const overview = workflow.getOverview();
-      
+
       assert(overview.includes('AI-powered content generation'));
       assert(overview.includes('1. Plans the content structure'));
       assert(overview.includes('2. Generates content based on requirements'));
@@ -211,7 +211,7 @@ describe('ContentGenerationWorkflow', () => {
 
     it('should handle different content types', async () => {
       const contentTypes = ['blog', 'documentation', 'report'] as const;
-      
+
       for (const contentType of contentTypes) {
         const params = {
           userId: 'test-user',
@@ -226,13 +226,13 @@ describe('ContentGenerationWorkflow', () => {
 
         const result = await workflow.executeWithValidation(params, context);
         assertEquals(result.success, true);
-        
+
         // Check that content plan is type-specific
         assertEquals(result.data.content_plan.content_type, contentType);
-        
+
         // Check that generated content mentions the content type
         assert(result.data.generated_content.includes(contentType));
-        
+
         // Check metadata
         assertEquals(result.metadata.content_type, contentType);
       }
@@ -252,20 +252,20 @@ describe('ContentGenerationWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const finalContent = result.data.full_content;
       const actualWordCount = finalContent.split(' ').length;
-      
+
       // Should be within reasonable range of target (mock generation)
       assert(actualWordCount > 50); // At least some content
-      
+
       // Check that word count was tracked
       assertEquals(result.metadata.final_word_count, actualWordCount);
     });
 
     it('should handle different tone requirements', async () => {
       const tones = ['professional', 'casual', 'academic', 'friendly'] as const;
-      
+
       for (const tone of tones) {
         const params = {
           userId: 'test-user',
@@ -280,7 +280,7 @@ describe('ContentGenerationWorkflow', () => {
 
         const result = await workflow.executeWithValidation(params, context);
         assertEquals(result.success, true);
-        
+
         // Check that tone was recorded in plan
         assertEquals(result.data.content_plan.tone, tone);
       }
@@ -302,7 +302,7 @@ describe('ContentGenerationWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const plan = result.data.content_plan;
       assertEquals(plan.content_type, 'documentation');
       assertEquals(plan.topic, 'API Integration Guide');
@@ -319,15 +319,27 @@ describe('ContentGenerationWorkflow', () => {
       const testCases = [
         {
           contentType: 'blog',
-          expectedOutlineItems: ['Introduction and hook', 'Main points and arguments', 'Conclusion and call-to-action'],
+          expectedOutlineItems: [
+            'Introduction and hook',
+            'Main points and arguments',
+            'Conclusion and call-to-action',
+          ],
         },
         {
           contentType: 'documentation',
-          expectedOutlineItems: ['Overview and purpose', 'Step-by-step instructions', 'Troubleshooting and FAQ'],
+          expectedOutlineItems: [
+            'Overview and purpose',
+            'Step-by-step instructions',
+            'Troubleshooting and FAQ',
+          ],
         },
         {
           contentType: 'report',
-          expectedOutlineItems: ['Executive summary', 'Key findings and analysis', 'Recommendations'],
+          expectedOutlineItems: [
+            'Executive summary',
+            'Key findings and analysis',
+            'Recommendations',
+          ],
         },
       ];
 
@@ -341,9 +353,9 @@ describe('ContentGenerationWorkflow', () => {
 
         const result = await workflow.executeWithValidation(params, context);
         assertEquals(result.success, true);
-        
+
         const outline = result.data.content_plan.outline;
-        
+
         // Check that expected outline items are present
         for (const expectedItem of testCase.expectedOutlineItems) {
           assert(outline.some((item: string) => item.includes(expectedItem.split(' ')[0]!)));
@@ -367,14 +379,16 @@ describe('ContentGenerationWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const generatedContent = result.data.generated_content;
       assert(typeof generatedContent === 'string');
       assert(generatedContent.length > 100);
       assert(generatedContent.includes('Clean Code Principles'));
-      
+
       // Check generation info
-      const generateStep = result.completed_steps.find((step: any) => step.operation === 'generate_content');
+      const generateStep = result.completed_steps.find((step: any) =>
+        step.operation === 'generate_content'
+      );
       assertExists(generateStep);
       assertExists(generateStep.data.word_count);
       assertExists(generateStep.data.character_count);
@@ -387,7 +401,7 @@ describe('ContentGenerationWorkflow', () => {
         'Database Optimization',
         'Security Best Practices',
       ];
-      
+
       for (const topic of topics) {
         const params = {
           userId: 'test-user',
@@ -398,7 +412,7 @@ describe('ContentGenerationWorkflow', () => {
 
         const result = await workflow.executeWithValidation(params, context);
         assertEquals(result.success, true);
-        
+
         const content = result.data.generated_content;
         assert(content.includes(topic));
       }
@@ -421,22 +435,24 @@ describe('ContentGenerationWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
-      const reviewStep = result.completed_steps.find((step: any) => step.operation === 'review_content');
+
+      const reviewStep = result.completed_steps.find((step: any) =>
+        step.operation === 'review_content'
+      );
       assertExists(reviewStep);
-      
+
       const reviewResults = reviewStep.data;
       assertExists(reviewResults.word_count_check);
       assertExists(reviewResults.tone_check);
       assertExists(reviewResults.quality_metrics);
       assertExists(reviewResults.recommendations);
       assertExists(reviewResults.reviewed_at);
-      
+
       // Check word count analysis
       assertEquals(reviewResults.word_count_check.target, 800);
       assert(typeof reviewResults.word_count_check.actual === 'number');
       assert(typeof reviewResults.word_count_check.within_range === 'boolean');
-      
+
       // Check tone analysis
       assertEquals(reviewResults.tone_check.target, 'professional');
       assertExists(reviewResults.tone_check.detected);
@@ -456,13 +472,13 @@ describe('ContentGenerationWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const reviewedContent = result.data.reviewed_content;
       const generatedContent = result.data.generated_content;
-      
+
       // Reviewed content should exist and potentially be different from generated
       assertExists(reviewedContent);
-      
+
       // Should have conclusion if it wasn't already present
       if (!generatedContent.toLowerCase().includes('conclusion')) {
         assert(reviewedContent.toLowerCase().includes('conclusion'));
@@ -484,22 +500,27 @@ describe('ContentGenerationWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
-      const reviewStep = result.completed_steps.find((step: any) => step.operation === 'review_content');
+
+      const reviewStep = result.completed_steps.find((step: any) =>
+        step.operation === 'review_content'
+      );
       const recommendations = reviewStep?.data.recommendations;
-      
+
       assertExists(recommendations);
       assert(Array.isArray(recommendations));
-      
+
       // Should have recommendations for low word count or missing references
-      const hasWordCountRec = recommendations.some((rec: string) => 
+      const hasWordCountRec = recommendations.some((rec: string) =>
         rec.includes('word count') || rec.includes('expand')
       );
-      const hasReferenceRec = recommendations.some((rec: string) => 
+      const hasReferenceRec = recommendations.some((rec: string) =>
         rec.includes('references') || rec.includes('links')
       );
-      
-      assert(hasWordCountRec || hasReferenceRec || recommendations.includes('Content meets quality standards'));
+
+      assert(
+        hasWordCountRec || hasReferenceRec ||
+          recommendations.includes('Content meets quality standards'),
+      );
     });
   });
 
@@ -518,7 +539,7 @@ describe('ContentGenerationWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const publishInfo = result.data.publish_info;
       assertExists(publishInfo.content_id);
       assertExists(publishInfo.title);
@@ -528,14 +549,14 @@ describe('ContentGenerationWorkflow', () => {
       assertExists(publishInfo.published_at);
       assertExists(publishInfo.metadata);
       assertExists(publishInfo.content_preview);
-      
+
       assertEquals(publishInfo.content_type, 'documentation');
       assertEquals(publishInfo.metadata.author, 'content-creator');
       assertEquals(publishInfo.metadata.topic, 'REST API Design');
-      
+
       // Title should be meaningful
       assert(publishInfo.title.includes('REST API Design'));
-      
+
       // Preview should be truncated
       assert(publishInfo.content_preview.length <= 203); // 200 + '...'
       assert(publishInfo.content_preview.endsWith('...'));
@@ -551,10 +572,10 @@ describe('ContentGenerationWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const publishInfo = result.data.publish_info;
       const title = publishInfo.title;
-      
+
       // Should have a meaningful title related to the topic
       assert(title.includes('JavaScript Frameworks') || title.includes('Understanding'));
     });
@@ -572,7 +593,7 @@ describe('ContentGenerationWorkflow', () => {
       };
 
       const result = await workflow.executeWithValidation(params, context);
-      
+
       // Should succeed in normal cases, but error handling is in place
       if (!result.success) {
         assert(result.failed_steps.length > 0);
@@ -591,11 +612,11 @@ describe('ContentGenerationWorkflow', () => {
       };
 
       const result = await workflow.executeWithValidation(params, context);
-      
+
       // In the mock implementation, all steps should succeed
       // But the structure supports continuing with failures
       assert(result.completed_steps.length > 0);
-      
+
       if (result.failed_steps.length > 0) {
         // Should still have some completed steps
         assert(result.completed_steps.length > 0);
@@ -618,11 +639,11 @@ describe('ContentGenerationWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       // Check execution timing
       assert(typeof result.duration === 'number');
       assert(result.duration > 0);
-      
+
       // Check metadata
       assertExists(result.metadata);
       assertEquals(result.metadata.workflow, 'content_generation');
@@ -632,7 +653,7 @@ describe('ContentGenerationWorkflow', () => {
       assertEquals(result.metadata.generation_completed, true);
       assertEquals(result.metadata.review_completed, true);
       assertEquals(result.metadata.publishing_completed, true);
-      
+
       // Each step should have timing
       result.completed_steps.forEach((step: any) => {
         assert(typeof step.duration_ms === 'number');
@@ -650,23 +671,19 @@ describe('ContentGenerationWorkflow', () => {
       };
 
       await workflow.executeWithValidation(params, context);
-      
+
       const logCalls = logSpy.calls;
       assert(logCalls.length > 0);
-      
+
       // Should log pipeline start
-      assert(logCalls.some(call => 
-        call.args[0].includes('Starting content generation pipeline')
-      ));
-      
+      assert(
+        logCalls.some((call) => call.args[0].includes('Starting content generation pipeline')),
+      );
+
       // Should log individual steps
-      assert(logCalls.some(call => 
-        call.args[0].includes('Planning content structure')
-      ));
-      
-      assert(logCalls.some(call => 
-        call.args[0].includes('Generating content based on plan')
-      ));
+      assert(logCalls.some((call) => call.args[0].includes('Planning content structure')));
+
+      assert(logCalls.some((call) => call.args[0].includes('Generating content based on plan')));
     });
   });
 
@@ -685,13 +702,13 @@ describe('ContentGenerationWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const finalContent = result.data.full_content;
-      
+
       // Should have markdown headers
       assert(finalContent.includes('# Understanding'));
       assert(finalContent.includes('## '));
-      
+
       // Should be structured content, not just plain text
       const headerCount = (finalContent.match(/##/g) || []).length;
       assert(headerCount >= 2);
@@ -711,23 +728,21 @@ describe('ContentGenerationWorkflow', () => {
 
       const result = await workflow.executeWithValidation(params, context);
       assertEquals(result.success, true);
-      
+
       const finalContent = result.data.full_content;
-      
+
       // Basic quality checks
       assert(finalContent.length > 200); // Substantial content
       assert(finalContent.includes(params.topic)); // Relevant to topic
       assert(!finalContent.includes('undefined')); // No undefined values
       assert(!finalContent.includes('[object Object]')); // No object serialization issues
-      
+
       // Should have professional tone indicators
       const professionalContent = finalContent.toLowerCase();
-      const hasProfessionalLanguage = (
-        professionalContent.includes('important') ||
+      const hasProfessionalLanguage = professionalContent.includes('important') ||
         professionalContent.includes('significant') ||
         professionalContent.includes('crucial') ||
-        professionalContent.includes('comprehensive')
-      );
+        professionalContent.includes('comprehensive');
       assert(hasProfessionalLanguage);
     });
   });

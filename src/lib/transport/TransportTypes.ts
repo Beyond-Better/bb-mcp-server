@@ -262,14 +262,10 @@ export interface SessionStats {
 
 // Transport dependencies (injected from previous phases)
 export interface TransportDependencies {
-  // From Phase 1
   logger: Logger;
   kvManager: KVManager;
   sessionStore: SessionStore;
   eventStore: TransportEventStore;
-
-  // // From Phase 2 (if needed)
-  // workflowRegistry?: WorkflowRegistry;
 }
 
 // Authentication result (from OAuth integration)

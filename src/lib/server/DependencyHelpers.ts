@@ -325,7 +325,9 @@ export async function validateConfiguration(
 
     if (missingConfig.length > 0) {
       const error = `Missing required OAuth consumer configuration: ${missingConfig.join(', ')}`;
-      logger.error('OAuth consumer configuration validation failed', new Error(error), { missingConfig });
+      logger.error('OAuth consumer configuration validation failed', new Error(error), {
+        missingConfig,
+      });
       throw new Error(error);
     }
 
@@ -352,7 +354,7 @@ export async function validateConfiguration(
     // Check if user explicitly wants to disable OAuth provider requirement
     const transportConfig = configManager.getTransportConfig();
     const allowInsecureHttp = transportConfig?.http?.allowInsecure === true;
-    
+
     if (missingOAuthConfig.length > 0) {
       if (allowInsecureHttp) {
         logger.warn('🚨 SECURITY WARNING: Running HTTP transport without OAuth provider', {
@@ -363,16 +365,21 @@ export async function validateConfiguration(
           missingConfig: missingOAuthConfig,
           environment: configManager.get('NODE_ENV', 'development'),
         });
-        logger.warn('🔓 HTTP server will accept unauthenticated requests - suitable for development only');
+        logger.warn(
+          '🔓 HTTP server will accept unauthenticated requests - suitable for development only',
+        );
       } else {
         logger.warn('🚨 HTTP transport without OAuth provider detected', {
           missingConfig: missingOAuthConfig,
           securityRisk: 'HTTP server will accept unauthenticated requests',
-          solution: 'Set HTTP_ALLOW_INSECURE=true to explicitly allow insecure mode, or configure OAuth provider',
+          solution:
+            'Set HTTP_ALLOW_INSECURE=true to explicitly allow insecure mode, or configure OAuth provider',
           recommendation: 'OAuth provider is strongly recommended for production HTTP transport',
         });
-        
-        const error = `Missing OAuth provider configuration for HTTP transport: ${missingOAuthConfig.join(', ')}. Set HTTP_ALLOW_INSECURE=true to allow insecure HTTP mode.`;
+
+        const error = `Missing OAuth provider configuration for HTTP transport: ${
+          missingOAuthConfig.join(', ')
+        }. Set HTTP_ALLOW_INSECURE=true to allow insecure HTTP mode.`;
         logger.error('OAuth provider configuration validation failed', new Error(error), {
           missingOAuthConfig,
           allowInsecureHint: 'Set HTTP_ALLOW_INSECURE=true to bypass this requirement',
@@ -604,7 +611,7 @@ export function getAllDependencies(overrides: AppServerOverrides = {}): AppServe
     ...consumerDeps,
   };
 
-  // Use pre-built MCP server instance (Option A pattern)
+  // Use pre-built MCP server instance if it exists
   const beyondMcpServer = overrides.beyondMcpServer || (() => {
     // Fallback: create generic MCP server if no consumer server provided
     const serverConfig = overrides.serverConfig || {
@@ -625,7 +632,7 @@ export function getAllDependencies(overrides: AppServerOverrides = {}): AppServe
         tools: {},
         logging: {},
       },
-      instructions: configManager.get('INSTRUCTIONS'),
+      instructions: configManager.get('MCP_SERVER_INSTRUCTIONS'),
       transport: configManager.getTransportConfig() || { type: 'stdio' as const },
     }, allDeps);
 
@@ -635,6 +642,7 @@ export function getAllDependencies(overrides: AppServerOverrides = {}): AppServe
       server.registerTool(tool.name, tool.definition, tool.handler, tool.options)
     );
 
+    // the server will be initialized in AppServer.start()
     return server;
   })();
 

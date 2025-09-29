@@ -120,6 +120,8 @@ const server = new BeyondMcpServer({
     consumer: MyOAuthConsumer // Optional custom implementation
   }
 });
+// server.initialize postponed till AppServer.start()
+//await server.initialize();
 
 // Register custom workflows
 server.registerWorkflow(MyCustomWorkflow);
@@ -294,8 +296,8 @@ class OAuthConsumer {
 export class ExampleOAuthConsumer extends OAuthConsumer {
   constructor() {
     super({
-      authUrl: 'https://api.actionstep.com/oauth/authorize',
-      tokenUrl: 'https://api.actionstep.com/oauth/token',
+      authUrl: 'https://api.example.com/oauth/authorize',
+      tokenUrl: 'https://api.example.com/oauth/token',
       // ... other Example-specific config
     });
   }
@@ -563,7 +565,7 @@ export class MockBeyondMcpServer extends BeyondMcpServer {
 
 ## Future Enhancement Roadmap
 
-### Phase 1 Features (v1.0)
+### Features (v1.0)
 - Core MCP server functionality
 - OAuth provider and consumer
 - Base workflow system
@@ -572,13 +574,13 @@ export class MockBeyondMcpServer extends BeyondMcpServer {
 - Configuration management
 - Plugin discovery system
 
-### Phase 2 Features (v1.5)
+### Features (v1.5)
 - Advanced workflow features (scheduling, dependencies)
 - Enhanced error recovery
 - Performance optimizations
 - Additional storage backends
 
-### Phase 3 Features (v2.0)
+### Features (v2.0)
 - Multi-tenant support
 - Advanced security features
 - Workflow templates and marketplace

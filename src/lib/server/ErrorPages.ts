@@ -4,8 +4,6 @@
  * Provides error response generation for both JSON API responses and HTML error pages
  * for OAuth flows and general server errors. Handles XSS prevention and user-friendly
  * error presentation.
- *
- * Extracted from: actionstep-mcp-server/src/server/HttpServer.ts error handling methods
  */
 
 import type { Logger } from '../../types/library.types.ts';

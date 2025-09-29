@@ -473,6 +473,4 @@ Deno.test('HttpTransport - compatibility code preservation validation', async ()
  * 4. Error handling maintains compatibility
  * 5. Transport orchestration works through TransportManager
  * 6. Request context management functions correctly
- *
- * These tests validate the most critical aspects of the Phase 3 extraction.
  */

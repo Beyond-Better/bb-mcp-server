@@ -1,6 +1,6 @@
 /**
  * Unit Tests for CoreTools
- * Tests generic MCP tools extracted from ActionStepMCPServer
+ * Tests generic MCP tools
  */
 
 import { assert, assertEquals, assertExists } from '@std/assert';

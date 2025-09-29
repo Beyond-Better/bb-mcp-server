@@ -38,20 +38,33 @@ import {
  */
 export class AppServer {
   private dependencies: AppServerDependencies;
-  private configManager: ConfigManager;
-  private logger: Logger;
+  private _configManager: ConfigManager;
+  private _logger: Logger;
   private beyondMcpServer: BeyondMcpServer;
   private httpServer?: HttpServer;
   private started = false;
   private initialized = false;
 
+  get configManager(): ConfigManager {
+    return this._configManager;
+  }
+  set configManager(configManager: ConfigManager) {
+    this._configManager = configManager;
+  }
+  get logger(): Logger {
+    return this._logger;
+  }
+  set logger(logger: Logger) {
+    this._logger = logger;
+  }
+
   private constructor(dependencies: AppServerDependencies) {
     this.dependencies = dependencies;
-    this.configManager = dependencies.configManager;
-    this.logger = dependencies.logger;
+    this._configManager = dependencies.configManager;
+    this._logger = dependencies.logger;
     this.beyondMcpServer = dependencies.beyondMcpServer;
 
-    this.logger.info('AppServer: Initialized with dependencies');
+    this._logger.info('AppServer: Initialized with dependencies');
     this.initialized = true;
   }
 
@@ -151,18 +164,18 @@ export class AppServer {
     }
 
     if (this.started) {
-      this.logger.warn('AppServer: Already started');
+      this._logger.warn('AppServer: Already started');
       return;
     }
 
-    this.logger.info('AppServer: Starting application server...');
+    this._logger.info('AppServer: Starting application server...');
 
     try {
       // Initialize Beyond MCP server first
       await this.beyondMcpServer.initialize();
 
       // Get transport configuration
-      const transportConfig = this.configManager.getTransportConfig();
+      const transportConfig = this._configManager.getTransportConfig();
 
       // only start http server for transport mode 'http' or if using OAuth provider in 'stdio' mode
 
@@ -177,12 +190,12 @@ export class AppServer {
       this.setupShutdownHandlers();
 
       this.started = true;
-      this.logger.info('AppServer: Application server started successfully', {
+      this._logger.info('AppServer: Application server started successfully', {
         transport: transportConfig?.type || 'stdio',
         httpServer: !!this.httpServer,
       });
     } catch (error) {
-      this.logger.error('AppServer: Failed to start application server', toError(error));
+      this._logger.error('AppServer: Failed to start application server', toError(error));
       throw error;
     }
   }
@@ -195,7 +208,7 @@ export class AppServer {
       return;
     }
 
-    this.logger.info('AppServer: Stopping application server...');
+    this._logger.info('AppServer: Stopping application server...');
 
     try {
       // Stop HTTP server first (if running)
@@ -207,9 +220,9 @@ export class AppServer {
       await this.beyondMcpServer.shutdown();
 
       this.started = false;
-      this.logger.info('AppServer: Application server stopped successfully');
+      this._logger.info('AppServer: Application server stopped successfully');
     } catch (error) {
-      this.logger.error('AppServer: Error during shutdown', toError(error));
+      this._logger.error('AppServer: Error during shutdown', toError(error));
       throw error;
     }
   }
@@ -218,12 +231,12 @@ export class AppServer {
    * Start in HTTP mode - HTTP server handles both MCP and API endpoints
    */
   private async startHttpMode(transportConfig: TransportConfig): Promise<void> {
-    this.logger.info('AppServer: Starting HTTP mode...');
+    this._logger.info('AppServer: Starting HTTP mode...');
 
     // Create HTTP server if we have the dependencies
     if (this.dependencies.httpServerConfig) {
       this.httpServer = new HttpServer({
-        logger: this.logger,
+        logger: this._logger,
         transportManager: this.dependencies.transportManager,
         oauthProvider: this.dependencies.oauthProvider!,
         workflowRegistry: this.dependencies.workflowRegistry,
@@ -233,7 +246,7 @@ export class AppServer {
       // Start HTTP server (handles MCP via /mcp endpoint)
       await this.httpServer.start();
     } else {
-      this.logger.warn('AppServer: HTTP transport configured but no HTTP server config provided');
+      this._logger.warn('AppServer: HTTP transport configured but no HTTP server config provided');
     }
   }
 
@@ -241,7 +254,7 @@ export class AppServer {
    * Start in STDIO mode - MCP server uses STDIO + optional HTTP server for OAuth
    */
   private async startStdioMode(transportConfig?: TransportConfig): Promise<void> {
-    this.logger.info('AppServer: Starting STDIO mode...');
+    this._logger.info('AppServer: Starting STDIO mode...');
 
     // Start Beyond MCP server with STDIO transport
     await this.beyondMcpServer.start();
@@ -249,7 +262,7 @@ export class AppServer {
     // Start HTTP server for OAuth callbacks (if configured)
     if (this.dependencies.httpServerConfig && this.dependencies.oauthProvider) {
       this.httpServer = new HttpServer({
-        logger: this.logger,
+        logger: this._logger,
         transportManager: this.dependencies.transportManager,
         oauthProvider: this.dependencies.oauthProvider,
         workflowRegistry: this.dependencies.workflowRegistry,
@@ -257,7 +270,7 @@ export class AppServer {
       });
 
       await this.httpServer.start();
-      this.logger.info('AppServer: HTTP server started for OAuth callbacks');
+      this._logger.info('AppServer: HTTP server started for OAuth callbacks');
     }
   }
 
@@ -266,12 +279,12 @@ export class AppServer {
    */
   private setupShutdownHandlers(): void {
     const shutdown = async (signal: string) => {
-      this.logger.info(`AppServer: Received ${signal}, shutting down gracefully...`);
+      this._logger.info(`AppServer: Received ${signal}, shutting down gracefully...`);
       try {
         await this.stop();
         Deno.exit(0);
       } catch (error) {
-        this.logger.error('AppServer: Error during graceful shutdown', toError(error));
+        this._logger.error('AppServer: Error during graceful shutdown', toError(error));
         Deno.exit(1);
       }
     };
@@ -281,9 +294,9 @@ export class AppServer {
     Deno.addSignalListener('SIGTERM', () => shutdown('SIGTERM'));
 
     // Keep process alive for HTTP mode
-    const transportConfig = this.configManager.getTransportConfig();
+    const transportConfig = this._configManager.getTransportConfig();
     if (transportConfig?.type === 'http') {
-      this.logger.info('AppServer: HTTP server running. Press Ctrl+C to shutdown.');
+      this._logger.info('AppServer: HTTP server running. Press Ctrl+C to shutdown.');
     }
   }
 
@@ -297,7 +310,7 @@ export class AppServer {
     httpServerRunning: boolean;
     uptime?: number;
   } {
-    const transportConfig = this.configManager.getTransportConfig();
+    const transportConfig = this._configManager.getTransportConfig();
 
     return {
       started: this.started,

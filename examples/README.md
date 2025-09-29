@@ -7,8 +7,9 @@ This directory contains a comprehensive set of example applications that demonst
 The examples are designed to be studied in order, with each demonstrating increasingly sophisticated features:
 
 ### 1️⃣ [1-simple](./1-simple/) - **Zero Custom Dependencies + Basic Plugin Tools**
-**Complexity**: ⭐ Beginner  
-**Features**: Basic plugin system, simple tools, minimal configuration  
+
+**Complexity**: ⭐ Beginner\
+**Features**: Basic plugin system, simple tools, minimal configuration\
 **Learning Focus**: "How to get started with minimal setup"
 
 - ✅ Zero custom dependencies (uses library defaults)
@@ -17,11 +18,13 @@ The examples are designed to be studied in order, with each demonstrating increa
 - ✅ STDIO and HTTP transport support
 
 **Tools Demonstrated**:
+
 - `current_datetime` - Shows basic data retrieval
-- `get_system_info` - Shows system integration  
+- `get_system_info` - Shows system integration
 - `validate_json` - Shows data validation
 
 **Key Learning Points**:
+
 - Plugin creation and discovery
 - Basic tool development patterns
 - Environment variable configuration
@@ -30,8 +33,9 @@ The examples are designed to be studied in order, with each demonstrating increa
 ---
 
 ### 2️⃣ [2-plugin-workflows](./2-plugin-workflows/) - **Zero Custom Dependencies + Plugin Workflows**
-**Complexity**: ⭐⭐ Intermediate  
-**Features**: Workflows vs tools, multi-step processes, state management  
+
+**Complexity**: ⭐⭐ Intermediate\
+**Features**: Workflows vs tools, multi-step processes, state management\
 **Learning Focus**: "When and how to use workflows vs simple tools"
 
 - ✅ Same infrastructure approach as simple example
@@ -40,11 +44,13 @@ The examples are designed to be studied in order, with each demonstrating increa
 - ✅ Workflow state management and error recovery
 
 **Workflows Demonstrated**:
+
 - **Data Processing Pipeline**: Multi-step data transformation
 - **File Management Workflow**: Create → Validate → Process → Archive
 - **Content Generation Workflow**: Plan → Generate → Review → Publish
 
 **Key Learning Points**:
+
 - When to use workflows vs simple tools
 - Multi-step process orchestration
 - State management and error handling
@@ -53,8 +59,9 @@ The examples are designed to be studied in order, with each demonstrating increa
 ---
 
 ### 3️⃣ [3-plugin-api-auth](./3-plugin-api-auth/) - **Custom API Client + OAuth Consumer**
-**Complexity**: ⭐⭐⭐ Advanced  
-**Features**: Third-party API integration, OAuth authentication, custom dependencies  
+
+**Complexity**: ⭐⭐⭐ Advanced\
+**Features**: Third-party API integration, OAuth authentication, custom dependencies\
 **Learning Focus**: "How to integrate with external APIs requiring authentication"
 
 - ✅ Custom dependency creation for API integration
@@ -63,11 +70,13 @@ The examples are designed to be studied in order, with each demonstrating increa
 - ✅ Real-world API integration patterns
 
 **Integration Components**:
+
 - `ExampleOAuthConsumer` - Custom OAuth consumer implementation
 - `ExampleApiClient` - Third-party API client with authentication
 - `ExampleDependencies` - Dependency injection and configuration
 
 **Key Learning Points**:
+
 - Custom dependency creation patterns
 - OAuth consumer implementation
 - API client architecture
@@ -76,8 +85,9 @@ The examples are designed to be studied in order, with each demonstrating increa
 ---
 
 ### 4️⃣ [4-manual-deps](./4-manual-deps/) - **Full Custom Dependency Override**
-**Complexity**: ⭐⭐⭐⭐ Expert  
-**Features**: Complete infrastructure control, advanced customization  
+
+**Complexity**: ⭐⭐⭐⭐ Expert\
+**Features**: Complete infrastructure control, advanced customization\
 **Learning Focus**: "Advanced customization and infrastructure control"
 
 - ✅ Override all default library dependencies
@@ -86,12 +96,14 @@ The examples are designed to be studied in order, with each demonstrating increa
 - ✅ Manual tool and workflow registration (no plugin discovery)
 
 **Advanced Features**:
+
 - Custom transport configuration
 - Advanced KV storage setup
 - Manual tool/workflow registration
 - Complete dependency injection control
 
 **Key Learning Points**:
+
 - Full infrastructure customization
 - Advanced dependency injection patterns
 - Manual registration vs plugin discovery
@@ -105,12 +117,13 @@ Each example follows a consistent structure to aid learning:
 
 ```
 {N}-example-name/
-├── README.md             # Example-specific documentation
-├── main.ts               # Entry point with AppServer setup
-├── .env.example          # Environment configuration template
-├── .env                  # Local environment (gitignored)
-├── deno.jsonc            # Deno configuration
-├── instructions.md       # Step-by-step setup instructions
+├── README.md                    # Example-specific documentation
+├── main.ts                      # Entry point with AppServer setup
+├── .env.example                 # Environment configuration template
+├── .env                         # Local environment (gitignored)
+├── deno.jsonc                   # Deno configuration
+├── instructions.md              # Step-by-step setup instructions (for humans)
+├── mcp_server_instructions.md   # LLM context instructions (for AI models)
 │── src/
 │   ├── plugins/          # Self-contained plugin implementations
 │   │   ├── {Plugin}.ts   # Plugin definition and exports
@@ -124,6 +137,51 @@ Each example follows a consistent structure to aid learning:
 	├── tools/            # Tool testing demonstrations
 	└── workflows/        # Workflow testing demonstrations
 ```
+
+## 🤖 MCP Server Instructions (LLM Context)
+
+Each example includes `mcp_server_instructions.md` that provides essential context for AI models using the MCP server. These instructions are automatically loaded by the server and help LLMs understand:
+
+### **Purpose & Importance**
+
+- **Tool Usage**: When and how to use specific tools and workflows
+- **Parameter Requirements**: Required vs optional parameters and validation rules
+- **Authentication**: OAuth flows and security requirements (examples 3-4)
+- **Error Handling**: Common issues and recovery strategies
+- **Best Practices**: Optimal usage patterns for complex operations
+
+### **Instructions vs Documentation**
+
+- **`instructions.md`**: Step-by-step setup guide **for humans**
+- **`mcp_server_instructions.md`**: Usage context **for LLM models**
+
+### **Automatic Loading**
+
+The server automatically loads instructions using this priority order:
+
+1. `MCP_SERVER_INSTRUCTIONS` environment variable (direct content)
+2. `MCP_INSTRUCTIONS_FILE` environment variable (file path)
+3. `mcp_server_instructions.md` in project root (default location)
+4. Built-in generic fallback instructions (always available)
+
+### **Customization**
+
+You can customize instructions for your specific use case:
+
+```bash
+# Option 1: Direct environment variable
+MCP_SERVER_INSTRUCTIONS="Custom instructions for your server..."
+
+# Option 2: Custom file path  
+MCP_INSTRUCTIONS_FILE="./config/custom-instructions.md"
+
+# Option 3: Default file (no configuration needed)
+# Just place your instructions in: ./mcp_server_instructions.md
+```
+
+**💡 Pro Tip**: Study each example's instructions to understand how complexity evolves from simple tools to OAuth-enabled workflows.
+
+---
 
 ## ⚠️ Critical Implementation Patterns
 
@@ -147,6 +205,7 @@ inputSchema: z.object({
 ```
 
 **Why This Matters:**
+
 - The MCP library expects plain object structure for `inputSchema`
 - Using `z.object()` wrapper causes type and runtime errors
 - All examples follow the correct pattern shown above
@@ -159,13 +218,15 @@ inputSchema: z.object({
 Each example includes demonstration tests that show users how to test their tools and workflows:
 
 ### Tool Testing Patterns
+
 - **Registration Testing**: Verify tools are properly registered
-- **Parameter Validation**: Test input validation and error handling  
+- **Parameter Validation**: Test input validation and error handling
 - **Execution Testing**: Test tool logic and response formatting
 - **Context Testing**: Test user context extraction and logging
 - **Integration Testing**: Test with realistic scenarios
 
 ### Workflow Testing Patterns
+
 - **Parameter Validation**: Test Zod schema validation
 - **Execution Flow**: Test multi-step workflow execution
 - **State Management**: Test resource tracking and context management
@@ -173,6 +234,7 @@ Each example includes demonstration tests that show users how to test their tool
 - **Step Tracking**: Test completed/failed step management
 
 ### Testing Tools Used
+
 - **Mock Services**: Mock API clients, databases, external services
 - **Spy Functions**: Monitor function calls and verify behavior
 - **Test Helpers**: Reusable test utilities and fixtures
@@ -189,9 +251,10 @@ Each example includes demonstration tests that show users how to test their tool
 ## 📖 Documentation Features
 
 Each example includes:
+
 - ✅ **Step-by-step tutorials** with clear instructions
 - ✅ **Architecture explanations** showing component relationships
-- ✅ **Common pitfalls** and troubleshooting guidance  
+- ✅ **Common pitfalls** and troubleshooting guidance
 - ✅ **Migration paths** showing how to evolve from simpler to more complex setups
 - ✅ **Best practices** and recommended patterns
 - ✅ **Testing demonstrations** showing how to validate implementations
@@ -199,6 +262,7 @@ Each example includes:
 ## 🛠️ Development Workflow
 
 For each example:
+
 ```bash
 # Navigate to example directory
 cd examples/{N}-example-name
@@ -219,6 +283,7 @@ deno test --allow-all tests/
 ## 🎯 Success Metrics
 
 These examples are successful if they:
+
 - ✅ **Reduce Learning Curve**: Clear progression from simple to complex
 - ✅ **Demonstrate Best Practices**: Show recommended patterns and architectures
 - ✅ **Provide Working Code**: All examples run successfully out of the box
@@ -228,6 +293,7 @@ These examples are successful if they:
 ## 🔄 Migration Between Examples
 
 Users can evolve their implementations by following the progression:
+
 - **1→2**: Add workflows to existing simple tool setup
 - **2→3**: Add external API integration and authentication
 - **3→4**: Gain full control over infrastructure dependencies
@@ -235,4 +301,4 @@ Users can evolve their implementations by following the progression:
 
 ---
 
-*These examples are the primary way for users to learn Beyond MCP Server. They demonstrate not just how to use the library, but when and why to use different approaches.*
+_These examples are the primary way for users to learn Beyond MCP Server. They demonstrate not just how to use the library, but when and why to use different approaches._

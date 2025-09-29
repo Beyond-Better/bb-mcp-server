@@ -1,6 +1,5 @@
 /**
  * Request Context Management for MCP servers
- * Extracted from ActionStepMCPServer.ts - AsyncLocalStorage context handling
  *
  * Handles AsyncLocalStorage context across MCP requests with:
  * - Thread-safe user identification
@@ -19,7 +18,6 @@ import type { BeyondMcpRequestContext, CreateContextData } from '../types/Beyond
 
 /**
  * Request context management for MCP servers
- * EXTRACTED: From ActionStepMCPServer.ts context management patterns
  */
 export class RequestContextManager {
   private static contextStorage = new AsyncLocalStorage<BeyondMcpRequestContext>();
@@ -31,7 +29,6 @@ export class RequestContextManager {
 
   /**
    * Execute an operation within a specific context
-   * PRESERVED: Exact context execution pattern from ActionStepMCPServer
    */
   async executeWithAuthContext<T>(
     context: BeyondMcpRequestContext,
@@ -54,7 +51,6 @@ export class RequestContextManager {
 
   /**
    * Get the current context from AsyncLocalStorage
-   * PRESERVED: Exact pattern from ActionStepMCPServer
    */
   getCurrentContext(): BeyondMcpRequestContext | null {
     return RequestContextManager.contextStorage.getStore() || null;
@@ -62,7 +58,6 @@ export class RequestContextManager {
 
   /**
    * Get the current authenticated user ID (convenience method)
-   * PRESERVED: Exact method from ActionStepMCPServer
    */
   getAuthenticatedUserId(): string | null {
     const context = this.getCurrentContext();

@@ -2,7 +2,6 @@
  * Logger - Generic logging system for bb-mcp-server library
  *
  * Provides structured logging with configurable levels and formats.
- * Extracted and generalized from ActionStep MCP Server's ConsoleLogger.
  */
 
 import { blue, bold, cyan, green, red, yellow } from '@std/fmt/colors';

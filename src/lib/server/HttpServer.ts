@@ -5,7 +5,6 @@
  * This is the main HTTP server extracted from the original HttpServer.ts, focusing on
  * request routing and orchestration rather than business logic implementation.
  *
- * Extracted from: actionstep-mcp-server/src/server/HttpServer.ts
  * Split into focused components:
  * - OAuthEndpoints.ts - OAuth HTTP endpoints
  * - APIRouter.ts - API routing system
@@ -295,7 +294,11 @@ export class HttpServer {
   /**
    * Get server metrics for monitoring
    */
-  getMetrics(): { uptime: { seconds: number; human: string }; started_at: string; endpoints: { oauth: unknown; mcp: unknown } } {
+  getMetrics(): {
+    uptime: { seconds: number; human: string };
+    started_at: string;
+    endpoints: { oauth: unknown; mcp: unknown };
+  } {
     const uptime = performance.now() - this.startTime.getTime();
 
     return {

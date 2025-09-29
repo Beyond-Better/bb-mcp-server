@@ -19,12 +19,12 @@ import {
   type ToolRegistration,
   type ToolRegistry,
   WorkflowRegistry,
-} from "@beyondbetter/bb-mcp-server";
-import { z } from "zod"; // Library provides Zod integration
+} from '@beyondbetter/bb-mcp-server';
+import { z } from 'zod'; // Library provides Zod integration
 
 // 🎯 Consumer-specific imports
-import { ExampleApiClient } from "../api/ExampleApiClient.ts";
-import { ExampleOAuthConsumer } from "../auth/ExampleOAuthConsumer.ts";
+import { ExampleApiClient } from '../api/ExampleApiClient.ts';
+import { ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts';
 
 export interface ExampleToolsDependencies {
   apiClient: ExampleApiClient;
@@ -39,12 +39,12 @@ export interface ExampleToolsDependencies {
  */
 export class ExampleTools extends ToolBase {
   // Required abstract properties from ToolBase
-  readonly name = "examplecorp-tools";
-  readonly version = "1.0.0";
+  readonly name = 'examplecorp-tools';
+  readonly version = '1.0.0';
   readonly description =
-    "ExampleCorp business tools for customer management, orders, and API integration";
-  readonly category = "business" as const;
-  readonly tags = ["examplecorp", "business", "customers", "orders", "api"];
+    'ExampleCorp business tools for customer management, orders, and API integration';
+  readonly category = 'business' as const;
+  readonly tags = ['examplecorp', 'business', 'customers', 'orders', 'api'];
   override readonly estimatedDuration = 5; // seconds
   override readonly requiresAuth = true;
 
@@ -83,16 +83,16 @@ export class ExampleTools extends ToolBase {
     this.registerGetOrderStatusTool(toolRegistry);
     this.registerGetApiInfoTool(toolRegistry);
 
-    this.logger.info("ExampleCorp custom tools registered", {
+    this.logger.info('ExampleCorp custom tools registered', {
       count: 4,
       tools: [
-        "query_customers_example",
-        "create_order_example",
-        "get_order_status_example",
-        "get_api_info_example",
+        'query_customers_example',
+        'create_order_example',
+        'get_order_status_example',
+        'get_api_info_example',
       ],
       note:
-        "Workflow tools (execute_workflow, get_schema_for_workflow) are registered by the library",
+        'Workflow tools (execute_workflow, get_schema_for_workflow) are registered by the library',
     });
   }
 
@@ -104,91 +104,89 @@ export class ExampleTools extends ToolBase {
   getTools(): ToolRegistration[] {
     return [
       {
-        name: "query_customers_example",
+        name: 'query_customers_example',
         definition: {
-          title: "🔍 Query ExampleCorp Customers",
+          title: '🔍 Query ExampleCorp Customers',
           description:
-            "Search and retrieve customer data from ExampleCorp API with OAuth authentication.",
-          category: "ExampleCorp",
-          tags: ["query", "customers", "api"],
+            'Search and retrieve customer data from ExampleCorp API with OAuth authentication.',
+          category: 'ExampleCorp',
+          tags: ['query', 'customers', 'api'],
           inputSchema: {
             search: z.string().optional().describe(
-              "Search term for customer names or IDs",
+              'Search term for customer names or IDs',
             ),
             limit: z.number().int().min(1).max(100).optional().default(10)
               .describe(
-                "Maximum number of results",
+                'Maximum number of results',
               ),
             filters: z.object({
-              status: z.enum(["active", "inactive", "suspended"]).optional(),
+              status: z.enum(['active', 'inactive', 'suspended']).optional(),
               region: z.string().optional(),
-              customerType: z.enum(["individual", "business"]).optional(),
-            }).optional().describe("Additional filters"),
-            userId: z.string().describe("User ID for authentication"),
+              customerType: z.enum(['individual', 'business']).optional(),
+            }).optional().describe('Additional filters'),
+            userId: z.string().describe('User ID for authentication'),
           },
         },
         handler: async (args, extra) => await this.queryCustomers(args, extra),
         options: { handlerMode: ToolHandlerMode.MANAGED },
       },
       {
-        name: "create_order_example",
+        name: 'create_order_example',
         definition: {
-          title: "📦 Create ExampleCorp Order",
-          description:
-            "Create new orders in ExampleCorp system with comprehensive validation.",
-          category: "ExampleCorp",
-          tags: ["create", "orders", "business", "api"],
+          title: '📦 Create ExampleCorp Order',
+          description: 'Create new orders in ExampleCorp system with comprehensive validation.',
+          category: 'ExampleCorp',
+          tags: ['create', 'orders', 'business', 'api'],
           inputSchema: {
-            customerId: z.string().describe("Customer ID for the order"),
+            customerId: z.string().describe('Customer ID for the order'),
             items: z.array(z.object({
               productId: z.string(),
               quantity: z.number().int().min(1),
               unitPrice: z.number().min(0),
               notes: z.string().optional(),
-            })).min(1).describe("Order items"),
+            })).min(1).describe('Order items'),
             shippingAddress: z.object({
               street: z.string(),
               city: z.string(),
               state: z.string(),
               zipCode: z.string(),
-              country: z.string().default("US"),
-            }).describe("Shipping address"),
-            priority: z.enum(["standard", "expedited", "urgent"]).optional()
-              .default("standard"),
+              country: z.string().default('US'),
+            }).describe('Shipping address'),
+            priority: z.enum(['standard', 'expedited', 'urgent']).optional()
+              .default('standard'),
             notes: z.string().optional(),
-            userId: z.string().describe("User ID for authentication"),
+            userId: z.string().describe('User ID for authentication'),
           },
         },
         handler: async (args, extra) => await this.createOrder(args, extra),
         options: { handlerMode: ToolHandlerMode.MANAGED },
       },
       {
-        name: "get_order_status_example",
+        name: 'get_order_status_example',
         definition: {
-          title: "📊 Get ExampleCorp Order Status",
-          description:
-            "Retrieve current status and tracking information for ExampleCorp orders.",
-          category: "ExampleCorp",
-          tags: ["query", "orders", "status", "api"],
+          title: '📊 Get ExampleCorp Order Status',
+          description: 'Retrieve current status and tracking information for ExampleCorp orders.',
+          category: 'ExampleCorp',
+          tags: ['query', 'orders', 'status', 'api'],
           inputSchema: {
-            orderId: z.string().describe("Order ID to query"),
+            orderId: z.string().describe('Order ID to query'),
             includeHistory: z.boolean().optional().default(false).describe(
-              "Include order status history",
+              'Include order status history',
             ),
-            userId: z.string().describe("User ID for authentication"),
+            userId: z.string().describe('User ID for authentication'),
           },
         },
         handler: async (args, extra) => await this.getOrderStatus(args, extra),
         options: { handlerMode: ToolHandlerMode.MANAGED },
       },
       {
-        name: "get_api_info_example",
+        name: 'get_api_info_example',
         definition: {
-          title: "ℹ️ Get ExampleCorp API Information",
+          title: 'ℹ️ Get ExampleCorp API Information',
           description:
-            "Get information about ExampleCorp API connectivity and available operations.",
-          category: "ExampleCorp",
-          tags: ["info", "api", "status"],
+            'Get information about ExampleCorp API connectivity and available operations.',
+          category: 'ExampleCorp',
+          tags: ['info', 'api', 'status'],
           inputSchema: {},
         },
         handler: async (args, extra) => await this.getApiInfo(args, extra),
@@ -203,27 +201,27 @@ export class ExampleTools extends ToolBase {
    */
   private registerQueryCustomersTool(registry: ToolRegistry): void {
     registry.registerTool(
-      "query_customers_example",
+      'query_customers_example',
       {
-        title: "🔍 Query ExampleCorp Customers",
+        title: '🔍 Query ExampleCorp Customers',
         description:
-          "Search and retrieve customer data from ExampleCorp API with OAuth authentication.",
-        category: "ExampleCorp",
-        tags: ["query", "customers", "api"],
+          'Search and retrieve customer data from ExampleCorp API with OAuth authentication.',
+        category: 'ExampleCorp',
+        tags: ['query', 'customers', 'api'],
         inputSchema: {
           search: z.string().optional().describe(
-            "Search term for customer names or IDs",
+            'Search term for customer names or IDs',
           ),
           limit: z.number().int().min(1).max(100).optional().default(10)
             .describe(
-              "Maximum number of results",
+              'Maximum number of results',
             ),
           filters: z.object({
-            status: z.enum(["active", "inactive", "suspended"]).optional(),
+            status: z.enum(['active', 'inactive', 'suspended']).optional(),
             region: z.string().optional(),
-            customerType: z.enum(["individual", "business"]).optional(),
-          }).optional().describe("Additional filters"),
-          userId: z.string().describe("User ID for authentication"),
+            customerType: z.enum(['individual', 'business']).optional(),
+          }).optional().describe('Additional filters'),
+          userId: z.string().describe('User ID for authentication'),
         },
       },
       async (args, extra) => await this.queryCustomers(args, extra),
@@ -237,32 +235,31 @@ export class ExampleTools extends ToolBase {
    */
   private registerCreateOrderTool(registry: ToolRegistry): void {
     registry.registerTool(
-      "create_order_example",
+      'create_order_example',
       {
-        title: "📦 Create ExampleCorp Order",
-        description:
-          "Create new orders in ExampleCorp system with comprehensive validation.",
-        category: "ExampleCorp",
-        tags: ["create", "orders", "business", "api"],
+        title: '📦 Create ExampleCorp Order',
+        description: 'Create new orders in ExampleCorp system with comprehensive validation.',
+        category: 'ExampleCorp',
+        tags: ['create', 'orders', 'business', 'api'],
         inputSchema: {
-          customerId: z.string().describe("Customer ID for the order"),
+          customerId: z.string().describe('Customer ID for the order'),
           items: z.array(z.object({
             productId: z.string(),
             quantity: z.number().int().min(1),
             unitPrice: z.number().min(0),
             notes: z.string().optional(),
-          })).min(1).describe("Order items"),
+          })).min(1).describe('Order items'),
           shippingAddress: z.object({
             street: z.string(),
             city: z.string(),
             state: z.string(),
             zipCode: z.string(),
-            country: z.string().default("US"),
-          }).describe("Shipping address"),
-          priority: z.enum(["standard", "expedited", "urgent"]).optional()
-            .default("standard"),
+            country: z.string().default('US'),
+          }).describe('Shipping address'),
+          priority: z.enum(['standard', 'expedited', 'urgent']).optional()
+            .default('standard'),
           notes: z.string().optional(),
-          userId: z.string().describe("User ID for authentication"),
+          userId: z.string().describe('User ID for authentication'),
         },
       },
       async (args, extra) => await this.createOrder(args, extra),
@@ -276,19 +273,18 @@ export class ExampleTools extends ToolBase {
    */
   private registerGetOrderStatusTool(registry: ToolRegistry): void {
     registry.registerTool(
-      "get_order_status_example",
+      'get_order_status_example',
       {
-        title: "📊 Get ExampleCorp Order Status",
-        description:
-          "Retrieve current status and tracking information for ExampleCorp orders.",
-        category: "ExampleCorp",
-        tags: ["query", "orders", "status", "api"],
+        title: '📊 Get ExampleCorp Order Status',
+        description: 'Retrieve current status and tracking information for ExampleCorp orders.',
+        category: 'ExampleCorp',
+        tags: ['query', 'orders', 'status', 'api'],
         inputSchema: {
-          orderId: z.string().describe("Order ID to query"),
+          orderId: z.string().describe('Order ID to query'),
           includeHistory: z.boolean().optional().default(false).describe(
-            "Include order status history",
+            'Include order status history',
           ),
-          userId: z.string().describe("User ID for authentication"),
+          userId: z.string().describe('User ID for authentication'),
         },
       },
       async (args, extra) => await this.getOrderStatus(args, extra),
@@ -302,13 +298,12 @@ export class ExampleTools extends ToolBase {
    */
   private registerGetApiInfoTool(registry: ToolRegistry): void {
     registry.registerTool(
-      "get_api_info_example",
+      'get_api_info_example',
       {
-        title: "ℹ️ Get ExampleCorp API Information",
-        description:
-          "Get information about ExampleCorp API connectivity and available operations.",
-        category: "ExampleCorp",
-        tags: ["info", "api", "status"],
+        title: 'ℹ️ Get ExampleCorp API Information',
+        description: 'Get information about ExampleCorp API connectivity and available operations.',
+        category: 'ExampleCorp',
+        tags: ['info', 'api', 'status'],
         inputSchema: {},
       },
       async (args, extra) => await this.getApiInfo(args, extra),
@@ -341,15 +336,15 @@ export class ExampleTools extends ToolBase {
         pagination: {
           page: 1,
           limit: limit || 10,
-          sortBy: "name",
-          sortOrder: "asc",
+          sortBy: 'name',
+          sortOrder: 'asc',
         },
         userId,
       });
 
       return {
         content: [{
-          type: "text",
+          type: 'text',
           text: JSON.stringify(
             {
               query: { search, limit, filters },
@@ -364,14 +359,14 @@ export class ExampleTools extends ToolBase {
       };
     } catch (error) {
       this.logger.error(
-        "Customer query failed",
+        'Customer query failed',
         error instanceof Error ? error : new Error(String(error)),
       );
       return {
         content: [{
-          type: "text",
+          type: 'text',
           text: `Customer query failed: ${
-            error instanceof Error ? error.message : "Unknown error"
+            error instanceof Error ? error.message : 'Unknown error'
           }`,
         }],
         isError: true,
@@ -385,8 +380,7 @@ export class ExampleTools extends ToolBase {
    */
   private async createOrder(args: any, extra?: any): Promise<CallToolResult> {
     try {
-      const { customerId, items, shippingAddress, priority, notes, userId } =
-        args;
+      const { customerId, items, shippingAddress, priority, notes, userId } = args;
 
       // 🎯 Get OAuth access token
       const accessToken = await this.oauthConsumer.getAccessToken(userId);
@@ -395,15 +389,15 @@ export class ExampleTools extends ToolBase {
       const order = await this.apiClient.createOrder({
         customerId,
         items,
-        shippingMethod: priority === "urgent"
-          ? "overnight"
-          : (priority === "expedited" ? "expedited" : "standard"),
+        shippingMethod: priority === 'urgent'
+          ? 'overnight'
+          : (priority === 'expedited' ? 'expedited' : 'standard'),
         notes,
       }, userId);
 
       return {
         content: [{
-          type: "text",
+          type: 'text',
           text: JSON.stringify(
             {
               orderId: order.id,
@@ -420,14 +414,14 @@ export class ExampleTools extends ToolBase {
       };
     } catch (error) {
       this.logger.error(
-        "Order creation failed",
+        'Order creation failed',
         error instanceof Error ? error : new Error(String(error)),
       );
       return {
         content: [{
-          type: "text",
+          type: 'text',
           text: `Order creation failed: ${
-            error instanceof Error ? error.message : "Unknown error"
+            error instanceof Error ? error.message : 'Unknown error'
           }`,
         }],
         isError: true,
@@ -457,20 +451,20 @@ export class ExampleTools extends ToolBase {
 
       return {
         content: [{
-          type: "text",
+          type: 'text',
           text: JSON.stringify(orderStatus, null, 2),
         }],
       };
     } catch (error) {
       this.logger.error(
-        "Order status query failed",
+        'Order status query failed',
         error instanceof Error ? error : new Error(String(error)),
       );
       return {
         content: [{
-          type: "text",
+          type: 'text',
           text: `Order status query failed: ${
-            error instanceof Error ? error.message : "Unknown error"
+            error instanceof Error ? error.message : 'Unknown error'
           }`,
         }],
         isError: true,
@@ -487,11 +481,11 @@ export class ExampleTools extends ToolBase {
 
       return {
         content: [{
-          type: "text",
+          type: 'text',
           text: JSON.stringify(
             {
               ...apiInfo,
-              connectionStatus: "connected",
+              connectionStatus: 'connected',
               timestamp: new Date().toISOString(),
             },
             null,
@@ -501,14 +495,14 @@ export class ExampleTools extends ToolBase {
       };
     } catch (error) {
       this.logger.error(
-        "API info query failed",
+        'API info query failed',
         error instanceof Error ? error : new Error(String(error)),
       );
       return {
         content: [{
-          type: "text",
+          type: 'text',
           text: `API info query failed: ${
-            error instanceof Error ? error.message : "Unknown error"
+            error instanceof Error ? error.message : 'Unknown error'
           }`,
         }],
         isError: true,

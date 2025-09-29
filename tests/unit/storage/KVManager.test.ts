@@ -1,7 +1,7 @@
 /**
  * KVManager Unit Tests
  *
- * Tests for the core KVManager functionality extracted from ActionStep MCP Server.
+ * Tests for the core KVManager functionality
  */
 
 import { assertEquals, assertExists, assertRejects } from '@std/assert';

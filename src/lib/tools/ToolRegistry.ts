@@ -1,6 +1,5 @@
 /**
  * Tool Registry with comprehensive Zod validation
- * Extracted from ActionStepMCPServer.ts - Tool registration logic
  *
  * Manages tool registration and validation for MCP servers with:
  * - Sophisticated Zod schema validation
@@ -31,7 +30,6 @@ import {
 
 /**
  * Tool registry with comprehensive Zod validation
- * EXTRACTED: From ActionStepMCPServer.ts tool registration patterns
  */
 export class ToolRegistry {
   private static instance: ToolRegistry | undefined;
@@ -95,7 +93,7 @@ export class ToolRegistry {
 
     if (!this._sdkMcpServer) {
       throw ErrorHandler.wrapError(
-        'SDK MCP server has not been set - create a new BeyondMcpServer first to set sdkMcpServer in ToolRegistry',
+        'SDK MCP server has not been set - create and initialize a new BeyondMcpServer first to set sdkMcpServer in ToolRegistry',
         'TOOL_REGISTRATION_FAILED',
         {
           toolName: name,
@@ -174,7 +172,6 @@ export class ToolRegistry {
                 ...(extra ? { ...extra } : {}),
               } as any);
 
-              // PRESERVED: Result format from ActionStepMCPServer
               return {
                 content: result.content,
                 _meta: {
@@ -231,7 +228,6 @@ export class ToolRegistry {
 
   /**
    * Validate tool input with detailed error reporting
-   * PRESERVED: Exact validation pattern from ActionStepMCPServer
    */
   async validateToolInput(
     toolName: string,
@@ -270,7 +266,6 @@ export class ToolRegistry {
 
   /**
    * Create dynamic enum from array of values
-   * PRESERVED: Exact pattern used in ActionStepMCPServer for workflow names
    */
   static createDynamicEnum<T extends string>(values: T[]): z.ZodEnum<[T, ...T[]]> {
     if (values.length === 0) {

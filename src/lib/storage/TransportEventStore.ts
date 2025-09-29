@@ -4,8 +4,6 @@
  * This implementation provides persistent event storage for MCP transports,
  * enabling session resumability across server restarts. It replaces the
  * in-memory EventStore with a Deno KV-backed solution.
- *
- * Extracted from ActionStep MCP Server for use in the bb-mcp-server library.
  */
 
 import type { JSONRPCMessage } from 'mcp/types.js';

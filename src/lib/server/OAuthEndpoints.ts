@@ -1,17 +1,15 @@
 /**
  * OAuth Endpoints - HTTP endpoints for OAuth 2.0 flows
  *
- * Provides HTTP endpoint wrappers that delegate to the existing Phase 4 OAuth handlers.
+ * Provides HTTP endpoint wrappers that delegate to the OAuth handlers.
  * This maintains clean separation between HTTP transport and OAuth business logic.
  *
- * Integration with Phase 4 OAuth Components:
+ * Integration with OAuth Components:
  * - OAuthProvider: Main OAuth orchestrator for authorization and token flows
  * - AuthorizationHandler: Authorization code flow handling
  * - TokenManager: Token operations and validation
  * - ClientRegistry: Client registration and validation
  * - OAuthMetadata: RFC 8414 metadata generation
- *
- * Extracted from: actionstep-mcp-server/src/server/HttpServer.ts OAuth methods
  */
 
 import type { Logger } from '../../types/library.types.ts';
@@ -23,12 +21,12 @@ import { reconstructOriginalUrl } from '../utils/UrlUtils.ts';
 /**
  * OAuth HTTP endpoints implementation
  *
- * Integrates with Phase 4 OAuth Provider to handle OAuth 2.0 HTTP endpoints.
+ * Integrates with OAuth Provider to handle OAuth 2.0 HTTP endpoints.
  * All OAuth business logic is delegated to the existing OAuth components,
  * this class only handles HTTP request/response transformation.
  */
 export class OAuthEndpoints {
-  private oauthProvider: OAuthProvider; // From Phase 4
+  private oauthProvider: OAuthProvider;
   private logger: Logger;
 
   constructor(oauthProvider: OAuthProvider, logger: Logger) {
@@ -563,7 +561,16 @@ export class OAuthEndpoints {
   /**
    * Get OAuth endpoints metrics
    */
-  getMetrics(): { endpoints: { authorize: string; token: string; register: string; callback: string; metadata: string }; provider: string } {
+  getMetrics(): {
+    endpoints: {
+      authorize: string;
+      token: string;
+      register: string;
+      callback: string;
+      metadata: string;
+    };
+    provider: string;
+  } {
     return {
       endpoints: {
         authorize: '/authorize',

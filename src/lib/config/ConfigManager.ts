@@ -2,8 +2,7 @@
  * Configuration Manager - Generic configuration loading for bb-mcp-server library
  *
  * Provides flexible configuration loading from environment variables, files, and
- * programmatic sources. Extracted and generalized from ActionStep MCP Server's
- * ConfigLoader with enhanced validation and extensibility.
+ * programmatic sources.
  */
 
 import '@std/dotenv/load';

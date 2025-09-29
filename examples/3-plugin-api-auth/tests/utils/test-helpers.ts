@@ -26,7 +26,7 @@
  * - Authentication failure simulation
  */
 
-import { assertEquals, assertExists } from "@std/assert";
+import { assertEquals, assertExists } from '@std/assert';
 
 /**
  * Mock OAuth Consumer Implementation
@@ -40,23 +40,23 @@ export class MockOAuthConsumer {
 
   // Properties to match ExampleOAuthConsumer interface
   exampleConfig: any = {};
-  readonly provider = "mock-provider";
-  readonly authUrl = "http://mock-auth-url";
-  readonly tokenUrl = "http://mock-token-url";
-  readonly clientId = "mock-client-id";
-  readonly clientSecret = "mock-client-secret";
-  readonly redirectUri = "http://mock-redirect";
-  readonly scopes = ["read", "write"];
+  readonly provider = 'mock-provider';
+  readonly authUrl = 'http://mock-auth-url';
+  readonly tokenUrl = 'http://mock-token-url';
+  readonly clientId = 'mock-client-id';
+  readonly clientSecret = 'mock-client-secret';
+  readonly redirectUri = 'http://mock-redirect';
+  readonly scopes = ['read', 'write'];
 
   // Additional properties to match base OAuthConsumer interface
   protected config: any = {
-    providerId: "mock-provider",
-    authUrl: "http://mock-auth-url",
-    tokenUrl: "http://mock-token-url",
-    clientId: "mock-client-id",
-    clientSecret: "mock-client-secret",
-    redirectUri: "http://mock-redirect",
-    scopes: ["read", "write"],
+    providerId: 'mock-provider',
+    authUrl: 'http://mock-auth-url',
+    tokenUrl: 'http://mock-token-url',
+    clientId: 'mock-client-id',
+    clientSecret: 'mock-client-secret',
+    redirectUri: 'http://mock-redirect',
+    scopes: ['read', 'write'],
     tokenRefreshBufferMinutes: 5,
     maxTokenRefreshRetries: 3,
   };
@@ -66,44 +66,44 @@ export class MockOAuthConsumer {
   constructor() {
     // Set up default test tokens for multiple test users
     const defaultToken = {
-      access_token: "mock_access_token_12345",
-      refresh_token: "mock_refresh_token_67890",
+      access_token: 'mock_access_token_12345',
+      refresh_token: 'mock_refresh_token_67890',
       expires_at: Date.now() + 3600000, // 1 hour from now
-      token_type: "Bearer",
+      token_type: 'Bearer',
     };
 
     // Set up tokens for all common test user IDs
-    this.tokens.set("test-user", defaultToken);
-    this.tokens.set("integration-test-user", {
+    this.tokens.set('test-user', defaultToken);
+    this.tokens.set('integration-test-user', {
       ...defaultToken,
-      access_token: "integration_token_123",
+      access_token: 'integration_token_123',
     });
-    this.tokens.set("refresh-test-user", {
+    this.tokens.set('refresh-test-user', {
       ...defaultToken,
-      access_token: "refresh_token_123",
+      access_token: 'refresh_token_123',
     });
-    this.tokens.set("cross-component-user", {
+    this.tokens.set('cross-component-user', {
       ...defaultToken,
-      access_token: "cross_component_123",
+      access_token: 'cross_component_123',
     });
-    this.tokens.set("business-process-user", {
+    this.tokens.set('business-process-user', {
       ...defaultToken,
-      access_token: "business_process_123",
+      access_token: 'business_process_123',
     });
-    this.tokens.set("failing-auth-user", {
+    this.tokens.set('failing-auth-user', {
       ...defaultToken,
-      access_token: "failing_auth_123",
+      access_token: 'failing_auth_123',
     });
-    this.tokens.set("consistent-error-user", {
+    this.tokens.set('consistent-error-user', {
       ...defaultToken,
-      access_token: "consistent_error_123",
+      access_token: 'consistent_error_123',
     });
   }
 
   async getAccessToken(userId: string): Promise<string> {
     if (this.authFailures.has(userId)) {
       throw new Error(
-        "OAuth authentication failed: Invalid or expired credentials",
+        'OAuth authentication failed: Invalid or expired credentials',
       );
     }
 
@@ -115,7 +115,7 @@ export class MockOAuthConsumer {
     // Check if token is expired and refresh if needed
     if (token.expires_at <= Date.now()) {
       if (!token.refresh_token) {
-        throw new Error("OAuth token expired and no refresh token available");
+        throw new Error('OAuth token expired and no refresh token available');
       }
 
       // Directly refresh the token without calling the async method to avoid circular calls
@@ -135,13 +135,13 @@ export class MockOAuthConsumer {
   async refreshAccessToken(userId: string): Promise<any> {
     if (this.authFailures.has(userId)) {
       throw new Error(
-        "OAuth authentication failed: Invalid or expired credentials",
+        'OAuth authentication failed: Invalid or expired credentials',
       );
     }
 
     const token = this.tokens.get(userId);
     if (!token?.refresh_token) {
-      throw new Error("No refresh token available");
+      throw new Error('No refresh token available');
     }
 
     const newToken = {
@@ -160,9 +160,7 @@ export class MockOAuthConsumer {
 
   // Additional methods to match base OAuthConsumer interface
   protected buildAuthUrl(state: string, codeChallenge?: string): string {
-    return `${this.authUrl}?state=${state}&code_challenge=${
-      codeChallenge || "mock_challenge"
-    }`;
+    return `${this.authUrl}?state=${state}&code_challenge=${codeChallenge || 'mock_challenge'}`;
   }
 
   protected async exchangeCodeForTokens(
@@ -174,7 +172,7 @@ export class MockOAuthConsumer {
       tokens: {
         accessToken: `mock_access_token_${Date.now()}`,
         refreshToken: `mock_refresh_token_${Date.now()}`,
-        tokenType: "Bearer",
+        tokenType: 'Bearer',
         expiresAt: Date.now() + 3600000,
         scopes: this.scopes,
       },
@@ -187,7 +185,7 @@ export class MockOAuthConsumer {
       tokens: {
         accessToken: `refreshed_token_${Date.now()}`,
         refreshToken: refreshToken,
-        tokenType: "Bearer",
+        tokenType: 'Bearer',
         expiresAt: Date.now() + 3600000,
         scopes: this.scopes,
       },
@@ -204,14 +202,14 @@ export class MockOAuthConsumer {
   ): Promise<any> {
     return {
       authorizationUrl: `${this.authUrl}?mock_flow=true&user=${userId}`,
-      state: "mock_state_" + Date.now(),
+      state: 'mock_state_' + Date.now(),
     };
   }
 
   async handleAuthorizationCallback(code: string, state: string): Promise<any> {
     return {
       success: true,
-      userId: "test-user",
+      userId: 'test-user',
     };
   }
 
@@ -306,12 +304,12 @@ export class MockApiClient {
 
   // Properties to match BaseApiClient interface
   protected config: any = {
-    baseUrl: "https://mock-api.test",
-    apiVersion: "v1",
+    baseUrl: 'https://mock-api.test',
+    apiVersion: 'v1',
     timeout: 30000,
     retryAttempts: 3,
     retryDelayMs: 1000,
-    userAgent: "MockApiClient/1.0",
+    userAgent: 'MockApiClient/1.0',
   };
   protected logger: any = null;
 
@@ -334,23 +332,23 @@ export class MockApiClient {
 
   private setupDefaultResponses(): void {
     // Default customer query response
-    this.responses.set("queryCustomers", {
+    this.responses.set('queryCustomers', {
       items: [
         {
-          id: "cust_001",
-          name: "Acme Corporation",
-          email: "contact@acme.com",
-          type: "business",
-          status: "active",
-          region: "US-West",
+          id: 'cust_001',
+          name: 'Acme Corporation',
+          email: 'contact@acme.com',
+          type: 'business',
+          status: 'active',
+          region: 'US-West',
         },
         {
-          id: "cust_002",
-          name: "John Doe",
-          email: "john@example.com",
-          type: "individual",
-          status: "active",
-          region: "US-East",
+          id: 'cust_002',
+          name: 'John Doe',
+          email: 'john@example.com',
+          type: 'individual',
+          status: 'active',
+          region: 'US-East',
         },
       ],
       totalCount: 2,
@@ -359,47 +357,47 @@ export class MockApiClient {
     });
 
     // Default order creation response
-    this.responses.set("createOrder", {
-      id: "order_12345",
-      status: "pending",
-      customerId: "cust_001",
+    this.responses.set('createOrder', {
+      id: 'order_12345',
+      status: 'pending',
+      customerId: 'cust_001',
       totalAmount: 299.99,
-      items: [{ productId: "prod_001", quantity: 1, unitPrice: 299.99 }],
-      trackingNumber: "TRK123456789",
+      items: [{ productId: 'prod_001', quantity: 1, unitPrice: 299.99 }],
+      trackingNumber: 'TRK123456789',
       estimatedDelivery: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         .toISOString(),
       createdAt: new Date().toISOString(),
     });
 
     // Default order status response
-    this.responses.set("getOrderStatus", {
-      orderId: "order_12345",
-      status: "shipped",
-      trackingNumber: "TRK123456789",
+    this.responses.set('getOrderStatus', {
+      orderId: 'order_12345',
+      status: 'shipped',
+      trackingNumber: 'TRK123456789',
       estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
         .toISOString(),
       history: [
         {
-          status: "pending",
+          status: 'pending',
           timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
             .toISOString(),
         },
         {
-          status: "processing",
+          status: 'processing',
           timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
             .toISOString(),
         },
-        { status: "shipped", timestamp: new Date().toISOString() },
+        { status: 'shipped', timestamp: new Date().toISOString() },
       ],
     });
 
     // Default API info response
-    this.responses.set("getApiInfo", {
-      name: "ExampleCorp API",
-      version: "2.1.0",
-      status: "operational",
-      uptime: "99.9%",
-      endpoints: ["customers", "orders", "products", "analytics"],
+    this.responses.set('getApiInfo', {
+      name: 'ExampleCorp API',
+      version: '2.1.0',
+      status: 'operational',
+      uptime: '99.9%',
+      endpoints: ['customers', 'orders', 'products', 'analytics'],
       rateLimit: {
         limit: 1000,
         remaining: 856,
@@ -409,20 +407,20 @@ export class MockApiClient {
   }
 
   async queryCustomers(params: any): Promise<any> {
-    this.logCall("queryCustomers", params, params.userId);
+    this.logCall('queryCustomers', params, params.userId);
 
     // Check OAuth authentication first
     if (params.userId) {
       await this.checkAuthentication(params.userId);
     }
 
-    if (this.failures.has("queryCustomers")) {
+    if (this.failures.has('queryCustomers')) {
       throw new Error(
-        "API call failed: Customer service temporarily unavailable",
+        'API call failed: Customer service temporarily unavailable',
       );
     }
 
-    const response = { ...this.responses.get("queryCustomers") };
+    const response = { ...this.responses.get('queryCustomers') };
 
     // Apply search filtering if provided
     if (params.search) {
@@ -461,40 +459,39 @@ export class MockApiClient {
   }
 
   async createOrder(orderData: any, userId: string): Promise<any> {
-    this.logCall("createOrder", orderData, userId);
+    this.logCall('createOrder', orderData, userId);
 
     // Check OAuth authentication first
     await this.checkAuthentication(userId);
 
-    if (this.failures.has("createOrder")) {
-      throw new Error("API call failed: Order creation service unavailable");
+    if (this.failures.has('createOrder')) {
+      throw new Error('API call failed: Order creation service unavailable');
     }
 
-    const response = { ...this.responses.get("createOrder") };
+    const response = { ...this.responses.get('createOrder') };
     response.customerId = orderData.customerId;
     response.items = orderData.items || response.items;
-    response.totalAmount =
-      orderData.items?.reduce(
-        (total: number, item: any) => total + (item.quantity * item.unitPrice),
-        0,
-      ) || response.totalAmount;
+    response.totalAmount = orderData.items?.reduce(
+      (total: number, item: any) => total + (item.quantity * item.unitPrice),
+      0,
+    ) || response.totalAmount;
 
     return response;
   }
 
   async getOrderStatus(params: any): Promise<any> {
-    this.logCall("getOrderStatus", params, params.userId);
+    this.logCall('getOrderStatus', params, params.userId);
 
     // Check OAuth authentication first
     if (params.userId) {
       await this.checkAuthentication(params.userId);
     }
 
-    if (this.failures.has("getOrderStatus")) {
-      throw new Error("API call failed: Order tracking service unavailable");
+    if (this.failures.has('getOrderStatus')) {
+      throw new Error('API call failed: Order tracking service unavailable');
     }
 
-    const response = { ...this.responses.get("getOrderStatus") };
+    const response = { ...this.responses.get('getOrderStatus') };
     response.orderId = params.orderId;
 
     if (!params.includeHistory) {
@@ -505,20 +502,20 @@ export class MockApiClient {
   }
 
   async getApiInfo(): Promise<any> {
-    this.logCall("getApiInfo", {}, "system");
+    this.logCall('getApiInfo', {}, 'system');
 
-    if (this.failures.has("getApiInfo")) {
-      throw new Error("API call failed: Service status unavailable");
+    if (this.failures.has('getApiInfo')) {
+      throw new Error('API call failed: Service status unavailable');
     }
 
-    return this.responses.get("getApiInfo");
+    return this.responses.get('getApiInfo');
   }
 
   async healthCheck(): Promise<
     { healthy: boolean; status: string; timestamp: string }
   > {
-    this.logCall("healthCheck", {}, "system");
-    const isHealthy = !this.failures.has("healthCheck");
+    this.logCall('healthCheck', {}, 'system');
+    const isHealthy = !this.failures.has('healthCheck');
     // console.log('🏥 HEALTH CHECK CALLED:', {
     //   count: this.getCallCount('healthCheck'),
     //   hasFailure: this.failures.has('healthCheck'),
@@ -526,46 +523,46 @@ export class MockApiClient {
     // });
 
     if (!isHealthy) {
-      console.log("😧 HEALTH CHECK FAILING!");
+      console.log('😧 HEALTH CHECK FAILING!');
     }
 
     return {
       healthy: isHealthy,
-      status: isHealthy ? "healthy" : "unhealthy",
+      status: isHealthy ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
     };
   }
 
   // Workflow-specific API methods
   async queryOrders(params: any): Promise<any> {
-    this.logCall("queryOrders", params, params.userId);
+    this.logCall('queryOrders', params, params.userId);
 
     // Check OAuth authentication first
     if (params.userId) {
       await this.checkAuthentication(params.userId);
     }
 
-    if (this.failures.has("queryOrders")) {
+    if (this.failures.has('queryOrders')) {
       throw new Error(
-        "API call failed: Orders service temporarily unavailable",
+        'API call failed: Orders service temporarily unavailable',
       );
     }
 
     return {
       items: [
         {
-          id: "order_001",
-          customerId: "cust_001",
-          status: "completed",
+          id: 'order_001',
+          customerId: 'cust_001',
+          status: 'completed',
           totalAmount: 199.99,
-          createdDate: "2024-01-15T10:30:00Z",
+          createdDate: '2024-01-15T10:30:00Z',
         },
         {
-          id: "order_002",
-          customerId: "cust_002",
-          status: "pending",
+          id: 'order_002',
+          customerId: 'cust_002',
+          status: 'pending',
           totalAmount: 299.99,
-          createdDate: "2024-01-16T14:20:00Z",
+          createdDate: '2024-01-16T14:20:00Z',
         },
       ],
       totalCount: 2,
@@ -574,21 +571,21 @@ export class MockApiClient {
   }
 
   async queryProducts(params: any): Promise<any> {
-    this.logCall("queryProducts", params, params.userId);
+    this.logCall('queryProducts', params, params.userId);
 
     return {
       items: [
         {
-          id: "prod_001",
-          name: "Widget Pro",
-          category: "electronics",
+          id: 'prod_001',
+          name: 'Widget Pro',
+          category: 'electronics',
           price: 299.99,
           inStock: true,
         },
         {
-          id: "prod_002",
-          name: "Gadget Max",
-          category: "electronics",
+          id: 'prod_002',
+          name: 'Gadget Max',
+          category: 'electronics',
           price: 199.99,
           inStock: false,
         },
@@ -599,14 +596,14 @@ export class MockApiClient {
   }
 
   async queryAnalytics(params: any): Promise<any> {
-    this.logCall("queryAnalytics", params, params.userId);
+    this.logCall('queryAnalytics', params, params.userId);
 
     return {
       summary: {
         totalRevenue: 15000.00,
         totalOrders: 150,
         averageOrderValue: 100.00,
-        topProducts: ["Widget Pro", "Gadget Max"],
+        topProducts: ['Widget Pro', 'Gadget Max'],
       },
       timeRange: params.filters.dateRange,
     };
@@ -644,27 +641,27 @@ export class MockApiClient {
 
   // Additional methods to match ExampleApiClient interface
   async createCustomer(customerData: any, userId: string): Promise<any> {
-    this.logCall("createCustomer", customerData, userId);
+    this.logCall('createCustomer', customerData, userId);
 
     // Check OAuth authentication first
     await this.checkAuthentication(userId);
 
     return {
-      id: "mock-customer-" + Date.now(),
+      id: 'mock-customer-' + Date.now(),
       ...customerData,
-      status: "active",
+      status: 'active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
   }
 
   async deleteCustomer(customerId: string): Promise<void> {
-    this.logCall("deleteCustomer", { customerId }, "system");
+    this.logCall('deleteCustomer', { customerId }, 'system');
     // Mock deletion - no return value needed
   }
 
   async cancelOrder(orderId: string): Promise<void> {
-    this.logCall("cancelOrder", { orderId }, "system");
+    this.logCall('cancelOrder', { orderId }, 'system');
     // Mock cancellation - no return value needed
   }
 
@@ -672,7 +669,7 @@ export class MockApiClient {
     productIds: string[],
     userId: string,
   ): Promise<Record<string, number>> {
-    this.logCall("getInventoryLevels", { productIds }, userId);
+    this.logCall('getInventoryLevels', { productIds }, userId);
     const result: Record<string, number> = {};
     productIds.forEach((id) => {
       result[id] = Math.floor(Math.random() * 100);
@@ -681,30 +678,29 @@ export class MockApiClient {
   }
 
   async bulkUpdateInventory(updateData: any, userId: string): Promise<any> {
-    this.logCall("bulkUpdateInventory", updateData, userId);
+    this.logCall('bulkUpdateInventory', updateData, userId);
     return {
       updated: updateData.updates?.length || 0,
       success: true,
-      results:
-        updateData.updates?.map((u: any) => ({
-          productId: u.productId,
-          success: true,
-        })) || [],
+      results: updateData.updates?.map((u: any) => ({
+        productId: u.productId,
+        success: true,
+      })) || [],
     };
   }
 
   async restoreInventoryLevels(
     inventory: Record<string, number>,
   ): Promise<void> {
-    this.logCall("restoreInventoryLevels", { inventory }, "system");
+    this.logCall('restoreInventoryLevels', { inventory }, 'system');
     // Mock restore - no return value needed
   }
 
   async processRefund(refundData: any, userId: string): Promise<any> {
-    this.logCall("processRefund", refundData, userId);
+    this.logCall('processRefund', refundData, userId);
     return {
-      refundId: "refund-" + Date.now(),
-      status: "processed",
+      refundId: 'refund-' + Date.now(),
+      status: 'processed',
       amount: refundData.refundAmount || 100,
       processedAt: new Date().toISOString(),
     };
@@ -714,27 +710,27 @@ export class MockApiClient {
     migrationData: any,
     userId: string,
   ): Promise<any> {
-    this.logCall("validateDataMigration", migrationData, userId);
+    this.logCall('validateDataMigration', migrationData, userId);
     return {
       valid: true,
-      estimatedDuration: "2 hours",
+      estimatedDuration: '2 hours',
       potentialIssues: [],
       recommendedActions: [],
     };
   }
 
   async executeDataMigration(migrationData: any, userId: string): Promise<any> {
-    this.logCall("executeDataMigration", migrationData, userId);
+    this.logCall('executeDataMigration', migrationData, userId);
     return {
-      migrationId: "migration-" + Date.now(),
-      status: "completed",
+      migrationId: 'migration-' + Date.now(),
+      status: 'completed',
       recordsProcessed: migrationData.batchSize || 1000,
       completedAt: new Date().toISOString(),
     };
   }
 
   async disconnect(): Promise<void> {
-    this.logCall("disconnect", {}, "system");
+    this.logCall('disconnect', {}, 'system');
     // Mock disconnect - no return value needed
   }
 
@@ -758,7 +754,7 @@ export class MockApiClient {
       data,
       error,
       metadata: {
-        requestId: "mock-request-" + Date.now(),
+        requestId: 'mock-request-' + Date.now(),
         timestamp: new Date().toISOString(),
       },
     };
@@ -775,14 +771,14 @@ export class MockApiClient {
 
   // Private methods to match ExampleApiClient interface
   private async makeRequest<T = any>(
-    method: "GET" | "POST" | "PUT" | "DELETE",
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     endpoint: string,
     options: any = {},
   ): Promise<any> {
     this.logCall(
-      "makeRequest",
+      'makeRequest',
       { method, endpoint, options },
-      options.userId || "system",
+      options.userId || 'system',
     );
 
     // Mock request - return success response
@@ -797,8 +793,8 @@ export class MockApiClient {
     // Mock HTTP request - return mock response
     return new Response(JSON.stringify({ mock: true }), {
       status: 200,
-      statusText: "OK",
-      headers: { "content-type": "application/json" },
+      statusText: 'OK',
+      headers: { 'content-type': 'application/json' },
     });
   }
 
@@ -821,14 +817,13 @@ export class MockAuthLogger {
   public warnCalls: Array<[string, any?]> = [];
   public errorCalls: Array<[string, Error | undefined, any?]> = [];
   public debugCalls: Array<[string, any?]> = [];
-  public authEvents: Array<{ event: string; userId: string; timestamp: Date }> =
-    [];
+  public authEvents: Array<{ event: string; userId: string; timestamp: Date }> = [];
 
   // Properties to match Logger interface
-  private currentLogLevel: string = "debug";
+  private currentLogLevel: string = 'debug';
   private config: any = {
-    level: "debug",
-    format: "text",
+    level: 'debug',
+    format: 'text',
     includeTimestamp: true,
     includeSource: true,
     colorize: false,
@@ -861,7 +856,7 @@ export class MockAuthLogger {
 
   // Additional methods to match Logger interface
   dir(arg: unknown): void {
-    this.debugCalls.push(["Debug object", arg]);
+    this.debugCalls.push(['Debug object', arg]);
   }
 
   child(context: Record<string, unknown>): MockAuthLogger {
@@ -891,19 +886,19 @@ export class MockAuthLogger {
   }
 
   async logApiCall(entry: any): Promise<void> {
-    this.info("API Call", entry);
+    this.info('API Call', entry);
   }
 
   async logWorkflowOperation(entry: any): Promise<void> {
-    this.info("Workflow Operation", entry);
+    this.info('Workflow Operation', entry);
   }
 
   async logAuthEvent(entry: any): Promise<void> {
-    this.info("Auth Event", entry);
+    this.info('Auth Event', entry);
   }
 
   async logSystemEvent(entry: any): Promise<void> {
-    this.info("System Event", entry);
+    this.info('System Event', entry);
   }
 
   async logCustomEvent(type: string, entry: any): Promise<void> {
@@ -943,16 +938,16 @@ export class MockAuthLogger {
   private writeLog(level: string, message: string, data?: unknown): void {
     // Mock implementation - just call the appropriate public method
     switch (level) {
-      case "debug":
+      case 'debug':
         this.debug(message, data);
         break;
-      case "info":
+      case 'info':
         this.info(message, data);
         break;
-      case "warn":
+      case 'warn':
         this.warn(message, data);
         break;
-      case "error":
+      case 'error':
         this.error(message, data instanceof Error ? data : undefined, data);
         break;
     }
@@ -963,9 +958,7 @@ export class MockAuthLogger {
     message: string,
     data?: unknown,
   ): string {
-    return `${level.toUpperCase()}: ${message}${
-      data ? " " + JSON.stringify(data) : ""
-    }`;
+    return `${level.toUpperCase()}: ${message}${data ? ' ' + JSON.stringify(data) : ''}`;
   }
 
   private formatJsonEntry(
@@ -989,7 +982,7 @@ export class MockAuthLogger {
   }
 
   private getLogLevelFromEnv(): string {
-    return "debug";
+    return 'debug';
   }
 
   // Additional properties to match AuditLogger interface
@@ -1015,10 +1008,10 @@ export class MockAuthLogger {
   }
 
   private logAuthEventPrivate(message: string, data?: any): void {
-    if (data?.userId || message.includes("OAuth") || message.includes("auth")) {
+    if (data?.userId || message.includes('OAuth') || message.includes('auth')) {
       this.authEvents.push({
         event: message,
-        userId: data?.userId || "unknown",
+        userId: data?.userId || 'unknown',
         timestamp: new Date(),
       });
     }
@@ -1073,9 +1066,9 @@ export function createAuthenticatedToolContext(overrides: any = {}): any {
   const mockLogger = createMockAuthLogger();
 
   return {
-    userId: "test-user",
-    requestId: "test-request-123",
-    clientId: "test-client",
+    userId: 'test-user',
+    requestId: 'test-request-123',
+    clientId: 'test-client',
     startTime: new Date(),
     logger: mockLogger,
     oAuthConsumer: mockOAuth,
@@ -1091,8 +1084,8 @@ export function createAuthenticatedToolContext(overrides: any = {}): any {
 export function createAuthenticatedWorkflowContext(overrides: any = {}): any {
   return {
     ...createAuthenticatedToolContext(),
-    sessionId: "test-session-456",
-    workflowId: "test-workflow-789",
+    sessionId: 'test-session-456',
+    workflowId: 'test-workflow-789',
     ...overrides,
   };
 }
@@ -1109,16 +1102,16 @@ export class MockOAuthConfig {
 
   private setDefaults(): void {
     const defaults = {
-      "OAUTH_CONSUMER_CLIENT_ID": "test-client-id",
-      "OAUTH_CONSUMER_CLIENT_SECRET": "test-client-secret",
-      "OAUTH_CONSUMER_AUTH_URL": "https://httpbin.org/anything/oauth/authorize",
-      "OAUTH_CONSUMER_TOKEN_URL": "https://httpbin.org/anything/oauth/token",
-      "OAUTH_CONSUMER_REDIRECT_URI": "http://localhost:3000/oauth/callback",
-      "OAUTH_CONSUMER_SCOPES": "read,write",
-      "THIRDPARTY_API_BASE_URL": "https://jsonplaceholder.typicode.com",
-      "THIRDPARTY_API_VERSION": "v1",
-      "LOG_LEVEL": "debug",
-      "MCP_TRANSPORT": "stdio",
+      'OAUTH_CONSUMER_CLIENT_ID': 'test-client-id',
+      'OAUTH_CONSUMER_CLIENT_SECRET': 'test-client-secret',
+      'OAUTH_CONSUMER_AUTH_URL': 'https://httpbin.org/anything/oauth/authorize',
+      'OAUTH_CONSUMER_TOKEN_URL': 'https://httpbin.org/anything/oauth/token',
+      'OAUTH_CONSUMER_REDIRECT_URI': 'http://localhost:3000/oauth/callback',
+      'OAUTH_CONSUMER_SCOPES': 'read,write',
+      'THIRDPARTY_API_BASE_URL': 'https://jsonplaceholder.typicode.com',
+      'THIRDPARTY_API_VERSION': 'v1',
+      'LOG_LEVEL': 'debug',
+      'MCP_TRANSPORT': 'stdio',
     };
 
     Object.entries(defaults).forEach(([key, value]) => {
@@ -1154,44 +1147,44 @@ export function generateAuthenticatedToolTestParams(): Array<{
 }> {
   return [
     {
-      name: "query customers with authentication",
-      toolName: "query_customers_example",
+      name: 'query customers with authentication',
+      toolName: 'query_customers_example',
       params: {
-        userId: "test-user",
-        search: "Acme",
+        userId: 'test-user',
+        search: 'Acme',
         limit: 10,
       },
       expectedAuthRequired: true,
     },
     {
-      name: "create order with authentication",
-      toolName: "create_order_example",
+      name: 'create order with authentication',
+      toolName: 'create_order_example',
       params: {
-        userId: "test-user",
-        customerId: "cust_001",
-        items: [{ productId: "prod_001", quantity: 1, unitPrice: 299.99 }],
+        userId: 'test-user',
+        customerId: 'cust_001',
+        items: [{ productId: 'prod_001', quantity: 1, unitPrice: 299.99 }],
         shippingAddress: {
-          street: "123 Test St",
-          city: "Test City",
-          state: "TS",
-          zipCode: "12345",
+          street: '123 Test St',
+          city: 'Test City',
+          state: 'TS',
+          zipCode: '12345',
         },
       },
       expectedAuthRequired: true,
     },
     {
-      name: "get order status with authentication",
-      toolName: "get_order_status_example",
+      name: 'get order status with authentication',
+      toolName: 'get_order_status_example',
       params: {
-        userId: "test-user",
-        orderId: "order_12345",
+        userId: 'test-user',
+        orderId: 'order_12345',
         includeHistory: true,
       },
       expectedAuthRequired: true,
     },
     {
-      name: "get API info (no authentication required)",
-      toolName: "get_api_info_example",
+      name: 'get API info (no authentication required)',
+      toolName: 'get_api_info_example',
       params: {},
       expectedAuthRequired: false,
     },
@@ -1204,33 +1197,33 @@ export function generateAuthenticatedToolTestParams(): Array<{
 export function generateOAuthFailureScenarios(): Array<{
   name: string;
   userId: string;
-  failureType: "no_token" | "expired_token" | "invalid_token" | "api_failure";
+  failureType: 'no_token' | 'expired_token' | 'invalid_token' | 'api_failure';
   expectedError: string;
 }> {
   return [
     {
-      name: "missing OAuth token",
-      userId: "user-without-token",
-      failureType: "no_token",
-      expectedError: "No OAuth token found",
+      name: 'missing OAuth token',
+      userId: 'user-without-token',
+      failureType: 'no_token',
+      expectedError: 'No OAuth token found',
     },
     {
-      name: "expired OAuth token",
-      userId: "user-expired-token",
-      failureType: "expired_token",
-      expectedError: "expired credentials",
+      name: 'expired OAuth token',
+      userId: 'user-expired-token',
+      failureType: 'expired_token',
+      expectedError: 'expired credentials',
     },
     {
-      name: "invalid OAuth token",
-      userId: "user-invalid-token",
-      failureType: "invalid_token",
-      expectedError: "Invalid or expired credentials",
+      name: 'invalid OAuth token',
+      userId: 'user-invalid-token',
+      failureType: 'invalid_token',
+      expectedError: 'Invalid or expired credentials',
     },
     {
-      name: "API service failure",
-      userId: "test-user",
-      failureType: "api_failure",
-      expectedError: "API call failed",
+      name: 'API service failure',
+      userId: 'test-user',
+      failureType: 'api_failure',
+      expectedError: 'API call failed',
     },
   ];
 }
@@ -1248,7 +1241,7 @@ export function assertAuthenticatedCall(
   userId: string,
 ): void {
   // Verify response structure
-  assertExists(response, "Response should exist");
+  assertExists(response, 'Response should exist');
 
   // Verify OAuth token was requested
   assertExists(
@@ -1267,7 +1260,7 @@ export function assertAuthenticationError(
   assertEquals(
     response.isError,
     true,
-    "Response should indicate authentication error",
+    'Response should indicate authentication error',
   );
   assertExists(response.content);
   const responseText = response.content[0].text;
@@ -1309,9 +1302,7 @@ export function assertAuditLogging(
     `Should have auth events for user: ${userId}`,
   );
 
-  const hasOperation = authEvents.some((event) =>
-    event.event.includes(operation)
-  );
+  const hasOperation = authEvents.some((event) => event.event.includes(operation));
   assertEquals(
     hasOperation,
     true,

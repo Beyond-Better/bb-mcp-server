@@ -5,7 +5,6 @@
  * for third-party OAuth integrations. All security patterns and token management logic
  * are preserved from the original AuthenticationService.ts implementation.
  *
- * Extracted from: actionstep-mcp-server/src/api/AuthenticationService.ts
  * Security Requirements:
  * - RFC 6749 OAuth 2.0 client implementation
  * - RFC 7636 PKCE support for public clients

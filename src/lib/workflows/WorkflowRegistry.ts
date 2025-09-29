@@ -1,12 +1,10 @@
 /**
  * Enhanced WorkflowRegistry for bb-mcp-server
  *
- * Extracted and enhanced from ActionStep MCP Server with:
  * - Plugin support foundation
  * - Category-based organization
  * - Tag-based searching
  * - Performance monitoring
- * - Phase 1 integrations
  */
 
 import type { Logger } from '../utils/Logger.ts';

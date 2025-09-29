@@ -5,7 +5,6 @@
  * and lifecycle management. All cryptographic operations are preserved exactly from
  * the original OAuthClientService.ts implementation to maintain security posture.
  *
- * Extracted from: actionstep-mcp-server/src/api/OAuthClientService.ts
  * Security Requirements:
  * - RFC 6749 compliant token generation and validation
  * - Cryptographically secure random generation using Web Crypto API
@@ -40,7 +39,7 @@ export interface MCPAccessToken {
   token_type: string;
   /** MCP client ID */
   client_id: string;
-  /** User ID that links to ActionStep tokens */
+  /** User ID that links to external tokens */
   user_id: string;
   /** Token scope */
   scope: string;
@@ -60,7 +59,7 @@ export interface MCPRefreshToken {
   refresh_token: string;
   /** MCP client ID */
   client_id: string;
-  /** User ID that links to ActionStep tokens */
+  /** User ID that links to external tokens */
   user_id: string;
   /** Token scope */
   scope: string;
@@ -78,7 +77,7 @@ export interface MCPAuthorizationCode {
   code: string;
   /** MCP client ID */
   client_id: string;
-  /** User ID that links to ActionStep tokens */
+  /** User ID that links to external tokens */
   user_id: string;
   /** Validated redirect URI */
   redirect_uri: string;

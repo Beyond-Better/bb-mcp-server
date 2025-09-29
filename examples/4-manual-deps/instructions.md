@@ -32,6 +32,7 @@ vim .env  # or use your preferred editor
 ```
 
 **Expert Configuration Options:**
+
 ```bash
 # Core Infrastructure (all manually configured)
 MCP_TRANSPORT=stdio|http
@@ -81,6 +82,7 @@ MCP_TRANSPORT=http deno run --allow-all main.ts
 ```
 
 You should see detailed initialization logs:
+
 ```
 [INFO] Initializing ExampleCorp MCP server dependencies...
 [INFO] Manual dependency creation with custom registration logic
@@ -116,19 +118,19 @@ Unlike previous examples, this shows **complete manual control** over every libr
 // 1. Manual Logger Configuration
 const logger = new Logger({
   level: configManager.get('LOG_LEVEL', 'info'),
-  format: configManager.get('LOG_FORMAT', 'json')
+  format: configManager.get('LOG_FORMAT', 'json'),
 });
 
 // 2. Manual Audit Logger Setup
 const auditLogger = new AuditLogger({
   enabled: configManager.get('AUDIT_ENABLED', 'true') === 'true',
   logAllApiCalls: configManager.get('AUDIT_LOG_ALL_API_CALLS', 'true') === 'true',
-  retentionDays: parseInt(configManager.get('AUDIT_RETENTION_DAYS', '90'), 10)
+  retentionDays: parseInt(configManager.get('AUDIT_RETENTION_DAYS', '90'), 10),
 }, logger);
 
 // 3. Manual KV Manager Initialization
 const kvManager = new KVManager({
-  kvPath: configManager.get('DENO_KV_PATH', './data/manual-deps.db')
+  kvPath: configManager.get('DENO_KV_PATH', './data/manual-deps.db'),
 }, logger);
 await kvManager.initialize(); // Manual initialization
 
@@ -147,11 +149,12 @@ const transportManager = new TransportManager({
     hostname: configManager.get('HTTP_HOST', 'localhost'),
     port: parseInt(configManager.get('HTTP_PORT', '3000'), 10),
     // ... complete HTTP configuration
-  }
+  },
 }, { logger, kvManager, sessionStore, eventStore });
 ```
 
 **Key Differences from Plugin Discovery:**
+
 - **No Plugin Discovery**: Zero automatic component discovery
 - **Manual Registration**: Direct control over tool and workflow registration
 - **Complete Configuration**: Every library component is manually configured
@@ -169,10 +172,10 @@ const toolRegistry = await getToolRegistry(logger, errorHandler);
 const instructions = await Deno.readTextFile('instructions.md');
 toolRegistry.sdkMcpServer = new SdkMcpServer({
   name: 'examplecorp-mcp-server',
-  version: '1.0.0'
+  version: '1.0.0',
 }, {
   capabilities: { tools: {}, logging: {} },
-  instructions
+  instructions,
 });
 
 // Create tools with explicit dependency injection
@@ -180,7 +183,7 @@ const exampleTools = new ExampleTools({
   apiClient: thirdpartyApiClient,
   oauthConsumer: oAuthConsumer,
   logger: logger,
-  auditLogger: auditLogger
+  auditLogger: auditLogger,
 });
 
 // Manual registration with logging
@@ -190,7 +193,7 @@ for (const registration of toolRegistrations) {
     registration.name,
     registration.definition,
     registration.handler,
-    registration.options
+    registration.options,
   );
   logger.info(`Manually registered tool: ${registration.definition.title}`);
 }
@@ -203,11 +206,12 @@ const operationWorkflow = new ExampleOperationWorkflow({ apiClient: thirdpartyAp
 workflowRegistry.registerWorkflow(queryWorkflow);
 workflowRegistry.registerWorkflow(operationWorkflow);
 logger.info('Manually registered workflows:', {
-  workflows: [queryWorkflow.name, operationWorkflow.name]
+  workflows: [queryWorkflow.name, operationWorkflow.name],
 });
 ```
 
 **Registration Benefits:**
+
 - **Complete Control**: Register components based on complex business logic
 - **Conditional Loading**: Only register what's needed for specific environments
 - **Performance Optimization**: Fine-tune registration order and dependencies
@@ -218,6 +222,7 @@ logger.info('Manually registered workflows:', {
 ### Manually Registered Tools
 
 #### `query_customers_example`
+
 **Advanced customer querying with manual configuration**
 
 ```json
@@ -240,6 +245,7 @@ logger.info('Manually registered workflows:', {
 ```
 
 #### `create_order_example`
+
 **Enterprise order creation with advanced validation**
 
 ```json
@@ -274,6 +280,7 @@ logger.info('Manually registered workflows:', {
 ### Manually Registered Workflows
 
 #### `example_query` Workflow
+
 **Advanced analytics with manual error handling**
 
 ```json
@@ -303,6 +310,7 @@ logger.info('Manually registered workflows:', {
 ```
 
 #### `example_operation` Workflow
+
 **Complex enterprise operations with transaction control**
 
 ```json
@@ -368,11 +376,11 @@ describe('Manual Tool Registration', () => {
   it('should register all tools manually', async () => {
     const dependencies = await createManualDependencies({ configManager, logger, kvManager });
     const toolRegistry = dependencies.toolRegistry!;
-    
+
     const registeredTools = toolRegistry.listTools();
     assertEquals(registeredTools.length, 4); // Expected number of tools
-    
-    const toolNames = registeredTools.map(tool => tool.name);
+
+    const toolNames = registeredTools.map((tool) => tool.name);
     assert(toolNames.includes('query_customers_example'));
     assert(toolNames.includes('create_order_example'));
     assert(toolNames.includes('get_order_status_example'));
@@ -385,7 +393,7 @@ describe('Manual Workflow Registration', () => {
   it('should register workflows manually', async () => {
     const dependencies = await createManualDependencies({ configManager, logger, kvManager });
     const workflowRegistry = dependencies.workflowRegistry!;
-    
+
     const workflowNames = workflowRegistry.getWorkflowNames();
     assertEquals(workflowNames.length, 2);
     assert(workflowNames.includes('example_query'));
@@ -401,20 +409,20 @@ describe('Manual Workflow Registration', () => {
 describe('Manual Health Checks', () => {
   it('should pass custom health checks', async () => {
     const dependencies = await createManualDependencies({ configManager, logger, kvManager });
-    
+
     // Custom health check for manual workflow registry
     const workflowRegistry = dependencies.workflowRegistry!;
     const workflowNames = workflowRegistry.getWorkflowNames();
-    
+
     assert(workflowNames.length > 0, 'No workflows registered - manual registration failed');
-    
+
     const healthStatus = {
       healthy: true,
       status: 'Workflows registered',
       workflowCount: workflowNames.length,
-      discoveryMode: 'manual'
+      discoveryMode: 'manual',
     };
-    
+
     assertEquals(healthStatus.healthy, true);
     assertEquals(healthStatus.discoveryMode, 'manual');
   });
@@ -431,6 +439,7 @@ LOG_LEVEL=debug LOG_FORMAT=json deno run --allow-all main.ts
 ```
 
 This provides detailed information about:
+
 - Manual dependency creation sequence
 - Tool and workflow registration process
 - Infrastructure component initialization
@@ -443,17 +452,20 @@ This provides detailed information about:
 #### 1. Manual Registration Order Issues
 
 **Problem:**
+
 ```
 Error: Cannot register tool - toolRegistry not initialized
 ```
 
 **Solution:**
+
 - Ensure tool registry creation happens before tool registration
 - Verify SDK MCP server configuration is complete
 - Check dependency injection order in createManualDependencies()
 - Validate error handler is properly created
 
 **Debug Steps:**
+
 ```typescript
 // Add debugging to createManualDependencies()
 logger.debug('Creating tool registry...', { step: 'tool-registry-creation' });
@@ -468,23 +480,26 @@ logger.debug('SDK MCP server configured successfully');
 #### 2. Infrastructure Component Dependencies
 
 **Problem:**
+
 ```
 Error: KV manager not initialized before credential store creation
 ```
 
 **Solution:**
+
 - Follow proper initialization order: KVManager → initialize() → dependent components
 - Ensure manual initialization calls are awaited
 - Verify component dependencies are satisfied before creation
 
 **Debug Steps:**
+
 ```typescript
 // Verify KV manager initialization
 logger.debug('Initializing KV manager...', { kvPath });
 const kvManager = new KVManager({ kvPath }, logger);
 await kvManager.initialize();
-logger.debug('KV manager initialized successfully', { 
-  isInitialized: kvManager.isInitialized() 
+logger.debug('KV manager initialized successfully', {
+  isInitialized: kvManager.isInitialized(),
 });
 
 // Verify dependent component creation
@@ -496,17 +511,20 @@ logger.debug('Credential store created successfully');
 #### 3. OAuth Configuration Complexity
 
 **Problem:**
+
 ```
 Error: OAuth provider configuration validation failed
 ```
 
 **Solution:**
+
 - Verify all required OAuth environment variables are set
 - Check OAuth provider configuration object structure
 - Validate dependency injection for OAuth provider
 - Ensure OAuth consumer and provider don't conflict
 
 **Debug Steps:**
+
 ```typescript
 // Debug OAuth provider configuration
 const oauthProviderConfig = {
@@ -522,7 +540,7 @@ const oauthDependencies = { logger, kvManager, credentialStore };
 logger.debug('OAuth provider dependencies:', {
   hasLogger: !!logger,
   hasKvManager: !!kvManager,
-  hasCredentialStore: !!credentialStore
+  hasCredentialStore: !!credentialStore,
 });
 ```
 
@@ -558,7 +576,7 @@ logger.debug('Memory usage after manual dependency creation:', {
   rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
   heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
   heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
-  external: `${Math.round(memoryUsage.external / 1024 / 1024)}MB`
+  external: `${Math.round(memoryUsage.external / 1024 / 1024)}MB`,
 });
 ```
 
@@ -566,18 +584,19 @@ logger.debug('Memory usage after manual dependency creation:', {
 
 ### Evolution of Complexity and Control
 
-| Example | Setup Lines | Control Level | Use Case |
-|---------|------------|---------------|----------|
-| **1-simple** | ~10 lines | Basic | Learning, prototypes |
-| **2-plugin-workflows** | ~15 lines | Standard | Most applications |
-| **3-plugin-api-auth** | ~25 lines | Advanced | OAuth integrations |
-| **4-manual-deps** | ~150+ lines | Expert | Enterprise, performance-critical |
+| Example                | Setup Lines | Control Level | Use Case                         |
+| ---------------------- | ----------- | ------------- | -------------------------------- |
+| **1-simple**           | ~10 lines   | Basic         | Learning, prototypes             |
+| **2-plugin-workflows** | ~15 lines   | Standard      | Most applications                |
+| **3-plugin-api-auth**  | ~25 lines   | Advanced      | OAuth integrations               |
+| **4-manual-deps**      | ~150+ lines | Expert        | Enterprise, performance-critical |
 
 ### When to Choose Manual Control
 
 **Choose Manual Control When**:
+
 - **Enterprise Integration**: Need to integrate with existing infrastructure
-- **Performance Critical**: Require fine-grained resource optimization  
+- **Performance Critical**: Require fine-grained resource optimization
 - **Custom Authentication**: Implementing non-standard auth patterns
 - **Conditional Loading**: Complex business logic for component registration
 - **Legacy Systems**: Working with existing enterprise systems
@@ -591,7 +610,7 @@ logger.debug('Memory usage after manual dependency creation:', {
    ```typescript
    // REMOVE: Plugin discovery (automatic)
    // Library automatically finds plugins in src/plugins/
-   
+
    // ADD: Manual registration (explicit)
    const toolRegistry = await getToolRegistry(logger, errorHandler);
    // ... manual tool registration
@@ -604,9 +623,9 @@ logger.debug('Memory usage after manual dependency creation:', {
      configManager,
      logger,
      thirdpartyApiClient,
-     oAuthConsumer
+     oAuthConsumer,
    };
-   
+
    // ADD: Complete manual infrastructure
    return {
      logger: manuallyCreatedLogger,
