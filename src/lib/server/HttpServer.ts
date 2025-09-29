@@ -295,7 +295,7 @@ export class HttpServer {
   /**
    * Get server metrics for monitoring
    */
-  getMetrics() {
+  getMetrics(): { uptime: { seconds: number; human: string }; started_at: string; endpoints: { oauth: unknown; mcp: unknown } } {
     const uptime = performance.now() - this.startTime.getTime();
 
     return {
