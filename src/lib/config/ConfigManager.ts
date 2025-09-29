@@ -464,9 +464,10 @@ export class ConfigManager {
    */
   private async loadEnvFile(envFile: string): Promise<void> {
     try {
-      // Note: @std/dotenv/load automatically loads .env file
-      // This method could be extended to load custom env files
-      await import(envFile);
+      // Note: @std/dotenv/load automatically loads .env file at import time
+      // For custom env files, we can use the dotenv library directly
+      const { load } = await import('@std/dotenv');
+      await load({ envPath: envFile, export: true });
     } catch (error) {
       this.logger?.warn('ConfigManager: Could not load environment file', { envFile, error });
     }

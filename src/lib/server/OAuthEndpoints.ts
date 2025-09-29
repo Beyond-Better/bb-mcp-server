@@ -563,7 +563,7 @@ export class OAuthEndpoints {
   /**
    * Get OAuth endpoints metrics
    */
-  getMetrics() {
+  getMetrics(): { endpoints: { authorize: string; token: string; register: string; callback: string; metadata: string }; provider: string } {
     return {
       endpoints: {
         authorize: '/authorize',

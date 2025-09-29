@@ -328,7 +328,7 @@ export class StatusEndpoints {
   /**
    * Get detailed server statistics
    */
-  getServerStats() {
+  getServerStats(): { server: { name: string; version: string; environment: string; uptime: { seconds: number; human: string }; started_at: string }; http: { hostname: string; port: number }; workflows: { count: number; available: string[] }; mcp: unknown; memory: unknown; timestamp: string } {
     const uptime = performance.now() - this.startTime.getTime();
 
     return {
