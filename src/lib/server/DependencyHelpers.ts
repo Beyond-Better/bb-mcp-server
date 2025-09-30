@@ -194,8 +194,24 @@ export function getOAuthProvider(
   const redirectUri = configManager.get<string>('OAUTH_PROVIDER_REDIRECT_URI');
 
   if (!clientId || !clientSecret || !redirectUri) {
+    logger.debug('OAuthProvider: Skipping OAuth provider creation - missing required config', {
+      hasClientId: !!clientId,
+      hasClientSecret: !!clientSecret,
+      hasRedirectUri: !!redirectUri,
+    });
     return undefined;
   }
+
+  // Log OAuth provider configuration for debugging
+  const enableDynamicReg = configManager.get('OAUTH_ENABLE_DYNAMIC_CLIENT_REG', 'true') === 'true';
+  logger.info('OAuthProvider: Creating OAuth provider with configuration', {
+    issuer: configManager.get('OAUTH_PROVIDER_ISSUER', 'http://localhost:3000'),
+    enableDynamicRegistration: enableDynamicReg,
+    requireHTTPS: configManager.get('OAUTH_REQUIRE_HTTPS', 'false') === 'true',
+    allowedHosts: configManager.get('OAUTH_ALLOWED_HOSTS', 'localhost').split(','),
+    supportedGrantTypes: ['authorization_code', 'refresh_token'],
+    supportedScopes: ['read', 'write', 'admin'],
+  });
 
   return new OAuthProvider({
     issuer: configManager.get('OAUTH_PROVIDER_ISSUER', 'http://localhost:3000'),
@@ -211,8 +227,8 @@ export function getOAuthProvider(
       authorizationCodeExpiryMs: parseInt(configManager.get('OAUTH_CODE_EXPIRATION', '600000'), 10),
     },
     clients: {
-      enableDynamicRegistration: configManager.get('OAUTH_ENABLE_DYNAMIC_CLIENT_REG') === 'true',
-      requireHTTPS: configManager.get('OAUTH_REQUIRE_HTTPS') === 'true',
+      enableDynamicRegistration: configManager.get('OAUTH_ENABLE_DYNAMIC_CLIENT_REG', 'true') === 'true',
+      requireHTTPS: configManager.get('OAUTH_REQUIRE_HTTPS', 'false') === 'true',
       allowedRedirectHosts: configManager.get('OAUTH_ALLOWED_HOSTS', 'localhost').split(','),
     },
     authorization: {
@@ -230,7 +246,7 @@ export function getOAuthProvider(
 }
 
 /**
- * Create transport manager instance
+ * Create transport manager instance with optional OAuth dependencies
  */
 export function getTransportManager(
   configManager: ConfigManager,
@@ -238,7 +254,9 @@ export function getTransportManager(
   kvManager: KVManager,
   sessionStore: SessionStore,
   eventStore: TransportEventStore,
-  //workflowRegistry: WorkflowRegistry,
+  oauthProvider?: OAuthProvider,
+  oAuthConsumer?: OAuthConsumer,
+  thirdpartyApiClient?: any,
 ): TransportManager {
   return new TransportManager({
     type: configManager.get('MCP_TRANSPORT', 'stdio') as 'stdio' | 'http',
@@ -257,13 +275,28 @@ export function getTransportManager(
         return typeof origins === 'string' ? origins.split(',') : origins;
       })(),
       preserveCompatibilityMode: true,
+      // 🔒 NEW: Authentication configuration from environment
+      enableAuthentication: configManager.get('MCP_AUTH_HTTP_ENABLED', 'true') === 'true',
+      skipAuthentication: (configManager.get('MCP_AUTH_HTTP_SKIP', 'false') as string) === 'true',
+      requireAuthentication: configManager.get('MCP_AUTH_HTTP_REQUIRE', 'true') === 'true',
+    },
+    stdio: {
+      enableLogging: configManager.get('STDIO_ENABLE_LOGGING', 'true') === 'true',
+      bufferSize: parseInt(configManager.get('STDIO_BUFFER_SIZE', '8192'), 10),
+      encoding: configManager.get('STDIO_ENCODING', 'utf8'),
+      // 🔒 NEW: STDIO authentication (discouraged by MCP spec)
+      enableAuthentication: (configManager.get('MCP_AUTH_STDIO_ENABLED', 'false') as string) === 'true',
+      skipAuthentication: (configManager.get('MCP_AUTH_STDIO_SKIP', 'false') as string) === 'true',
     },
   }, {
     logger,
     kvManager,
     sessionStore,
     eventStore,
-    //workflowRegistry,
+    // 🔒 NEW: OAuth authentication dependencies
+    oauthProvider,
+    oauthConsumer: oAuthConsumer,
+    thirdPartyApiClient: thirdpartyApiClient,
   });
 }
 
@@ -622,17 +655,6 @@ export async function getAllDependencies(
     kvManager,
     credentialStore,
   );
-  const transportManager = overrides.transportManager || getTransportManager(
-    configManager,
-    logger,
-    kvManager,
-    sessionStore,
-    eventStore,
-  );
-
-  // Create HTTP server config if needed
-  const httpServerConfig = overrides.httpServerConfig || getHttpServerConfig(configManager);
-
   // Consumer-specific dependencies (instances only - simple approach)
   const consumerDeps: any = {};
 
@@ -644,6 +666,20 @@ export async function getAllDependencies(
   if (overrides.thirdpartyApiClient) {
     consumerDeps.thirdpartyApiClient = overrides.thirdpartyApiClient;
   }
+
+  const transportManager = overrides.transportManager || getTransportManager(
+    configManager,
+    logger,
+    kvManager,
+    sessionStore,
+    eventStore,
+    oauthProvider, // 🔒 Pass OAuth provider for MCP token validation
+    consumerDeps.oAuthConsumer, // 🔒 Pass OAuth consumer for third-party authentication
+    consumerDeps.thirdpartyApiClient, // 🔒 Pass third-party API client for token refresh
+  );
+
+  // Create HTTP server config if needed
+  const httpServerConfig = overrides.httpServerConfig || getHttpServerConfig(configManager);
 
   // Create MCP server (either from class or default)
   const serverConfig = overrides.serverConfig || {

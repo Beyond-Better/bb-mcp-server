@@ -344,6 +344,7 @@ export interface AuthorizationServerMetadata {
     server_name: string;
     server_version: string;
     supported_workflows: string[];
+    mcp_endpoint?: string;
   };
 }
 

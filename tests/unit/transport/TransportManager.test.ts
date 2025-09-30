@@ -605,31 +605,24 @@ Deno.test({
   async fn() {
     const dependencies = await createTestDependencies();
 
-    const httpConfig: TransportConfig = {
-      type: 'http',
-      http: {
-        hostname: 'localhost',
-        port: 3009,
-        sessionTimeout: 30 * 60 * 1000,
-        maxConcurrentSessions: 1000,
-        enableSessionPersistence: true,
-        sessionCleanupInterval: 5 * 60 * 1000,
-        requestTimeout: 30 * 1000,
-        maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
-        preserveCompatibilityMode: true,
+    // Use STDIO transport for health check test (doesn't require OAuth per MCP spec)
+    const stdioConfig: TransportConfig = {
+      type: 'stdio',
+      stdio: {
+        enableLogging: true,
+        bufferSize: 8192,
+        encoding: 'utf8',
       },
     };
 
-    const transportManager = new TransportManager(httpConfig, dependencies);
+    const transportManager = new TransportManager(stdioConfig, dependencies);
 
     // Health check before initialization
     const unhealthyStatus = transportManager.getHealthStatus();
     assertEquals(unhealthyStatus.healthy, false);
     assertEquals(unhealthyStatus.initialized, false);
     assertEquals(unhealthyStatus.connected, false);
-    assertEquals(unhealthyStatus.transportType, 'http');
+    assertEquals(unhealthyStatus.transportType, 'stdio');
     assert(unhealthyStatus.issues.length > 0);
     assert(unhealthyStatus.issues.includes('Transport manager not initialized'));
 
@@ -640,6 +633,8 @@ Deno.test({
     assertEquals(healthyStatus.initialized, true);
     assertEquals(healthyStatus.connected, true);
     assertEquals(healthyStatus.issues.length, 0);
+    // Check authentication status
+    assertEquals(healthyStatus.authentication.enabled, false); // No OAuth provider in test
 
     await transportManager.cleanup();
     await cleanupTestDependencies(dependencies);

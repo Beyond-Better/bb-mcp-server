@@ -46,12 +46,21 @@ export interface HttpTransportConfig {
   preserveCompatibilityMode: boolean; // default: true - CRITICAL FOR MCP SDK
   enableTransportPersistence?: boolean;
   sessionRestoreEnabled?: boolean;
+
+  // 🔒 Authentication configuration
+  enableAuthentication?: boolean; // Auto-enabled if oauthProvider available
+  skipAuthentication?: boolean; // Skip auth even if OAuth components available  
+  requireAuthentication?: boolean; // Require auth for all endpoints (except open endpoints)
 }
 
 export interface StdioTransportConfig {
   enableLogging: boolean; // default: true
   bufferSize: number; // default: 8192
   encoding: string; // default: 'utf8'
+  
+  // 🔒 Authentication configuration (discouraged by MCP spec)
+  enableAuthentication?: boolean; // STDIO SHOULD NOT use OAuth per MCP spec
+  skipAuthentication?: boolean; // Skip auth even if OAuth components available
 }
 
 export interface SessionConfig {
@@ -266,6 +275,11 @@ export interface TransportDependencies {
   kvManager: KVManager;
   sessionStore: SessionStore;
   eventStore: TransportEventStore;
+
+  // 🔒 SECURITY: OAuth authentication components (optional)
+  oauthProvider?: any; // OAuthProvider for MCP token validation
+  oauthConsumer?: any; // OAuthConsumer for third-party authentication
+  thirdPartyApiClient?: any; // Third-party API client for token refresh
 }
 
 // Authentication result (from OAuth integration)

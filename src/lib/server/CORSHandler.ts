@@ -39,8 +39,8 @@ export class CORSHandler {
   private static readonly DEFAULT_CONFIG: Required<CORSConfig> = {
     allowOrigin: '*',
     allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'mcp-session-id'],
-    exposeHeaders: ['Mcp-Session-Id'],
+    allowHeaders: ['Content-Type', 'Authorization', 'mcp-session-id', 'MCP-Protocol-Version'],
+    exposeHeaders: ['Mcp-Session-Id', 'WWW-Authenticate'],
     maxAge: 86400, // 24 hours
     allowCredentials: false,
   };

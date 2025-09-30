@@ -38,7 +38,7 @@ export interface ExampleOAuthConfig extends OAuthConsumerConfig {
 export class ExampleOAuthConsumer extends OAuthConsumer {
   private exampleConfig: ExampleOAuthConfig['exampleCorp'];
 
-  constructor(config: ExampleOAuthConfig, logger: Logger, kvManager: KVManager) {
+  constructor(config: ExampleOAuthConfig, logger: Logger, kvManager: KVManager, credentialStore: any) {
     // 🎯 Call parent with ExampleCorp OAuth configuration
     super(
       {
@@ -57,6 +57,7 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
       },
       logger,
       kvManager,
+      credentialStore,
     );
 
     this.exampleConfig = config.exampleCorp;

@@ -15,6 +15,7 @@
 
 import type { Logger } from '../../types/library.types.ts';
 import type { CredentialStore } from '../storage/CredentialStore.ts';
+import type { KVManager } from '../storage/KVManager.ts';
 import { toError } from '../utils/Error.ts';
 import type {
   AuthCallbackResult,
@@ -25,16 +26,6 @@ import type {
   TokenResult,
   UserCredentials,
 } from './OAuthTypes.ts';
-
-/**
- * Dependencies required by OAuthConsumer
- */
-export interface OAuthConsumerDependencies {
-  /** Logger for security event logging */
-  logger?: Logger;
-  /** KV Manager for storage */
-  kvManager?: any; // Will be properly typed when KVManager is imported
-}
 
 /**
  * 🔒 SECURITY-CRITICAL: Generic OAuth 2.0 Consumer Base Class
@@ -50,17 +41,27 @@ export interface OAuthConsumerDependencies {
  * - Automatic token refresh with exponential backoff
  * - Secure credential storage with expiry management
  * - Comprehensive security logging and error handling
+ * 
+ * Session Binding Interface:
+ * - Implements ThirdPartyAuthService interface for OAuth Provider session binding
+ * - Allows MCP token validation to check third-party token status
+ * - Supports automatic token refresh for seamless session management
  */
 export abstract class OAuthConsumer {
   protected config: OAuthConsumerConfig;
-  protected kvManager: any;
+  protected kvManager: KVManager | undefined;
+  protected credentialStore: CredentialStore | undefined;
   protected logger: Logger | undefined;
 
   // 🔒 SECURITY-CRITICAL: KV key prefixes for secure storage
-  protected readonly AUTH_REQUESTS_PREFIX = ['oauth', 'auth_requests'];
-  protected readonly AUTH_STATE_PREFIX = ['oauth', 'auth_state'];
+  protected readonly AUTH_STATE_PREFIX = ['oauth', 'consumer_auth_state'];
 
-  constructor(config: OAuthConsumerConfig, logger?: Logger, kvManager?: any) {
+  constructor(
+    config: OAuthConsumerConfig,
+    logger?: Logger,
+    kvManager?: KVManager,
+    credentialStore?: CredentialStore,
+  ) {
     // Apply config with proper defaults
     this.config = {
       providerId: config.providerId,
@@ -75,6 +76,7 @@ export abstract class OAuthConsumer {
       ...(config.customHeaders && { customHeaders: config.customHeaders }),
     };
     this.kvManager = kvManager;
+    this.credentialStore = credentialStore;
     this.logger = logger;
 
     this.logger?.info('OAuthConsumer: Initialized OAuth consumer', {
@@ -83,6 +85,8 @@ export abstract class OAuthConsumer {
       tokenUrl: this.config.tokenUrl,
       scopes: this.config.scopes,
       tokenRefreshBufferMinutes: this.config.tokenRefreshBufferMinutes,
+      hasCredentialStore: !!credentialStore,
+      hasKVManager: !!kvManager,
     });
   }
 
@@ -362,25 +366,46 @@ export abstract class OAuthConsumer {
   /**
    * 🔒 SECURITY-CRITICAL: Get valid access token with automatic refresh
    *
-   * Preserves exact token validation and refresh logic from AuthenticationService.ts
-   * - Token expiry validation with buffer
-   * - Automatic token refresh when near expiry
-   * - Retry logic with exponential backoff
-   * - Secure credential updates
+   * CredentialStore.getCredentials returns null for expired tokens (with buffer),
+   * so we need to handle token refresh explicitly.
    */
   async getValidAccessToken(userId: string): Promise<string | null> {
     const tokenId = Math.random().toString(36).substring(2, 15);
 
     try {
-      const credentials = await this.kvManager?.get?.([
-        'oauth',
-        'credentials',
-        userId,
-        this.config.providerId,
-      ]);
+      if (!this.credentialStore) {
+        this.logger?.warn(`OAuthConsumer: No credential store available [${tokenId}]`, {
+          tokenId,
+          userId,
+        });
+        return null;
+      }
 
-      if (!credentials) {
-        this.logger?.debug(`OAuthConsumer: No credentials found [${tokenId}]`, {
+      // CredentialStore.getCredentials already checks expiry with buffer
+      const credentials = await this.credentialStore.getCredentials(userId, this.config.providerId);
+
+      if (credentials) {
+        // Credentials are valid (not expired)
+        return credentials.accessToken;
+      }
+
+      // Credentials are null - either don't exist or are expired
+      // Check if we have expired credentials that can be refreshed
+      if (!this.kvManager) {
+        this.logger?.debug(`OAuthConsumer: No KV manager available for refresh [${tokenId}]`, {
+          tokenId,
+          userId,
+        });
+        return null;
+      }
+
+      // Get credentials directly from KV (bypass expiry check) to attempt refresh
+      const expiredCreds = await this.kvManager.get<any>(
+        ['credentials', this.config.providerId, userId]
+      );
+
+      if (!expiredCreds || !expiredCreds.refreshToken) {
+        this.logger?.debug(`OAuthConsumer: No credentials or refresh token available [${tokenId}]`, {
           tokenId,
           userId,
           providerId: this.config.providerId,
@@ -388,72 +413,49 @@ export abstract class OAuthConsumer {
         return null;
       }
 
-      // Check if token is expired or expiring soon (with buffer)
-      const now = Date.now();
-      const bufferMs = this.config.tokenRefreshBufferMinutes * 60 * 1000;
+      // Attempt token refresh
+      this.logger?.info(`OAuthConsumer: Attempting token refresh [${tokenId}]`, {
+        tokenId,
+        userId,
+        providerId: this.config.providerId,
+      });
 
-      if (credentials.expiresAt > now + bufferMs) {
-        // Token is still valid
-        return credentials.accessToken;
-      }
+      try {
+        const refreshResult = await this.refreshTokens(expiredCreds.refreshToken);
 
-      // Token is expired or expiring soon - attempt refresh
-      if (credentials.refreshToken) {
-        this.logger?.info(`OAuthConsumer: Attempting token refresh [${tokenId}]`, {
-          tokenId,
-          userId,
-          providerId: this.config.providerId,
-          expiresAt: new Date(credentials.expiresAt).toISOString(),
-          timeToExpiry: credentials.expiresAt - now,
-        });
-
-        try {
-          const refreshResult = await this.refreshTokens(credentials.refreshToken);
-
-          // Update stored credentials
-          if (refreshResult.credentials) {
-            await this.updateUserCredentials(userId, refreshResult.credentials);
-
-            this.logger?.info(`OAuthConsumer: Token refresh successful [${tokenId}]`, {
-              tokenId,
-              userId,
-              providerId: this.config.providerId,
-              newExpiresAt: new Date(refreshResult.credentials.expiresAt).toISOString(),
-            });
-
-            return refreshResult.credentials.accessToken;
-          } else {
-            throw new Error('Token refresh succeeded but no credentials returned');
-          }
-        } catch (refreshError) {
-          this.logger?.error(
-            `OAuthConsumer: Token refresh failed [${tokenId}]:`,
-            toError(refreshError),
-            {
-              tokenId,
-              userId,
-              providerId: this.config.providerId,
-            },
+        if (refreshResult.success && refreshResult.credentials) {
+          // Update credentials in store
+          await this.credentialStore.updateCredentials(
+            userId,
+            this.config.providerId,
+            refreshResult.credentials
           );
 
-          // Clean up invalid credentials
-          await this.kvManager?.delete?.(['oauth', 'credentials', userId, this.config.providerId]);
-          return null;
+          this.logger?.info(`OAuthConsumer: Token refresh successful [${tokenId}]`, {
+            tokenId,
+            userId,
+            providerId: this.config.providerId,
+          });
+
+          return refreshResult.credentials.accessToken;
+        } else {
+          throw new Error(refreshResult.error || 'Token refresh failed');
         }
+      } catch (refreshError) {
+        this.logger?.error(
+          `OAuthConsumer: Token refresh failed [${tokenId}]:`,
+          toError(refreshError),
+          {
+            tokenId,
+            userId,
+            providerId: this.config.providerId,
+          },
+        );
+
+        // Clean up invalid credentials
+        await this.credentialStore.deleteCredentials(userId, this.config.providerId);
+        return null;
       }
-
-      this.logger?.warn(
-        `OAuthConsumer: Token expired and no refresh token available [${tokenId}]`,
-        {
-          tokenId,
-          userId,
-          providerId: this.config.providerId,
-        },
-      );
-
-      // Clean up expired credentials
-      await this.kvManager?.delete?.(['oauth', 'credentials', userId, this.config.providerId]);
-      return null;
     } catch (error) {
       this.logger?.error(
         `OAuthConsumer: Failed to get valid access token [${tokenId}]:`,
@@ -487,12 +489,11 @@ export abstract class OAuthConsumer {
    */
   async getUserCredentials(userId: string): Promise<UserCredentials | null> {
     try {
-      const credentials = await this.kvManager?.get?.([
-        'oauth',
-        'credentials',
-        userId,
-        this.config.providerId,
-      ]);
+      if (!this.credentialStore) {
+        return null;
+      }
+
+      const credentials = await this.credentialStore.getCredentials(userId, this.config.providerId);
 
       if (!credentials) {
         return null;
@@ -519,10 +520,11 @@ export abstract class OAuthConsumer {
    */
   async storeUserCredentials(userId: string, credentials: OAuthCredentials): Promise<void> {
     try {
-      await this.kvManager?.set?.(
-        ['oauth', 'credentials', userId, this.config.providerId],
-        credentials,
-      );
+      if (!this.credentialStore) {
+        throw new Error('Credential store not available');
+      }
+
+      await this.credentialStore.storeCredentials(userId, this.config.providerId, credentials);
 
       this.logger?.info('OAuthConsumer: Stored user credentials', {
         userId,
@@ -542,10 +544,11 @@ export abstract class OAuthConsumer {
    */
   async updateUserCredentials(userId: string, credentials: OAuthCredentials): Promise<boolean> {
     try {
-      await this.kvManager?.set?.(
-        ['oauth', 'credentials', userId, this.config.providerId],
-        credentials,
-      );
+      if (!this.credentialStore) {
+        throw new Error('Credential store not available');
+      }
+
+      await this.credentialStore.updateCredentials(userId, this.config.providerId, credentials);
 
       this.logger?.info('OAuthConsumer: Updated user credentials', {
         userId,
@@ -567,7 +570,11 @@ export abstract class OAuthConsumer {
    */
   async revokeUserCredentials(userId: string): Promise<boolean> {
     try {
-      await this.kvManager?.delete?.(['oauth', 'credentials', userId, this.config.providerId]);
+      if (!this.credentialStore) {
+        throw new Error('Credential store not available');
+      }
+
+      await this.credentialStore.deleteCredentials(userId, this.config.providerId);
 
       this.logger?.info('OAuthConsumer: Revoked user credentials', {
         userId,
@@ -588,9 +595,13 @@ export abstract class OAuthConsumer {
    */
   async getAuthenticatedUsers(): Promise<string[]> {
     try {
-      // Simple implementation - would need to be improved for production
-      const credentialsPrefix = ['oauth', 'credentials'];
-      const results = await this.kvManager?.list?.(credentialsPrefix) || [];
+      if (!this.kvManager) {
+        return [];
+      }
+
+      // Get all credential entries for this provider
+      const credentialsPrefix = ['credentials', this.config.providerId];
+      const results = await this.kvManager.list(credentialsPrefix);
       const users = new Set<string>();
 
       for (const item of results) {
@@ -624,15 +635,27 @@ export abstract class OAuthConsumer {
   }
 
   /**
-   * Store authorization state securely
+   * 🔒 SECURITY-CRITICAL: Store authorization state securely with TTL
+   * 
+   * Authorization state is temporary (10 minutes) and separate from long-term credentials,
+   * so we use KVManager directly rather than CredentialStore.
    */
   protected async storeAuthState(state: string, authRequest: AuthorizationRequest): Promise<void> {
     try {
-      // Use CredentialStore's KV manager (would need access or separate storage)
-      // For now, this is a placeholder - would need proper implementation
+      if (!this.kvManager) {
+        throw new Error('KV Manager not available for auth state storage');
+      }
+
+      await this.kvManager.set(
+        [...this.AUTH_STATE_PREFIX, this.config.providerId, state],
+        authRequest,
+        { expireIn: 10 * 60 * 1000 }, // 10 minutes TTL
+      );
+
       this.logger?.debug('OAuthConsumer: Stored authorization state', {
         state,
         userId: authRequest.userId,
+        providerId: this.config.providerId,
         ttl: '10 minutes',
       });
     } catch (error) {
@@ -642,14 +665,33 @@ export abstract class OAuthConsumer {
   }
 
   /**
-   * Get authorization state
+   * 🔒 SECURITY-CRITICAL: Get authorization state with expiry validation
    */
   protected async getAuthState(state: string): Promise<AuthorizationRequest | null> {
     try {
-      // Placeholder - would need proper implementation
-      // Would retrieve from secure storage with expiry check
-      this.logger?.debug('OAuthConsumer: Retrieved authorization state', { state });
-      return null; // Placeholder
+      if (!this.kvManager) {
+        this.logger?.warn('OAuthConsumer: KV Manager not available for auth state retrieval');
+        return null;
+      }
+
+      const authRequest = await this.kvManager.get<AuthorizationRequest>(
+        [...this.AUTH_STATE_PREFIX, this.config.providerId, state],
+      );
+
+      if (!authRequest) {
+        this.logger?.debug('OAuthConsumer: Authorization state not found', {
+          state,
+          providerId: this.config.providerId,
+        });
+        return null;
+      }
+
+      this.logger?.debug('OAuthConsumer: Retrieved authorization state', {
+        state,
+        userId: authRequest.userId,
+        providerId: this.config.providerId,
+      });
+      return authRequest;
     } catch (error) {
       this.logger?.error('OAuthConsumer: Failed to get auth state:', toError(error));
       return null;
@@ -657,12 +699,23 @@ export abstract class OAuthConsumer {
   }
 
   /**
-   * Delete authorization state (one-time use security)
+   * 🔒 SECURITY-CRITICAL: Delete authorization state (one-time use security)
    */
   protected async deleteAuthState(state: string): Promise<void> {
     try {
-      // Placeholder - would delete from secure storage
-      this.logger?.debug('OAuthConsumer: Deleted authorization state', { state });
+      if (!this.kvManager) {
+        this.logger?.warn('OAuthConsumer: KV Manager not available for auth state deletion');
+        return;
+      }
+
+      await this.kvManager.delete(
+        [...this.AUTH_STATE_PREFIX, this.config.providerId, state],
+      );
+
+      this.logger?.debug('OAuthConsumer: Deleted authorization state', {
+        state,
+        providerId: this.config.providerId,
+      });
     } catch (error) {
       this.logger?.error('OAuthConsumer: Failed to delete auth state:', toError(error));
     }

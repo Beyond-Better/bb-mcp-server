@@ -109,6 +109,8 @@ export class OAuthMetadata {
     this.logger?.info(`OAuthMetadata: Generating authorization server metadata [${metadataId}]`, {
       metadataId,
       issuer: this.config.issuer,
+      enableDynamicRegistration: this.config.enableDynamicRegistration,
+      registrationEndpoint: this.config.registrationEndpoint,
     });
 
     try {
@@ -125,6 +127,13 @@ export class OAuthMetadata {
         }),
         // Always include revocation endpoint
         revocation_endpoint: this.buildEndpointUrl(this.config.revocationEndpoint!),
+
+      this.logger?.debug(`OAuthMetadata: Registration endpoint decision [${metadataId}]`, {
+        metadataId,
+        enableDynamicRegistration: this.config.enableDynamicRegistration,
+        registrationEndpoint: this.config.registrationEndpoint,
+        willIncludeInMetadata: !!this.config.enableDynamicRegistration,
+      });
 
         // Supported capabilities
         grant_types_supported: [...this.config.supportedGrantTypes],
@@ -143,6 +152,7 @@ export class OAuthMetadata {
         server_name: 'bb-mcp-server',
         server_version: '1.0.0',
         supported_workflows: ['oauth_authorization', 'session_management', 'token_validation'],
+        mcp_endpoint: `${this.config.issuer}/mcp`,
       };
 
       metadata.mcp_extensions = this.config.mcpExtensions
@@ -150,6 +160,7 @@ export class OAuthMetadata {
           server_name: this.config.mcpExtensions.serverName,
           server_version: this.config.mcpExtensions.serverVersion,
           supported_workflows: [...this.config.mcpExtensions.supportedWorkflows],
+          mcp_endpoint: `${this.config.issuer}/mcp`,
         }
         : defaultMcpExtensions;
 

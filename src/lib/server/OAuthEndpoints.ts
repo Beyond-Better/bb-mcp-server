@@ -260,7 +260,21 @@ export class OAuthEndpoints {
       });
     } catch (error) {
       this.logger.error(`OAuthEndpoints: Token error [${tokenId}]:`, toError(error));
-      return this.generateOAuthError('invalid_request', 'Token request failed');
+      
+      // Extract specific error message from the error
+      const errorMessage = error instanceof Error ? error.message : 'Token request failed';
+      
+      // Map specific error messages to proper OAuth error codes (RFC 6749)
+      let oauthError = 'invalid_request';
+      if (errorMessage.includes('refresh token') || errorMessage.includes('Invalid or expired')) {
+        oauthError = 'invalid_grant';
+      } else if (errorMessage.includes('client') || errorMessage.includes('Client')) {
+        oauthError = 'invalid_client';
+      } else if (errorMessage.includes('authorization code') || errorMessage.includes('Authorization code')) {
+        oauthError = 'invalid_grant';
+      }
+      
+      return this.generateOAuthError(oauthError, errorMessage);
     }
   }
 
@@ -415,9 +429,11 @@ export class OAuthEndpoints {
 
   /**
    * Well-known endpoints (OAuth metadata)
+   * Supports both oauth-authorization-server (RFC 8414) and oauth-protected-resource (RFC 9068)
    */
   async handleWellKnown(request: Request, path: string, method: string): Promise<Response> {
-    if (path === 'oauth-authorization-server' && method === 'GET') {
+    // Support both RFC 8414 and RFC 9068 endpoints
+    if ((path === 'oauth-authorization-server' || path === 'oauth-protected-resource') && method === 'GET') {
       try {
         // Delegate to OAuth Provider for metadata generation
         const metadata = await this.oauthProvider.getAuthorizationServerMetadata();

@@ -26,6 +26,12 @@ import type {
 } from './TransportTypes.ts';
 import type { Logger } from '../utils/Logger.ts';
 import { reconstructOriginalUrl } from '../utils/UrlUtils.ts';
+import {
+  AuthenticationMiddleware,
+  type AuthenticationConfig,
+  type AuthenticationContext,
+  type AuthenticationDependencies,
+} from './AuthenticationMiddleware.ts';
 
 /**
  * HTTP transport implementation for MCP
@@ -40,6 +46,7 @@ export class HttpTransport implements Transport {
   private config: HttpTransportConfig;
   private dependencies: TransportDependencies;
   private logger: Logger;
+  private authenticationMiddleware: AuthenticationMiddleware;
 
   // MCP Transport Management (from MCPRequestHandler)
   private mcpTransports = new Map<string, StreamableHTTPServerTransport>();
@@ -65,6 +72,22 @@ export class HttpTransport implements Transport {
     };
     this.dependencies = dependencies;
     this.logger = dependencies.logger;
+
+    // Initialize authentication middleware
+    const authConfig: AuthenticationConfig = {
+      enabled: config.enableAuthentication ?? (!!dependencies.oauthProvider),
+      skipAuthentication: config.skipAuthentication ?? false,
+      requireAuthentication: config.requireAuthentication ?? true,
+    };
+
+    const authDependencies: AuthenticationDependencies = {
+      oauthProvider: dependencies.oauthProvider,
+      oauthConsumer: dependencies.oauthConsumer,
+      thirdPartyApiClient: dependencies.thirdPartyApiClient,
+      logger: dependencies.logger,
+    };
+
+    this.authenticationMiddleware = new AuthenticationMiddleware(authConfig, authDependencies);
   }
 
   async start(): Promise<void> {
@@ -125,16 +148,19 @@ export class HttpTransport implements Transport {
 
   /**
    * Main HTTP request handling entry point
-   * Delegates to method-specific handlers with preserved compatibility
+   * Delegates to method-specific handlers with preserved compatibility and authentication
+   * 
+   * 🔒 SECURITY-CRITICAL: Integrates authentication middleware with MCP request execution
    */
   async handleHttpRequest(
     request: Request,
     sdkMcpServer: SdkMcpServer,
-    authContext?: BeyondMcpAuthContext,
+    beyondMcpServer?: any, // BeyondMcpServer instance for auth context execution
   ): Promise<Response> {
     const requestId = Math.random().toString(36).substring(2, 15);
     const startTime = performance.now();
     const method = request.method;
+    const url = new URL(request.url);
 
     this.requestCount++;
 
@@ -144,28 +170,120 @@ export class HttpTransport implements Transport {
 
     try {
       let response: Response;
+      let authenticatedRequest = request;
+      let mcpAuthContext: AuthenticationContext | undefined;
 
-      switch (method) {
-        case 'POST':
-          response = await this.handleMCPPost(request, method, sdkMcpServer, authContext);
-          break;
-        case 'GET':
-          response = await this.handleMCPGet(request, method, sdkMcpServer, authContext);
-          break;
-        case 'DELETE':
-          response = await this.handleMCPDelete(request, method, sdkMcpServer, authContext);
-          break;
-        default:
-          this.logger.warn(`HttpTransport: Method not allowed [${requestId}]`, {
+      // 🔒 SECURITY-CRITICAL: Check if authentication is required
+      if (this.authenticationMiddleware.isAuthenticationRequired(url)) {
+        this.logger.debug(`HttpTransport: Authentication required [${requestId}]`, {
+          requestId,
+          pathname: url.pathname,
+        });
+
+        // Authenticate the request
+        const authResult = await this.authenticationMiddleware.authenticateRequest(
+          request,
+          requestId,
+        );
+
+        if (!authResult.authenticated) {
+          // Create enhanced error response with proper status code and guidance
+          const errorStatus = this.authenticationMiddleware.getAuthErrorStatus(authResult);
+          const guidance = this.authenticationMiddleware.getClientGuidance(authResult.errorCode);
+
+          this.logger.warn(`HttpTransport: Authentication failed [${requestId}]`, {
             requestId,
-            method,
+            error: authResult.error,
+            errorCode: authResult.errorCode,
+            actionTaken: authResult.actionTaken,
+            clientId: authResult.clientId,
+            userId: authResult.userId,
+            responseStatus: errorStatus,
+            duration: performance.now() - startTime,
+            hasOAuthChallenge: !!authResult.oauthChallenge,
           });
-          response = this.createErrorResponse(
-            'Method Not Allowed',
-            405,
-            `Method ${method} not allowed for MCP endpoint`,
+
+          return this.createEnhancedErrorResponse(
+            errorStatus === 403 ? 'Forbidden' : 'Unauthorized',
+            errorStatus,
+            authResult.error || 'Authentication required',
+            authResult.errorCode,
+            authResult.actionTaken,
+            guidance,
+            authResult.oauthChallenge,
           );
-          break;
+        }
+
+        // Create authentication context for request execution
+        mcpAuthContext = this.authenticationMiddleware.createAuthContext(authResult, requestId);
+
+        // Add authentication context to request headers
+        authenticatedRequest = this.authenticationMiddleware.addAuthContextToRequest(
+          request,
+          authResult,
+        );
+
+        this.logger.debug(`HttpTransport: Authentication successful [${requestId}]`, {
+          requestId,
+          clientId: authResult.clientId,
+          userId: authResult.userId,
+          scopes: authResult.scope?.length || 0,
+          actionTaken: authResult.actionTaken,
+        });
+      } else {
+        this.logger.debug(`HttpTransport: Authentication not required [${requestId}]`, {
+          requestId,
+          pathname: url.pathname,
+        });
+      }
+
+      // 🔒 SECURITY-CRITICAL: Execute request within authentication context
+      if (mcpAuthContext && beyondMcpServer) {
+        // Execute MCP operations within authenticated context using BeyondMcpServer's AsyncLocalStorage
+        response = await beyondMcpServer.executeWithAuthContext(mcpAuthContext, async () => {
+          switch (method) {
+            case 'POST':
+              return await this.handleMCPPost(authenticatedRequest, method, sdkMcpServer);
+            case 'GET':
+              return await this.handleMCPGet(authenticatedRequest, method, sdkMcpServer);
+            case 'DELETE':
+              return await this.handleMCPDelete(authenticatedRequest, method, sdkMcpServer);
+            default:
+              this.logger.warn(`HttpTransport: Method not allowed [${requestId}]`, {
+                requestId,
+                method,
+              });
+              return this.createErrorResponse(
+                'Method Not Allowed',
+                405,
+                `Method ${method} not allowed for MCP endpoint`,
+              );
+          }
+        });
+      } else {
+        // Execute without authentication context for open endpoints
+        switch (method) {
+          case 'POST':
+            response = await this.handleMCPPost(authenticatedRequest, method, sdkMcpServer);
+            break;
+          case 'GET':
+            response = await this.handleMCPGet(authenticatedRequest, method, sdkMcpServer);
+            break;
+          case 'DELETE':
+            response = await this.handleMCPDelete(authenticatedRequest, method, sdkMcpServer);
+            break;
+          default:
+            this.logger.warn(`HttpTransport: Method not allowed [${requestId}]`, {
+              requestId,
+              method,
+            });
+            response = this.createErrorResponse(
+              'Method Not Allowed',
+              405,
+              `Method ${method} not allowed for MCP endpoint`,
+            );
+            break;
+        }
       }
 
       // Update metrics
@@ -205,7 +323,6 @@ export class HttpTransport implements Transport {
     request: Request,
     method: string,
     sdkMcpServer: SdkMcpServer,
-    authContext?: BeyondMcpAuthContext,
   ): Promise<Response> {
     // Parse request body first
     let requestBody: any;
@@ -342,7 +459,6 @@ export class HttpTransport implements Transport {
     request: Request,
     method: string,
     sdkMcpServer: SdkMcpServer,
-    authContext?: BeyondMcpAuthContext,
   ): Promise<Response> {
     const sessionId = request.headers.get('mcp-session-id') as string | undefined;
 
@@ -466,7 +582,6 @@ export class HttpTransport implements Transport {
     request: Request,
     method: string,
     sdkMcpServer: SdkMcpServer,
-    authContext?: BeyondMcpAuthContext,
   ): Promise<Response> {
     const sessionId = request.headers.get('mcp-session-id') as string | undefined;
 
@@ -720,6 +835,90 @@ export class HttpTransport implements Transport {
       {
         status,
         headers: { 'Content-Type': 'application/json' },
+      },
+    );
+  }
+
+  /**
+   * Create enhanced error response with error codes and action context
+   * Preserves legacy error handling patterns from MCPRequestHandler.ts
+   * Enhanced with OAuth challenge support for auth flow initiation
+   */
+  private createEnhancedErrorResponse(
+    message: string,
+    status: number,
+    details?: string,
+    errorCode?: string,
+    actionTaken?: string,
+    guidance?: string,
+    oauthChallenge?: {
+      realm: string;
+      authorizationUri: string;
+      registrationUri?: string;
+      error?: string;
+      errorDescription?: string;
+    },
+  ): Response {
+    const error = {
+      error: {
+        code: -32000,
+        message,
+        status,
+        details,
+        errorCode,
+        actionTaken,
+        timestamp: new Date().toISOString(),
+        // Provide guidance to MCP clients (follows legacy pattern)
+        guidance,
+        // Include OAuth challenge for flow initiation
+        ...(oauthChallenge && {
+          oauth: {
+            authorizationUri: oauthChallenge.authorizationUri,
+            registrationUri: oauthChallenge.registrationUri,
+            realm: oauthChallenge.realm,
+          },
+        }),
+      },
+    };
+
+    // Build response headers
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      // Add custom headers to help clients understand the error (legacy pattern)
+      ...(errorCode && { 'X-MCP-Error-Code': errorCode }),
+      ...(actionTaken && { 'X-MCP-Action-Taken': actionTaken }),
+    };
+
+    // Add WWW-Authenticate header for OAuth challenge (RFC 6750)
+    if (oauthChallenge) {
+      const wwwAuthenticateValue = this.authenticationMiddleware.buildWWWAuthenticateHeader(
+        oauthChallenge,
+      );
+      headers['WWW-Authenticate'] = wwwAuthenticateValue;
+      
+      // Log OAuth challenge for debugging
+      this.logger.debug('HttpTransport: Added OAuth challenge to response', {
+        authorizationUri: oauthChallenge.authorizationUri,
+        registrationUri: oauthChallenge.registrationUri,
+        realm: oauthChallenge.realm,
+        wwwAuthenticate: wwwAuthenticateValue,
+      });
+    }
+
+    return new Response(
+      JSON.stringify(
+        {
+          jsonrpc: '2.0',
+          error,
+          id: null,
+        },
+        null,
+        2,
+      ),
+      {
+        status,
+        headers,
       },
     );
   }

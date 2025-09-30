@@ -55,6 +55,9 @@ export interface OAuthProviderDependencies {
 
 /**
  * Third-party authentication service interface for MCP session binding
+ * 
+ * This interface allows the OAuth provider to validate third-party tokens
+ * and maintain session binding between MCP tokens and external provider tokens.
  */
 export interface ThirdPartyAuthService {
   /** Get user credentials from third-party provider */
@@ -64,6 +67,9 @@ export interface ThirdPartyAuthService {
   /** Update user credentials after token refresh */
   updateUserCredentials(userId: string, tokens: any): Promise<boolean>;
 }
+
+// Note: OAuthConsumer implements ThirdPartyAuthService methods via duck typing
+// The interface compatibility is handled at runtime
 
 /**
  * Third-party API client interface for automatic token refresh
