@@ -57,17 +57,10 @@ export interface RateLimitConfig {
 
 /**
  * OAuth Provider configuration (when MCP server acts as OAuth provider)
+ * @see ../auth/OAuthTypes.ts for full type definition
  */
-export interface OAuthProviderConfig {
-  clientId: string;
-  clientSecret: string;
-  redirectUri: string;
-  issuer?: string;
-  enablePKCE?: boolean;
-  enableDynamicRegistration?: boolean;
-  tokenExpirationMs?: number;
-  refreshTokenExpirationMs?: number;
-}
+import type { OAuthProviderConfig } from '../auth/OAuthTypes.ts';
+export type { OAuthProviderConfig };
 
 /**
  * OAuth Consumer configuration (for third-party API integration)

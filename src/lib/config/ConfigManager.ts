@@ -321,6 +321,7 @@ export class ConfigManager {
 
   /**
    * Load OAuth provider configuration from environment (optional)
+   * Returns the nested structure expected by OAuthProvider constructor
    */
   private loadOAuthProviderConfig() {
     const clientId = Deno.env.get(`${this.options.envPrefix}OAUTH_PROVIDER_CLIENT_ID`);
@@ -332,18 +333,39 @@ export class ConfigManager {
     }
 
     return {
+      issuer: this.getEnvOptional('OAUTH_PROVIDER_ISSUER', 'http://localhost:3001'),
       clientId,
       clientSecret,
       redirectUri,
-      issuer: this.getEnvOptional('OAUTH_PROVIDER_ISSUER', 'http://localhost:3001'),
-      enablePKCE: this.getEnvBoolean('OAUTH_PROVIDER_PKCE', true),
-      enableDynamicRegistration: this.getEnvBoolean('OAUTH_PROVIDER_DYNAMIC_REGISTRATION', false),
-      tokenExpirationMs: parseInt(
-        this.getEnvOptional('OAUTH_PROVIDER_TOKEN_EXPIRATION', '3600000'),
-      ), // 1 hour
-      refreshTokenExpirationMs: parseInt(
-        this.getEnvOptional('OAUTH_PROVIDER_REFRESH_TOKEN_EXPIRATION', '2592000000'),
-      ), // 30 days
+      
+      tokens: {
+        accessTokenExpiryMs: parseInt(
+          this.getEnvOptional('OAUTH_PROVIDER_TOKEN_EXPIRATION', '3600000'),
+          10
+        ),
+        refreshTokenExpiryMs: parseInt(
+          this.getEnvOptional('OAUTH_PROVIDER_REFRESH_TOKEN_EXPIRATION', '2592000000'),
+          10
+        ),
+        authorizationCodeExpiryMs: parseInt(
+          this.getEnvOptional('OAUTH_CODE_EXPIRATION', '600000'),
+          10
+        ),
+      },
+      
+      clients: {
+        enableDynamicRegistration: this.getEnvBoolean('OAUTH_PROVIDER_DYNAMIC_CLIENT_REG', true),
+        requireHTTPS: this.getEnvBoolean('OAUTH_REQUIRE_HTTPS', false),
+        allowedRedirectHosts: this.getEnvArray('OAUTH_ALLOWED_HOSTS', ['localhost']),
+      },
+      
+      authorization: {
+        supportedGrantTypes: ['authorization_code', 'refresh_token'],
+        supportedResponseTypes: ['code'],
+        supportedScopes: ['read', 'write', 'admin'],
+        enablePKCE: this.getEnvBoolean('OAUTH_PROVIDER_PKCE', true),
+        requirePKCE: false,
+      },
     };
   }
 

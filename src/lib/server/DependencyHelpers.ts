@@ -7,6 +7,7 @@
  */
 
 import { ConfigManager } from '../config/ConfigManager.ts';
+import type { OAuthProviderConfig } from '../config/ConfigTypes.ts';
 import { Logger } from '../utils/Logger.ts';
 import { AuditLogger } from '../utils/AuditLogger.ts';
 import { KVManager } from '../storage/KVManager.ts';
@@ -189,56 +190,22 @@ export function getOAuthProvider(
   kvManager: KVManager,
   credentialStore: CredentialStore,
 ): OAuthProvider | undefined {
-  const clientId = configManager.get<string>('OAUTH_PROVIDER_CLIENT_ID');
-  const clientSecret = configManager.get<string>('OAUTH_PROVIDER_CLIENT_SECRET');
-  const redirectUri = configManager.get<string>('OAUTH_PROVIDER_REDIRECT_URI');
-
-  if (!clientId || !clientSecret || !redirectUri) {
-    logger.debug('OAuthProvider: Skipping OAuth provider creation - missing required config', {
-      hasClientId: !!clientId,
-      hasClientSecret: !!clientSecret,
-      hasRedirectUri: !!redirectUri,
-    });
+  const oauthConfig = configManager.get<OAuthProviderConfig>('oauthProvider');
+  
+  if (!oauthConfig) {
+    logger.debug('OAuthProvider: No OAuth provider configuration found');
     return undefined;
   }
 
-  // Log OAuth provider configuration for debugging
-  const enableDynamicReg = configManager.get('OAUTH_ENABLE_DYNAMIC_CLIENT_REG', 'true') === 'true';
   logger.info('OAuthProvider: Creating OAuth provider with configuration', {
-    issuer: configManager.get('OAUTH_PROVIDER_ISSUER', 'http://localhost:3000'),
-    enableDynamicRegistration: enableDynamicReg,
-    requireHTTPS: configManager.get('OAUTH_REQUIRE_HTTPS', 'false') === 'true',
-    allowedHosts: configManager.get('OAUTH_ALLOWED_HOSTS', 'localhost').split(','),
-    supportedGrantTypes: ['authorization_code', 'refresh_token'],
-    supportedScopes: ['read', 'write', 'admin'],
+    issuer: oauthConfig.issuer,
+    enableDynamicRegistration: oauthConfig.clients.enableDynamicRegistration,
+    enablePKCE: oauthConfig.authorization.enablePKCE,
+    supportedGrantTypes: oauthConfig.authorization.supportedGrantTypes,
+    supportedScopes: oauthConfig.authorization.supportedScopes,
   });
 
-  return new OAuthProvider({
-    issuer: configManager.get('OAUTH_PROVIDER_ISSUER', 'http://localhost:3000'),
-    clientId,
-    clientSecret,
-    redirectUri,
-    tokens: {
-      accessTokenExpiryMs: parseInt(configManager.get('OAUTH_TOKEN_EXPIRATION', '3600000'), 10),
-      refreshTokenExpiryMs: parseInt(
-        configManager.get('OAUTH_REFRESH_TOKEN_EXPIRATION', '2592000000'),
-        10,
-      ),
-      authorizationCodeExpiryMs: parseInt(configManager.get('OAUTH_CODE_EXPIRATION', '600000'), 10),
-    },
-    clients: {
-      enableDynamicRegistration: configManager.get('OAUTH_ENABLE_DYNAMIC_CLIENT_REG', 'true') === 'true',
-      requireHTTPS: configManager.get('OAUTH_REQUIRE_HTTPS', 'false') === 'true',
-      allowedRedirectHosts: configManager.get('OAUTH_ALLOWED_HOSTS', 'localhost').split(','),
-    },
-    authorization: {
-      supportedGrantTypes: ['authorization_code', 'refresh_token'],
-      supportedResponseTypes: ['code'],
-      supportedScopes: ['read', 'write', 'admin'],
-      enablePKCE: true,
-      requirePKCE: false,
-    },
-  }, {
+  return new OAuthProvider(oauthConfig, {
     logger,
     kvManager,
     credentialStore,

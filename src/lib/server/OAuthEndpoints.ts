@@ -433,10 +433,24 @@ export class OAuthEndpoints {
    */
   async handleWellKnown(request: Request, path: string, method: string): Promise<Response> {
     // Support both RFC 8414 and RFC 9068 endpoints
-    if ((path === 'oauth-authorization-server' || path === 'oauth-protected-resource') && method === 'GET') {
+    // RFC 9728: Resource-specific metadata paths like oauth-protected-resource/mcp are also supported
+    const isAuthServerMetadata = path === 'oauth-authorization-server';
+    const isProtectedResourceMetadata = path === 'oauth-protected-resource' || path.startsWith('oauth-protected-resource/');
+    
+    if ((isAuthServerMetadata || isProtectedResourceMetadata) && method === 'GET') {
       try {
         // Delegate to OAuth Provider for metadata generation
         const metadata = await this.oauthProvider.getAuthorizationServerMetadata();
+        
+        // RFC 9728: If this is a resource-specific metadata request, add the resource field
+        if (isProtectedResourceMetadata && path.startsWith('oauth-protected-resource/')) {
+          const resourcePath = '/' + path.substring('oauth-protected-resource/'.length);
+          const url = new URL(request.url);
+          const resourceUrl = `${url.protocol}//${url.host}${resourcePath}`;
+          
+          // Add resource field to metadata for RFC 9728 compliance
+          (metadata as any).resource = resourceUrl;
+        }
 
         return new Response(JSON.stringify(metadata, null, 2), {
           status: 200,
