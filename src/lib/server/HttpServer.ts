@@ -16,6 +16,7 @@
 import type { Logger } from '../../types/library.types.ts';
 import type { TransportManager } from '../transport/TransportManager.ts';
 import type { OAuthProvider } from '../auth/OAuthProvider.ts';
+import type { OAuthConsumer } from '../auth/OAuthConsumer.ts';
 import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
 import { OAuthEndpoints } from './OAuthEndpoints.ts';
 import { APIRouter } from './APIRouter.ts';
@@ -59,6 +60,8 @@ export interface HttpServerDependencies {
   transportManager: TransportManager;
   /** OAuth provider for OAuth endpoints */
   oauthProvider: OAuthProvider;
+  /** OAuth consumer for third-party OAuth flows (optional) */
+  oauthConsumer?: OAuthConsumer;
   /** Workflow registry for status endpoints */
   workflowRegistry: WorkflowRegistry;
   /** Server configuration */
@@ -96,7 +99,7 @@ export class HttpServer {
     this.startTime = new Date();
 
     // Initialize endpoint handlers
-    this.oauthEndpoints = new OAuthEndpoints(dependencies.oauthProvider, dependencies.logger);
+    this.oauthEndpoints = new OAuthEndpoints(dependencies);
     this.apiRouter = new APIRouter(this.httpServerConfig.api, dependencies);
     this.statusEndpoints = new StatusEndpoints(dependencies, this.startTime);
     this.corsHandler = new CORSHandler(this.httpServerConfig.cors);
@@ -218,14 +221,18 @@ export class HttpServer {
    * Check if path is an OAuth endpoint
    */
   private isOAuthEndpoint(path: string): boolean {
-    return [
+    const oauthPaths = [
       '/authorize',
       '/token',
       '/register',
       '/callback',
       '/oauth/callback',
       '/auth/callback',
-    ].includes(path);
+      // Support API-versioned callback paths
+      '/api/v1/auth/callback',
+      '/api/v1/oauth/callback',
+    ];
+    return oauthPaths.includes(path);
   }
 
   /**

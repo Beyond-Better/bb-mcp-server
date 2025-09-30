@@ -47,10 +47,12 @@ export async function getConfigManager(): Promise<ConfigManager> {
  * Create standard logger instance
  */
 export function getLogger(configManager: ConfigManager): Logger {
-  return new Logger({
+  const logger =  new Logger({
     level: configManager.get('LOG_LEVEL', 'info'),
     format: configManager.get('LOG_FORMAT', 'json'),
   });
+  configManager.logger = logger; // configManager would have been created with default values for Logger
+  return logger;
 }
 
 /**
@@ -189,6 +191,8 @@ export function getOAuthProvider(
   logger: Logger,
   kvManager: KVManager,
   credentialStore: CredentialStore,
+  oauthConsumer?: OAuthConsumer,
+  thirdPartyApiClient?: any,
 ): OAuthProvider | undefined {
   const oauthConfig = configManager.get<OAuthProviderConfig>('oauthProvider');
   
@@ -197,18 +201,23 @@ export function getOAuthProvider(
     return undefined;
   }
 
+  //logger.info('OAuthProvider: oauthConfig', oauthConfig);
   logger.info('OAuthProvider: Creating OAuth provider with configuration', {
     issuer: oauthConfig.issuer,
     enableDynamicRegistration: oauthConfig.clients.enableDynamicRegistration,
     enablePKCE: oauthConfig.authorization.enablePKCE,
     supportedGrantTypes: oauthConfig.authorization.supportedGrantTypes,
     supportedScopes: oauthConfig.authorization.supportedScopes,
+    hasOAuthConsumer: !!oauthConsumer,
+    hasThirdPartyApiClient: !!thirdPartyApiClient,
   });
 
   return new OAuthProvider(oauthConfig, {
     logger,
     kvManager,
     credentialStore,
+    oauthConsumer,
+    thirdPartyApiClient,
   });
 }
 
@@ -616,13 +625,8 @@ export async function getAllDependencies(
   const errorHandler = overrides.errorHandler || getErrorHandler();
   const workflowRegistry = overrides.workflowRegistry || getWorkflowRegistry(logger, errorHandler);
   const toolRegistry = overrides.toolRegistry || getToolRegistry(logger, errorHandler);
-  const oauthProvider = overrides.oauthProvider || getOAuthProvider(
-    configManager,
-    logger,
-    kvManager,
-    credentialStore,
-  );
-  // Consumer-specific dependencies (instances only - simple approach)
+  // Consumer-specific dependencies must be created before OAuthProvider
+  // because OAuthProvider needs them for session binding
   const consumerDeps: any = {};
 
   // Use pre-built consumer instances (Option A pattern)
@@ -634,6 +638,14 @@ export async function getAllDependencies(
     consumerDeps.thirdpartyApiClient = overrides.thirdpartyApiClient;
   }
 
+  const oauthProvider = overrides.oauthProvider || getOAuthProvider(
+    configManager,
+    logger,
+    kvManager,
+    credentialStore,
+    consumerDeps.oAuthConsumer, // Pass OAuth consumer for third-party auth
+    consumerDeps.thirdpartyApiClient, // Pass API client for token refresh
+  );
   const transportManager = overrides.transportManager || getTransportManager(
     configManager,
     logger,

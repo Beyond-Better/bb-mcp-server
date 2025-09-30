@@ -28,6 +28,18 @@ import type {
 } from './OAuthTypes.ts';
 
 /**
+ * Dependencies required by OAuthProvider
+ */
+export interface OAuthConsumerDependencies {
+  /** KV storage manager for OAuth data persistence */
+  kvManager: KVManager;
+  /** Credential store for secure token storage */
+  credentialStore: CredentialStore;
+  /** Logger for security event logging */
+  logger: Logger;
+}
+
+/**
  * 🔒 SECURITY-CRITICAL: Generic OAuth 2.0 Consumer Base Class
  *
  * Provides foundation for third-party OAuth integrations with exact security preservation
@@ -41,7 +53,7 @@ import type {
  * - Automatic token refresh with exponential backoff
  * - Secure credential storage with expiry management
  * - Comprehensive security logging and error handling
- * 
+ *
  * Session Binding Interface:
  * - Implements ThirdPartyAuthService interface for OAuth Provider session binding
  * - Allows MCP token validation to check third-party token status
@@ -49,19 +61,16 @@ import type {
  */
 export abstract class OAuthConsumer {
   protected config: OAuthConsumerConfig;
-  protected kvManager: KVManager | undefined;
-  protected credentialStore: CredentialStore | undefined;
-  protected logger: Logger | undefined;
+  protected logger: Logger;
+
+  // Dependencies
+  protected kvManager: KVManager;
+  protected credentialStore: CredentialStore;
 
   // 🔒 SECURITY-CRITICAL: KV key prefixes for secure storage
   protected readonly AUTH_STATE_PREFIX = ['oauth', 'consumer_auth_state'];
 
-  constructor(
-    config: OAuthConsumerConfig,
-    logger?: Logger,
-    kvManager?: KVManager,
-    credentialStore?: CredentialStore,
-  ) {
+  constructor(config: OAuthConsumerConfig, dependencies: OAuthConsumerDependencies) {
     // Apply config with proper defaults
     this.config = {
       providerId: config.providerId,
@@ -75,9 +84,12 @@ export abstract class OAuthConsumer {
       maxTokenRefreshRetries: config.maxTokenRefreshRetries ?? 3,
       ...(config.customHeaders && { customHeaders: config.customHeaders }),
     };
-    this.kvManager = kvManager;
-    this.credentialStore = credentialStore;
-    this.logger = logger;
+    this.kvManager = dependencies.kvManager;
+    this.credentialStore = dependencies.credentialStore;
+    this.logger = dependencies.logger;
+
+    if (!this.kvManager) throw new Error(`OAuthConsumer constructor failed: must supply kvManager`);
+    if (!this.credentialStore) throw new Error(`OAuthConsumer constructor failed: must supply credentialStore`);
 
     this.logger?.info('OAuthConsumer: Initialized OAuth consumer', {
       providerId: this.config.providerId,
@@ -85,8 +97,8 @@ export abstract class OAuthConsumer {
       tokenUrl: this.config.tokenUrl,
       scopes: this.config.scopes,
       tokenRefreshBufferMinutes: this.config.tokenRefreshBufferMinutes,
-      hasCredentialStore: !!credentialStore,
-      hasKVManager: !!kvManager,
+      hasCredentialStore: !!this.credentialStore,
+      hasKVManager: !!this.kvManager,
     });
   }
 
@@ -147,7 +159,7 @@ export abstract class OAuthConsumer {
       return {
         success: true,
         credentials,
-        tokens: credentials,
+        tokens: credentials, // Alias for backward compatibility
       };
     } catch (error) {
       return {
@@ -196,7 +208,7 @@ export abstract class OAuthConsumer {
       return {
         success: true,
         credentials,
-        tokens: credentials,
+        tokens: credentials, // Alias for backward compatibility
       };
     } catch (error) {
       return {
@@ -327,9 +339,10 @@ export abstract class OAuthConsumer {
       // Exchange code for tokens
       const tokenResult = await this.exchangeCodeForTokens(code, state);
 
-      // Store user credentials
-      if (tokenResult.success && tokenResult.credentials) {
-        await this.storeUserCredentials(storedAuthRequest.userId, tokenResult.credentials);
+      // Store user credentials (support both 'credentials' and 'tokens' for backward compatibility)
+      const credentials = tokenResult.credentials || tokenResult.tokens;
+      if (tokenResult.success && credentials) {
+        await this.storeUserCredentials(storedAuthRequest.userId, credentials);
       } else {
         throw new Error(tokenResult.error || 'Token exchange failed');
       }
@@ -401,15 +414,18 @@ export abstract class OAuthConsumer {
 
       // Get credentials directly from KV (bypass expiry check) to attempt refresh
       const expiredCreds = await this.kvManager.get<any>(
-        ['credentials', this.config.providerId, userId]
+        ['credentials', this.config.providerId, userId],
       );
 
       if (!expiredCreds || !expiredCreds.refreshToken) {
-        this.logger?.debug(`OAuthConsumer: No credentials or refresh token available [${tokenId}]`, {
-          tokenId,
-          userId,
-          providerId: this.config.providerId,
-        });
+        this.logger?.debug(
+          `OAuthConsumer: No credentials or refresh token available [${tokenId}]`,
+          {
+            tokenId,
+            userId,
+            providerId: this.config.providerId,
+          },
+        );
         return null;
       }
 
@@ -428,7 +444,7 @@ export abstract class OAuthConsumer {
           await this.credentialStore.updateCredentials(
             userId,
             this.config.providerId,
-            refreshResult.credentials
+            refreshResult.credentials,
           );
 
           this.logger?.info(`OAuthConsumer: Token refresh successful [${tokenId}]`, {
@@ -636,7 +652,7 @@ export abstract class OAuthConsumer {
 
   /**
    * 🔒 SECURITY-CRITICAL: Store authorization state securely with TTL
-   * 
+   *
    * Authorization state is temporary (10 minutes) and separate from long-term credentials,
    * so we use KVManager directly rather than CredentialStore.
    */

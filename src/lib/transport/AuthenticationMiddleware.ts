@@ -255,6 +255,40 @@ export class AuthenticationMiddleware {
           duration: Date.now() - startTime,
         });
 
+        // Generate OAuth challenge with third-party authorization URL if needed
+        let oauthChallenge = this.getOAuthChallenge(
+          this.mapErrorCodeToOAuthError(authResult.errorCode),
+          authResult.error || 'Invalid access token'
+        );
+
+        // If third-party auth is required and we have an OAuth consumer, generate the auth URL
+        if (authResult.errorCode === 'third_party_auth_required' && this.dependencies.oauthConsumer && authResult.userId) {
+          try {
+            // Start the third-party authorization flow to get the URL
+            const authFlow = await this.dependencies.oauthConsumer.startAuthorizationFlow(authResult.userId);
+            
+            // Replace the OAuth challenge with the third-party authorization URL
+            oauthChallenge = {
+              realm: 'third-party-api',
+              authorizationUri: authFlow.authorizationUrl,
+              error: 'third_party_auth_required',
+              errorDescription: authResult.error || 'Third-party authentication required',
+            };
+
+            this.logger?.info(`AuthenticationMiddleware: Generated third-party OAuth challenge [${requestId}]`, {
+              requestId,
+              userId: authResult.userId,
+              authorizationUrl: authFlow.authorizationUrl,
+              state: authFlow.state,
+            });
+          } catch (error) {
+            this.logger?.error(`AuthenticationMiddleware: Failed to generate third-party auth URL [${requestId}]:`, toError(error), {
+              requestId,
+              userId: authResult.userId,
+            });
+          }
+        }
+
         return {
           authenticated: false,
           error: authResult.error || 'Invalid access token',
@@ -262,10 +296,7 @@ export class AuthenticationMiddleware {
           actionTaken: authResult.actionTaken || '',
           ...(authResult.clientId && { clientId: authResult.clientId }),
           ...(authResult.userId && { userId: authResult.userId }),
-          oauthChallenge: this.getOAuthChallenge(
-            this.mapErrorCodeToOAuthError(authResult.errorCode),
-            authResult.error || 'Invalid access token'
-          ),
+          oauthChallenge,
         };
       }
 
