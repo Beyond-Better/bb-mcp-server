@@ -7,6 +7,7 @@
 
 import '@std/dotenv/load';
 import { toError } from '../utils/Error.ts';
+import { LogFormat, Logger, LogLevel } from '../utils/Logger.ts';
 import type {
   AppConfig,
   AuditConfig,
@@ -14,25 +15,21 @@ import type {
   ConfigValidationResult,
   EnvironmentMapping,
   LoggingConfig,
+  OAuthConsumerConfig,
+  OAuthProviderConfig,
   RateLimitConfig,
   ServerConfig,
   StorageConfig,
+  ThirdPartyApiConfig,
   TransportConfig,
 } from './ConfigTypes.ts';
-
-interface Logger {
-  debug(message: string, data?: unknown): void;
-  info(message: string, data?: unknown): void;
-  warn(message: string, data?: unknown): void;
-  error(message: string, error?: Error, data?: unknown): void;
-}
 
 /**
  * Generic configuration manager with environment variable support
  */
 export class ConfigManager {
   private config: Partial<AppConfig> = {};
-  private logger: Logger | undefined;
+  private _logger: Logger;
   private options: ConfigLoaderOptions;
 
   constructor(options: ConfigLoaderOptions = {}, logger?: Logger) {
@@ -42,7 +39,15 @@ export class ConfigManager {
       envPrefix: '',
       ...options,
     };
-    this.logger = logger;
+    // create logger with "safe" config if we didn't get a logger - IOW, don't output text format in production
+    this._logger = logger || new Logger({
+      level: Deno.env.get('LOG_LEVEL') as LogLevel || 'info',
+      format: Deno.env.get('LOG_FORMAT') as LogFormat || 'json',
+    });
+  }
+
+  set logger(logger: Logger) {
+    this._logger = logger;
   }
 
   /**
@@ -57,6 +62,7 @@ export class ConfigManager {
 
       // Build configuration from environment variables
       this.config = {
+        environment: this.options.environment || this.getEnvOptional('ENVIRONMENT', 'production'),
         server: this.loadServerConfig(),
         transport: this.loadTransportConfig(),
         storage: this.loadStorageConfig(),
@@ -70,10 +76,16 @@ export class ConfigManager {
       if (oauthProvider) {
         this.config.oauthProvider = oauthProvider;
       }
+      this._logger?.info('Configuration oauthProvider:', oauthProvider);
 
       const oauthConsumer = this.loadOAuthConsumerConfig();
       if (oauthConsumer) {
         this.config.oauthConsumer = oauthConsumer;
+      }
+
+      const thirdpartyApiClient = this.loadThirdpartyApiConfig();
+      if (thirdpartyApiClient) {
+        this.config.thirdpartyApiClient = thirdpartyApiClient;
       }
 
       // Validate configuration
@@ -84,14 +96,15 @@ export class ConfigManager {
         }
 
         if (validation.warnings.length > 0) {
-          this.logger?.warn('Configuration warnings:', validation.warnings);
+          this._logger?.warn('Configuration warnings:', validation.warnings);
         }
       }
 
-      this.logger?.info('ConfigManager: Configuration loaded successfully');
+      this._logger?.info('ConfigManager: Configuration loaded successfully');
+      //this._logger?.debug('ConfigManager: Configuration loaded successfully', this.config);
       return this.config as AppConfig;
     } catch (error) {
-      this.logger?.error('ConfigManager: Failed to load configuration', toError(error));
+      this._logger?.error('ConfigManager: Failed to load configuration', toError(error));
       throw error;
     }
   }
@@ -225,7 +238,7 @@ export class ConfigManager {
    */
   private loadTransportConfig(): TransportConfig {
     const transport = this.getEnvOptional('MCP_TRANSPORT', 'stdio') as 'stdio' | 'http';
-    this.logger?.debug('Transport Config loaded:', transport);
+    this._logger?.debug('Transport Config loaded:', transport);
 
     const config: TransportConfig = {
       type: transport,
@@ -323,49 +336,114 @@ export class ConfigManager {
    * Load OAuth provider configuration from environment (optional)
    * Returns the nested structure expected by OAuthProvider constructor
    */
-  private loadOAuthProviderConfig() {
-    const clientId = Deno.env.get(`${this.options.envPrefix}OAUTH_PROVIDER_CLIENT_ID`);
-    const clientSecret = Deno.env.get(`${this.options.envPrefix}OAUTH_PROVIDER_CLIENT_SECRET`);
-    const redirectUri = Deno.env.get(`${this.options.envPrefix}OAUTH_PROVIDER_REDIRECT_URI`);
-
-    if (!clientId || !clientSecret || !redirectUri) {
-      return null;
-    }
+  private loadOAuthProviderConfig(): OAuthProviderConfig {
+    const clientId = this.getEnvRequired('OAUTH_PROVIDER_CLIENT_ID');
+    const clientSecret = this.getEnvRequired('OAUTH_PROVIDER_CLIENT_SECRET');
+    const redirectUri = this.getEnvRequired('OAUTH_PROVIDER_REDIRECT_URI');
 
     return {
       issuer: this.getEnvOptional('OAUTH_PROVIDER_ISSUER', 'http://localhost:3001'),
       clientId,
       clientSecret,
       redirectUri,
-      
+
       tokens: {
         accessTokenExpiryMs: parseInt(
           this.getEnvOptional('OAUTH_PROVIDER_TOKEN_EXPIRATION', '3600000'),
-          10
+          10,
         ),
         refreshTokenExpiryMs: parseInt(
           this.getEnvOptional('OAUTH_PROVIDER_REFRESH_TOKEN_EXPIRATION', '2592000000'),
-          10
+          10,
         ),
         authorizationCodeExpiryMs: parseInt(
-          this.getEnvOptional('OAUTH_CODE_EXPIRATION', '600000'),
-          10
+          this.getEnvOptional('OAUTH_PROVIDER_CODE_EXPIRATION', '600000'),
+          10,
         ),
       },
-      
+
       clients: {
         enableDynamicRegistration: this.getEnvBoolean('OAUTH_PROVIDER_DYNAMIC_CLIENT_REG', true),
-        requireHTTPS: this.getEnvBoolean('OAUTH_REQUIRE_HTTPS', false),
-        allowedRedirectHosts: this.getEnvArray('OAUTH_ALLOWED_HOSTS', ['localhost']),
+        requireHTTPS: this.getEnvBoolean('OAUTH_PROVIDER_REQUIRE_HTTPS', false),
+        allowedRedirectHosts: this.getEnvArray('OAUTH_PROVIDER_ALLOWED_HOSTS', ['localhost']),
       },
-      
+
       authorization: {
         supportedGrantTypes: ['authorization_code', 'refresh_token'],
         supportedResponseTypes: ['code'],
-        supportedScopes: ['read', 'write', 'admin'],
+        supportedScopes: ['all', 'read', 'write', 'admin'],
         enablePKCE: this.getEnvBoolean('OAUTH_PROVIDER_PKCE', true),
         requirePKCE: false,
       },
+    };
+  }
+
+  /**
+   * Load OAuth consumer configuration from environment (optional)
+   */
+  private loadOAuthConsumerConfig(): OAuthConsumerConfig | null {
+    const providerId = this.getEnvOptional('OAUTH_CONSUMER_PROVIDER_ID', '');
+
+    // Early return if no provider ID - skip entire OAuth config
+    if (!providerId) {
+      return null;
+    }
+
+    const clientId = this.getEnvRequired('OAUTH_CONSUMER_CLIENT_ID');
+    const clientSecret = this.getEnvRequired('OAUTH_CONSUMER_CLIENT_SECRET');
+    const authUrl = this.getEnvRequired('OAUTH_CONSUMER_AUTH_URL');
+    const tokenUrl = this.getEnvRequired('OAUTH_CONSUMER_TOKEN_URL');
+    const redirectUri = this.getEnvRequired('OAUTH_CONSUMER_REDIRECT_URI');
+
+    const scopes = this.getEnvArray('OAUTH_CONSUMER_SCOPES', []);
+
+    const tokenRefreshBufferMinutes = parseInt(
+      this.getEnvOptional('OAUTH_CONSUMER_TOKEN_REFRESH_BUFFER_MINUTES', '5'),
+    );
+    const maxTokenRefreshRetries = parseInt(
+      this.getEnvOptional('OAUTH_CONSUMER_MAX_TOKEN_REFRESH_RETRIES', '3'),
+    );
+
+    const customHeaders = this.getEnvRecord('OAUTH_CONSUMER_CUSTOM_HEADERS', {});
+
+    return {
+      providerId,
+      clientId,
+      clientSecret,
+      authUrl,
+      tokenUrl,
+      redirectUri,
+      scopes,
+      tokenRefreshBufferMinutes,
+      maxTokenRefreshRetries,
+      customHeaders,
+    };
+  }
+
+  /**
+   * Load third-party API configuration from environment (optional)
+   */
+  private loadThirdpartyApiConfig(): ThirdPartyApiConfig | null {
+    const providerId = this.getEnvOptional('THIRDPARTY_API_PROVIDER_ID', '');
+
+    // Early return if no provider ID - skip entire third-party api config
+    if (!providerId) {
+      return null;
+    }
+
+    const version = this.getEnvRequired('THIRDPARTY_API_VERSION');
+    const baseUrl = this.getEnvRequired('THIRDPARTY_API_BASE_URL');
+    const timeout = parseInt(this.getEnvOptional('THIRDPARTY_API_TIMEOUT', '5000'));
+    const retryAttempts = parseInt(this.getEnvOptional('THIRDPARTY_API_RETRY_ATTEMPTS', '3'));
+    const retryDelayMs = parseInt(this.getEnvOptional('THIRDPARTY_API_RETRY_DELAY', '1000'));
+
+    return {
+      providerId,
+      version,
+      baseUrl,
+      timeout,
+      retryAttempts,
+      retryDelayMs,
     };
   }
 
@@ -388,32 +466,6 @@ export class ConfigManager {
           (p) => p.length > 0,
         ) || undefined,
       blockedPlugins: this.getEnvArray('PLUGINS_BLOCKED_LIST', []),
-    };
-  }
-
-  /**
-   * Load OAuth consumer configuration from environment (optional)
-   */
-  private loadOAuthConsumerConfig() {
-    const provider = Deno.env.get(`${this.options.envPrefix}OAUTH_CONSUMER_PROVIDER`);
-    const clientId = Deno.env.get(`${this.options.envPrefix}OAUTH_CONSUMER_CLIENT_ID`);
-    const clientSecret = Deno.env.get(`${this.options.envPrefix}OAUTH_CONSUMER_CLIENT_SECRET`);
-    const authUrl = Deno.env.get(`${this.options.envPrefix}OAUTH_CONSUMER_AUTH_URL`);
-    const tokenUrl = Deno.env.get(`${this.options.envPrefix}OAUTH_CONSUMER_TOKEN_URL`);
-    const redirectUri = Deno.env.get(`${this.options.envPrefix}OAUTH_CONSUMER_REDIRECT_URI`);
-
-    if (!provider || !clientId || !clientSecret || !authUrl || !tokenUrl || !redirectUri) {
-      return null;
-    }
-
-    return {
-      provider,
-      clientId,
-      clientSecret,
-      authUrl,
-      tokenUrl,
-      redirectUri,
-      scopes: this.getEnvArray('OAUTH_CONSUMER_SCOPES', []),
     };
   }
 
@@ -490,7 +542,7 @@ export class ConfigManager {
       const { load } = await import('@std/dotenv');
       await load({ envPath: envFile, export: true });
     } catch (error) {
-      this.logger?.warn('ConfigManager: Could not load environment file', { envFile, error });
+      this._logger?.warn('ConfigManager: Could not load environment file', { envFile, error });
     }
   }
 
@@ -529,5 +581,52 @@ export class ConfigManager {
     const value = Deno.env.get(`${this.options.envPrefix}${key}`);
     if (!value) return defaultValue;
     return value.split(',').map((item) => item.trim()).filter((item) => item.length > 0);
+  }
+
+  /**
+   * Helper to get Record from environment variable (key=value,key2=value2)
+   *
+   * **Usage examples:**
+   * • `KEY_VALUE_PAIRS=name=john,age=30,city=NYC`
+   * • `HEADERS=authorization=Bearer token,content-type=application/json`
+   * • `CONFIG=debug=true,timeout=5000,env=production`
+   */
+  private getEnvRecord(
+    key: string,
+    defaultValue: Record<string, string> = {},
+  ): Record<string, string> {
+    const value = Deno.env.get(`${this.options.envPrefix}${key}`);
+    if (!value) return defaultValue;
+
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0 && item.includes('='))
+      .reduce((acc, item) => {
+        const [k, ...rest] = item.split('=');
+        if (k !== undefined) {
+          acc[k.trim()] = rest.join('=').trim(); // Handles values containing '='
+        }
+        return acc;
+      }, {} as Record<string, string>);
+  }
+
+  /**
+   * Helper to get Record from JSON environment variable
+   *
+   * Usage: `CONFIG={"debug":"true","timeout":"5000"}`
+   */
+  private getEnvRecordJSON(
+    key: string,
+    defaultValue: Record<string, string> = {},
+  ): Record<string, string> {
+    const value = Deno.env.get(`${this.options.envPrefix}${key}`);
+    if (!value) return defaultValue;
+
+    try {
+      return JSON.parse(value);
+    } catch {
+      return defaultValue;
+    }
   }
 }

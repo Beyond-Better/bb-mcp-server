@@ -20,6 +20,7 @@ import type {
   TransportDependencies,
 } from '../../../src/lib/transport/TransportTypes.ts';
 import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
+import { TestBeyondMcpServer, createTestBeyondMcpServer } from '../../utils/test-helpers.ts';
 
 // Simple test MCP Server that provides the interface HttpTransport expects
 class TestSdkMcpServer {
@@ -32,51 +33,6 @@ class TestSdkMcpServer {
   async close(): Promise<void> {
     this.connected = false;
     return Promise.resolve();
-  }
-}
-
-class TestBeyondMcpServer {
-  private connected = false;
-  private sdkMcpServer?: SdkMcpServer;
-
-  getSdkMcpServer() {
-    if (!this.sdkMcpServer) {
-      //this.sdkMcpServer = new TestSdkMcpServer();
-      this.sdkMcpServer = new SdkMcpServer(
-        {
-          name: 'example-test-server',
-          version: '1.0.0',
-          title: 'Example Test Server',
-          description: 'Example Test Server',
-        },
-        {
-          capabilities: {
-            tools: {},
-            logging: {},
-          },
-        },
-      );
-    }
-    return this.sdkMcpServer;
-  }
-
-  executeWithAuthContext<T>(
-    context: BeyondMcpAuthContext,
-    operation: () => Promise<T>,
-  ): Promise<T> {
-    // Mock auth context execution
-    return operation();
-  }
-
-  isConnected(): boolean {
-    return this.connected;
-  }
-
-  async close(): Promise<void> {
-    this.connected = false;
-    if (this.sdkMcpServer) {
-      await this.sdkMcpServer.close();
-    }
   }
 }
 
@@ -157,7 +113,7 @@ Deno.test('HttpTransport - Deno→Node compatibility preservation', async () => 
   const config = createTestHttpTransportConfig();
   const dependencies = await createMockTransportDependencies();
   const httpTransport = new HttpTransport(config, dependencies);
-  const mockBeyondMcpServer = new TestBeyondMcpServer();
+  const testBeyondMcpServer = await createTestBeyondMcpServer();
 
   await httpTransport.start();
 
@@ -181,8 +137,8 @@ Deno.test('HttpTransport - Deno→Node compatibility preservation', async () => 
     // - MCP SDK integration patterns
     const response = await httpTransport.handleHttpRequest(
       httpRequest,
-      mockBeyondMcpServer.getSdkMcpServer(),
-      authContext,
+      testBeyondMcpServer.getSdkMcpServer(),
+      testBeyondMcpServer,
     );
 
     // Validate response structure (MCP protocol compliance)
@@ -206,7 +162,7 @@ Deno.test('HttpTransport - Deno→Node compatibility preservation', async () => 
     }
   } finally {
     await httpTransport.stop();
-    await mockBeyondMcpServer.close();
+    await testBeyondMcpServer.shutdown();
     await dependencies.cleanup();
   }
 });
@@ -216,7 +172,7 @@ Deno.test('HttpTransport - session management integration', async () => {
   config.enableSessionPersistence = true;
   const dependencies = await createMockTransportDependencies();
   const httpTransport = new HttpTransport(config, dependencies);
-  const mockBeyondMcpServer = new TestBeyondMcpServer();
+  const testBeyondMcpServer = await createTestBeyondMcpServer();
 
   await httpTransport.start();
 
@@ -235,8 +191,8 @@ Deno.test('HttpTransport - session management integration', async () => {
     const authContext = createTestAuthContext();
     const response = await httpTransport.handleHttpRequest(
       httpRequest,
-      mockBeyondMcpServer.getSdkMcpServer(),
-      authContext,
+      testBeyondMcpServer.getSdkMcpServer(),
+      testBeyondMcpServer,
     );
 
     // MCP SDK may return 403 for incomplete server - this is expected behavior for integration tests
@@ -255,7 +211,7 @@ Deno.test('HttpTransport - session management integration', async () => {
     assert(httpTransport.getSessionCount() >= 0);
   } finally {
     await httpTransport.stop();
-    await mockBeyondMcpServer.close();
+    await testBeyondMcpServer.shutdown();
     await dependencies.cleanup();
   }
 });
@@ -264,7 +220,7 @@ Deno.test('HttpTransport - error handling compatibility', async () => {
   const config = createTestHttpTransportConfig();
   const dependencies = await createMockTransportDependencies();
   const httpTransport = new HttpTransport(config, dependencies);
-  const mockBeyondMcpServer = new TestBeyondMcpServer();
+  const testBeyondMcpServer = await createTestBeyondMcpServer();
 
   await httpTransport.start();
 
@@ -282,8 +238,8 @@ Deno.test('HttpTransport - error handling compatibility', async () => {
     const authContext = createTestAuthContext();
     const response = await httpTransport.handleHttpRequest(
       httpRequest,
-      mockBeyondMcpServer.getSdkMcpServer(),
-      authContext,
+      testBeyondMcpServer.getSdkMcpServer(),
+      testBeyondMcpServer,
     );
 
     // Should return proper error response
@@ -304,7 +260,7 @@ Deno.test('HttpTransport - error handling compatibility', async () => {
     );
   } finally {
     await httpTransport.stop();
-    await mockBeyondMcpServer.close();
+    await testBeyondMcpServer.shutdown();
     await dependencies.cleanup();
   }
 });
@@ -340,11 +296,11 @@ Deno.test('TransportManager - HTTP transport integration', async () => {
   };
   const dependencies = await createMockTransportDependencies();
   const transportManager = new TransportManager(config, dependencies);
-  const mockBeyondMcpServer = new TestBeyondMcpServer();
+  const testBeyondMcpServer = await createTestBeyondMcpServer();
 
   try {
     // Initialize transport manager
-    await transportManager.initialize(mockBeyondMcpServer.getSdkMcpServer());
+    await transportManager.initialize(testBeyondMcpServer.getSdkMcpServer());
 
     assert(transportManager.isInitialized());
     assertEquals(transportManager.getTransportType(), 'http');
@@ -362,7 +318,7 @@ Deno.test('TransportManager - HTTP transport integration', async () => {
     assert(typeof metrics.manager.uptime === 'number');
   } finally {
     await transportManager.cleanup();
-    await mockBeyondMcpServer.close();
+    await testBeyondMcpServer.shutdown();
     await dependencies.cleanup(); // Fix database and interval leaks
   }
 });
