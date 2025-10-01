@@ -13,6 +13,7 @@ import { AuditLogger } from '../utils/AuditLogger.ts';
 import { KVManager } from '../storage/KVManager.ts';
 import { SessionStore } from '../storage/SessionStore.ts';
 import { TransportEventStore } from '../storage/TransportEventStore.ts';
+import { TransportEventStoreChunked } from '../storage/TransportEventStoreChunked.ts';
 import { CredentialStore } from '../storage/CredentialStore.ts';
 import { ErrorHandler } from '../utils/ErrorHandler.ts';
 import { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
@@ -96,6 +97,46 @@ export function getSessionStore(kvManager: KVManager, logger: Logger): SessionSt
  */
 export function getTransportEventStore(kvManager: KVManager, logger: Logger): TransportEventStore {
   return new TransportEventStore(kvManager.getKV(), ['events'], logger);
+}
+
+/**
+ * Create chunked transport event store instance for handling large messages
+ */
+export function getTransportEventStoreChunked(
+  kvManager: KVManager,
+  logger: Logger,
+  config?: {
+    maxChunkSize?: number;
+    enableCompression?: boolean;
+    compressionThreshold?: number;
+    maxMessageSize?: number;
+  }
+): TransportEventStoreChunked {
+  return new TransportEventStoreChunked(kvManager.getKV(), ['events'], logger, config);
+}
+
+/**
+ * Create transport event store instance with automatic chunked storage selection
+ * Uses chunked storage if TRANSPORT_USE_CHUNKED_STORAGE=true or large message support is needed
+ */
+export function getSmartTransportEventStore(
+  kvManager: KVManager,
+  logger: Logger,
+  configManager?: ConfigManager
+): TransportEventStore | TransportEventStoreChunked {
+  const useChunked = (configManager?.get('TRANSPORT_USE_CHUNKED_STORAGE', 'false') as string) === 'true';
+  
+  if (useChunked && configManager) {
+    logger.info('Using chunked transport event store for large message support');
+    return getTransportEventStoreChunked(kvManager, logger, {
+      maxChunkSize: parseInt(configManager.get('TRANSPORT_MAX_CHUNK_SIZE', '61440'), 10), // 60KB
+      enableCompression: configManager.get('TRANSPORT_ENABLE_COMPRESSION', 'true') === 'true',
+      compressionThreshold: parseInt(configManager.get('TRANSPORT_COMPRESSION_THRESHOLD', '1024'), 10), // 1KB
+      maxMessageSize: parseInt(configManager.get('TRANSPORT_MAX_MESSAGE_SIZE', '10485760'), 10), // 10MB
+    });
+  }
+  
+  return getTransportEventStore(kvManager, logger);
 }
 
 /**
@@ -231,7 +272,7 @@ export function getTransportManager(
   sessionStore: SessionStore,
   eventStore: TransportEventStore,
   oauthProvider?: OAuthProvider,
-  oAuthConsumer?: OAuthConsumer,
+  oauthConsumer?: OAuthConsumer,
   thirdpartyApiClient?: any,
 ): TransportManager {
   return new TransportManager({
@@ -271,7 +312,7 @@ export function getTransportManager(
     eventStore,
     // 🔒 NEW: OAuth authentication dependencies
     oauthProvider,
-    oauthConsumer: oAuthConsumer,
+    oauthConsumer,
     thirdPartyApiClient: thirdpartyApiClient,
   });
 }
@@ -377,10 +418,10 @@ function getInstructionsSource(configManager: ConfigManager): string {
 export async function validateConfiguration(
   configManager: ConfigManager,
   logger: Logger,
-  dependencies?: { oAuthConsumer?: unknown },
+  dependencies?: { oauthConsumer?: unknown },
 ): Promise<void> {
   // Only validate OAuth consumer config if OAuth consumer is actually being used
-  if (dependencies?.oAuthConsumer) {
+  if (dependencies?.oauthConsumer) {
     const requiredConfig = [
       'OAUTH_CONSUMER_CLIENT_ID',
       'OAUTH_CONSUMER_CLIENT_SECRET',
@@ -483,7 +524,7 @@ export async function performHealthChecks(
   dependencies: {
     kvManager: KVManager;
     oauthProvider: OAuthProvider;
-    oAuthConsumer?: OAuthConsumer;
+    oauthConsumer?: OAuthConsumer;
     thirdpartyApiClient?: any;
   },
   logger: Logger,
@@ -519,13 +560,13 @@ export async function performHealthChecks(
       },
     },
   ];
-  if (dependencies.oAuthConsumer) {
-    const oAuthConsumer = dependencies.oAuthConsumer;
+  if (dependencies.oauthConsumer) {
+    const oauthConsumer = dependencies.oauthConsumer;
     healthChecks.push({
       name: 'ExampleCorp OAuth Consumer',
       check: async () => {
         // Basic initialization check
-        await oAuthConsumer.initialize();
+        await oauthConsumer.initialize();
         return { healthy: true, status: 'initialized' };
       },
     });
@@ -620,7 +661,7 @@ export async function getAllDependencies(
 
   const kvManager = overrides.kvManager || await getKvManager(configManager, logger);
   const sessionStore = overrides.sessionStore || getSessionStore(kvManager, logger);
-  const eventStore = overrides.eventStore || getTransportEventStore(kvManager, logger);
+  const eventStore = overrides.eventStore || getSmartTransportEventStore(kvManager, logger, configManager);
   const credentialStore = overrides.credentialStore || getCredentialStore(kvManager, logger);
   const errorHandler = overrides.errorHandler || getErrorHandler();
   const workflowRegistry = overrides.workflowRegistry || getWorkflowRegistry(logger, errorHandler);
@@ -630,8 +671,8 @@ export async function getAllDependencies(
   const consumerDeps: any = {};
 
   // Use pre-built consumer instances (Option A pattern)
-  if (overrides.oAuthConsumer) {
-    consumerDeps.oAuthConsumer = overrides.oAuthConsumer;
+  if (overrides.oauthConsumer) {
+    consumerDeps.oauthConsumer = overrides.oauthConsumer;
   }
 
   if (overrides.thirdpartyApiClient) {
@@ -643,7 +684,7 @@ export async function getAllDependencies(
     logger,
     kvManager,
     credentialStore,
-    consumerDeps.oAuthConsumer, // Pass OAuth consumer for third-party auth
+    consumerDeps.oauthConsumer, // Pass OAuth consumer for third-party auth
     consumerDeps.thirdpartyApiClient, // Pass API client for token refresh
   );
   const transportManager = overrides.transportManager || getTransportManager(
@@ -653,7 +694,7 @@ export async function getAllDependencies(
     sessionStore,
     eventStore,
     oauthProvider, // 🔒 Pass OAuth provider for MCP token validation
-    consumerDeps.oAuthConsumer, // 🔒 Pass OAuth consumer for third-party authentication
+    consumerDeps.oauthConsumer, // 🔒 Pass OAuth consumer for third-party authentication
     consumerDeps.thirdpartyApiClient, // 🔒 Pass third-party API client for token refresh
   );
 
@@ -722,14 +763,14 @@ export async function getAllDependencies(
     return server;
   })();
 
-  // Initialize Beyond MCP server
-  await beyondMcpServer.initialize();
-
   await registerPluginsInRegistries(
     allDeps.toolRegistry,
     allDeps.workflowRegistry,
     allDeps,
   );
+
+  // Initialize Beyond MCP server
+  await beyondMcpServer.initialize();
 
   return {
     ...allDeps,

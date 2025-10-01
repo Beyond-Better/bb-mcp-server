@@ -35,9 +35,9 @@ export interface StreamMetadata {
  * Deno KV-backed EventStore implementation for persistent MCP session state
  */
 export class TransportEventStore implements EventStore {
-  private kv: Deno.Kv;
-  private keyPrefix: readonly string[];
-  private logger: Logger | undefined;
+  protected kv: Deno.Kv;
+  protected keyPrefix: readonly string[];
+  protected logger: Logger | undefined;
 
   constructor(
     kv: Deno.Kv,
@@ -108,7 +108,7 @@ export class TransportEventStore implements EventStore {
    * Generates a unique event ID for a given stream ID
    * Uses format: streamId|timestamp|random to avoid underscore conflicts
    */
-  private generateEventId(streamId: string): string {
+  protected generateEventId(streamId: string): string {
     const timestamp = Date.now().toString(36);
     const random = Math.random().toString(36).substring(2, 10);
     return `${streamId}|${timestamp}|${random}`;
@@ -117,7 +117,7 @@ export class TransportEventStore implements EventStore {
   /**
    * Extracts the stream ID from an event ID
    */
-  private getStreamIdFromEventId(eventId: string): string {
+  protected getStreamIdFromEventId(eventId: string): string {
     const parts = eventId.split('|');
     return parts.length >= 3 ? (parts[0] ?? '') : '';
   }
@@ -125,7 +125,7 @@ export class TransportEventStore implements EventStore {
   /**
    * Get the timestamp from an event ID for ordering
    */
-  private getTimestampFromEventId(eventId: string): number {
+  protected getTimestampFromEventId(eventId: string): number {
     const parts = eventId.split('|');
     if (parts.length >= 3 && parts[1]) {
       return parseInt(parts[1], 36);
@@ -365,7 +365,7 @@ export class TransportEventStore implements EventStore {
   /**
    * Update stream metadata
    */
-  private async updateStreamMetadata(streamId: string, lastEventId: string): Promise<void> {
+  protected async updateStreamMetadata(streamId: string, lastEventId: string): Promise<void> {
     const metadataKey = [...this.keyPrefix, 'stream_metadata', streamId];
 
     try {

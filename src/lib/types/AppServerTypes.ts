@@ -6,9 +6,10 @@ import type { ConfigManager } from '../config/ConfigManager.ts';
 import type { Logger } from '../utils/Logger.ts';
 import type { AuditLogger } from '../utils/AuditLogger.ts';
 import type { KVManager } from '../storage/KVManager.ts';
+import type { CredentialStore } from '../storage/CredentialStore.ts';
 import type { SessionStore } from '../storage/SessionStore.ts';
 import type { TransportEventStore } from '../storage/TransportEventStore.ts';
-import type { CredentialStore } from '../storage/CredentialStore.ts';
+import type { TransportEventStoreChunked } from '../storage/TransportEventStoreChunked.ts';
 import type { ErrorHandler } from '../utils/ErrorHandler.ts';
 import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
 import type { ToolRegistry } from '../tools/ToolRegistry.ts';
@@ -47,7 +48,7 @@ export interface AppServerDependencies {
   auditLogger: AuditLogger;
   kvManager: KVManager;
   sessionStore: SessionStore;
-  eventStore: TransportEventStore;
+  eventStore: TransportEventStore | TransportEventStoreChunked;
   credentialStore: CredentialStore;
   errorHandler: ErrorHandler;
   workflowRegistry: WorkflowRegistry;
@@ -61,9 +62,9 @@ export interface AppServerDependencies {
   // HTTP Server configuration (optional)
   httpServerConfig?: HttpServerConfig;
 
-  // Consumer-specific dependencies (pre-built instances - Option A pattern)
+  // Consumer-specific dependencies (pre-built instances
   thirdpartyApiClient?: any;
-  oAuthConsumer?: any;
+  oauthConsumer?: any;
 
   // Server configuration for generic fallback
   serverConfig?: {
@@ -87,6 +88,7 @@ export interface CreateCustomAppServerDependencies {
   configManager: ConfigManager;
   logger: Logger;
   kvManager: KVManager;
+  credentialStore: CredentialStore;
 }
 
 export type DependenciesHealthCheck = {

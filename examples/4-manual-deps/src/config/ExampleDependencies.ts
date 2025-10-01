@@ -8,7 +8,7 @@
  * - Demonstrates separation between library and consumer concerns
  */
 
-import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
+import { McpServer as SdkMcpServer } from "mcp/server/mcp.js";
 
 // 🎯 Library imports - all infrastructure dependencies
 import {
@@ -19,6 +19,7 @@ import {
   CreateCustomAppServerDependencies,
   CredentialStore,
   ErrorHandler,
+  getCredentialStore,
   getKvManager,
   getLogger,
   KVManager,
@@ -27,22 +28,32 @@ import {
   performHealthChecks,
   SessionStore,
   TransportEventStore,
+  TransportEventStoreChunked,
   TransportManager,
   validateConfiguration,
   WorkflowRegistry,
   //type MCPServerDependencies,
   type WorkflowRegistryConfig,
-} from '@beyondbetter/bb-mcp-server';
+} from "@beyondbetter/bb-mcp-server";
 
 // 🎯 Import dependency helpers from the library
-import { getToolRegistry, getWorkflowRegistry } from '@beyondbetter/bb-mcp-server';
+import {
+  getToolRegistry,
+  getWorkflowRegistry,
+} from "@beyondbetter/bb-mcp-server";
 
 // 🎯 Consumer-specific imports - business logic components
-import { type ExampleOAuthConfig, ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts';
-import { ExampleApiClient, type ExampleApiClientConfig } from '../api/ExampleApiClient.ts';
-import { ExampleTools } from '../tools/ExampleTools.ts';
-import { ExampleQueryWorkflow } from '../workflows/ExampleQueryWorkflow.ts';
-import { ExampleOperationWorkflow } from '../workflows/ExampleOperationWorkflow.ts';
+import {
+  type ExampleOAuthConfig,
+  ExampleOAuthConsumer,
+} from "../auth/ExampleOAuthConsumer.ts";
+import {
+  ExampleApiClient,
+  type ExampleApiClientConfig,
+} from "../api/ExampleApiClient.ts";
+import { ExampleTools } from "../tools/ExampleTools.ts";
+import { ExampleQueryWorkflow } from "../workflows/ExampleQueryWorkflow.ts";
+import { ExampleOperationWorkflow } from "../workflows/ExampleOperationWorkflow.ts";
 
 /**
  * Create ExampleCorp dependencies using library infrastructure
@@ -61,29 +72,30 @@ export async function createManualDependencies(
 
   // 🎯 Initialize library logger with ExampleCorp configuration
   const logger = new Logger({
-    level: configManager.get('LOG_LEVEL', 'info'),
-    format: configManager.get('LOG_FORMAT', 'json'),
+    level: configManager.get("LOG_LEVEL", "info"),
+    format: configManager.get("LOG_FORMAT", "json"),
   });
 
-  logger.info('Initializing ExampleCorp MCP server dependencies...');
+  logger.info("Initializing ExampleCorp MCP server dependencies...");
 
   // 🎯 Initialize library audit logger
   const auditLogger = new AuditLogger({
-    enabled: configManager.get('AUDIT_ENABLED', 'true') === 'true',
-    logAllApiCalls: configManager.get('AUDIT_LOG_ALL_API_CALLS', 'true') === 'true',
-    logFile: configManager.get('AUDIT_LOG_FILE'),
+    enabled: configManager.get("AUDIT_ENABLED", "true") === "true",
+    logAllApiCalls:
+      configManager.get("AUDIT_LOG_ALL_API_CALLS", "true") === "true",
+    logFile: configManager.get("AUDIT_LOG_FILE"),
     retentionDays: parseInt(
-      configManager.get('AUDIT_RETENTION_DAYS', '90'),
+      configManager.get("AUDIT_RETENTION_DAYS", "90"),
       10,
     ),
   }, logger);
 
   // 🎯 Initialize library KV storage using ConfigManager
   const kvPath = configManager.get(
-    'DENO_KV_PATH',
-    './example/data/examplecorp-mcp-server.db',
+    "DENO_KV_PATH",
+    "./example/data/examplecorp-mcp-server.db",
   );
-  logger.info('ExampleCorp: Configuring KV storage', {
+  logger.info("ExampleCorp: Configuring KV storage", {
     kvPath,
     resolvedPath: new URL(kvPath, `file://${Deno.cwd()}/`).pathname,
     currentWorkingDirectory: Deno.cwd(),
@@ -102,58 +114,78 @@ export async function createManualDependencies(
   // 🎯 Initialize library session store (required by TransportManager)
   const sessionStore = new SessionStore(
     kvManager,
-    { keyPrefix: ['sessions'] },
+    { keyPrefix: ["sessions"] },
     logger,
   );
 
   // 🎯 Initialize library event store (required by TransportManager)
-  const eventStore = new TransportEventStore(
-    kvManager.getKV(),
-    ['events'],
-    logger,
-  );
+  // Use chunked storage for handling large messages (recommended)
+  const useChunkedStorage = configManager.get("TRANSPORT_USE_CHUNKED_STORAGE", "true") === "true";
+  
+  const eventStore = useChunkedStorage
+    ? new TransportEventStoreChunked(
+        kvManager.getKV(),
+        ["events"],
+        logger,
+        {
+          maxChunkSize: parseInt(configManager.get("TRANSPORT_MAX_CHUNK_SIZE", "61440"), 10), // 60KB
+          enableCompression: configManager.get("TRANSPORT_ENABLE_COMPRESSION", "true") === "true",
+          compressionThreshold: parseInt(configManager.get("TRANSPORT_COMPRESSION_THRESHOLD", "1024"), 10), // 1KB
+          maxMessageSize: parseInt(configManager.get("TRANSPORT_MAX_MESSAGE_SIZE", "10485760"), 10), // 10MB
+        }
+      )
+    : new TransportEventStore(
+        kvManager.getKV(),
+        ["events"],
+        logger,
+      );
 
   // 🎯 Initialize library error handler
   const errorHandler = new ErrorHandler();
 
   // 🎯 Initialize library OAuth provider (MCP server as OAuth provider)
   const oauthProvider = new OAuthProvider({
-    issuer: configManager.get('OAUTH_PROVIDER_ISSUER', 'http://localhost:3000'),
-    clientId: configManager.get('OAUTH_PROVIDER_CLIENT_ID', 'example-client'),
+    issuer: configManager.get("OAUTH_PROVIDER_ISSUER", "http://localhost:3000"),
+    clientId: configManager.get("OAUTH_PROVIDER_CLIENT_ID", "example-client"),
     clientSecret: configManager.get(
-      'OAUTH_PROVIDER_CLIENT_SECRET',
-      'example-secret',
+      "OAUTH_PROVIDER_CLIENT_SECRET",
+      "example-secret",
     ),
     redirectUri: configManager.get(
-      'OAUTH_PROVIDER_REDIRECT_URI',
-      'http://localhost:3000/oauth/callback',
+      "OAUTH_PROVIDER_REDIRECT_URI",
+      "http://localhost:3000/oauth/callback",
     ),
     tokens: {
       accessTokenExpiryMs: parseInt(
-        configManager.get('OAUTH_TOKEN_EXPIRATION', '3600000'),
+        configManager.get("OAUTH_TOKEN_EXPIRATION", "3600000"),
         10,
       ),
       refreshTokenExpiryMs: parseInt(
-        configManager.get('OAUTH_REFRESH_TOKEN_EXPIRATION', '2592000000'),
+        configManager.get("OAUTH_REFRESH_TOKEN_EXPIRATION", "2592000000"),
         10,
       ),
       authorizationCodeExpiryMs: parseInt(
-        configManager.get('OAUTH_CODE_EXPIRATION', '600000'),
+        configManager.get("OAUTH_PROVIDER_CODE_EXPIRATION", "600000"),
         10,
       ),
     },
     clients: {
-      enableDynamicRegistration: configManager.get('OAUTH_ENABLE_DYNAMIC_CLIENT_REG') === 'true',
-      requireHTTPS: configManager.get('OAUTH_REQUIRE_HTTPS') === 'true',
+      enableDynamicRegistration:
+        configManager.get("OAUTH_PROVIDER_DYNAMIC_CLIENT_REG") === "true",
+      requireHTTPS:
+        configManager.get("OAUTH_PROVIDER_REQUIRE_HTTPS") === "true",
       allowedRedirectHosts: (() => {
-        const hosts = configManager.get('OAUTH_ALLOWED_HOSTS', 'localhost');
-        return typeof hosts === 'string' ? hosts.split(',') : hosts;
+        const hosts = configManager.get(
+          "OAUTH_PROVIDER_ALLOWED_HOSTS",
+          "localhost",
+        );
+        return typeof hosts === "string" ? hosts.split(",") : hosts;
       })(),
     },
     authorization: {
-      supportedGrantTypes: ['authorization_code', 'refresh_token'],
-      supportedResponseTypes: ['code'],
-      supportedScopes: ['read', 'write', 'admin'],
+      supportedGrantTypes: ["authorization_code", "refresh_token"],
+      supportedResponseTypes: ["code"],
+      supportedScopes: ["read", "write", "admin"],
       enablePKCE: true,
       requirePKCE: false,
     },
@@ -170,68 +202,70 @@ export async function createManualDependencies(
 
   // 🎯 Create ExampleCorp OAuth consumer configuration using standard config keys
   const apiBaseUrl = configManager.get(
-    'THIRDPARTY_API_BASE_URL',
-    'https://jsonplaceholder.typicode.com',
+    "THIRDPARTY_API_BASE_URL",
+    "https://jsonplaceholder.typicode.com",
   );
   const exampleOAuthConfig: ExampleOAuthConfig = {
     // Standard OAuth 2.0 configuration (using standard config keys)
-    provider: 'examplecorp',
+    providerId: "examplecorp",
     authUrl: configManager.get(
-      'OAUTH_CONSUMER_AUTH_URL',
-      'https://httpbin.org/anything/oauth/authorize',
+      "OAUTH_CONSUMER_AUTH_URL",
+      "https://httpbin.org/anything/oauth/authorize",
     ),
     tokenUrl: configManager.get(
-      'OAUTH_CONSUMER_TOKEN_URL',
-      'https://httpbin.org/anything/oauth/token',
+      "OAUTH_CONSUMER_TOKEN_URL",
+      "https://httpbin.org/anything/oauth/token",
     ),
-    clientId: configManager.get('OAUTH_CONSUMER_CLIENT_ID', 'demo-client-id'),
+    clientId: configManager.get("OAUTH_CONSUMER_CLIENT_ID", "demo-client-id"),
     clientSecret: configManager.get(
-      'OAUTH_CONSUMER_CLIENT_SECRET',
-      'demo-client-secret',
+      "OAUTH_CONSUMER_CLIENT_SECRET",
+      "demo-client-secret",
     ),
     redirectUri: configManager.get(
-      'OAUTH_CONSUMER_REDIRECT_URI',
-      'http://localhost:3000/oauth/consumer/callback',
+      "OAUTH_CONSUMER_REDIRECT_URI",
+      "http://localhost:3000/oauth/consumer/callback",
     ),
-    scopes: configManager.get('OAUTH_CONSUMER_SCOPES', ['read', 'write']),
+    scopes: configManager.get("OAUTH_CONSUMER_SCOPES", ["read", "write"]),
+
+    tokenRefreshBufferMinutes: 5,
+    maxTokenRefreshRetries: 3,
 
     // ExampleCorp-specific configuration
     exampleCorp: {
       apiBaseUrl,
-      apiVersion: configManager.get('THIRDPARTY_API_VERSION', 'v1'),
-      scopes: configManager.get('OAUTH_CONSUMER_SCOPES', ['read', 'write']),
+      apiVersion: configManager.get("THIRDPARTY_API_VERSION", "v1"),
+      scopes: configManager.get("OAUTH_CONSUMER_SCOPES", ["read", "write"]),
       customClaims: {
         // ExampleCorp-specific OAuth claims
-        organization: configManager.get('THIRDPARTY_ORGANIZATION'),
-        department: configManager.get('THIRDPARTY_DEPARTMENT'),
+        organization: configManager.get("THIRDPARTY_ORGANIZATION"),
+        department: configManager.get("THIRDPARTY_DEPARTMENT"),
       },
     },
   };
 
   // 🎯 Create ExampleCorp OAuth consumer (extends library OAuthConsumer)
-  const oAuthConsumer = new ExampleOAuthConsumer(
+  const oauthConsumer = new ExampleOAuthConsumer(
     exampleOAuthConfig,
-    logger,
-    kvManager,
+    { logger, kvManager, credentialStore },
   );
 
   // 🎯 Create ExampleCorp API client configuration using standard config keys
   const apiClientConfig: ExampleApiClientConfig = {
     baseUrl: configManager.get(
-      'THIRDPARTY_API_BASE_URL',
-      'https://jsonplaceholder.typicode.com',
+      "THIRDPARTY_API_BASE_URL",
+      "https://jsonplaceholder.typicode.com",
     ),
-    apiVersion: configManager.get('THIRDPARTY_API_VERSION', 'v1'),
-    timeout: configManager.get('THIRDPARTY_API_TIMEOUT', 30000),
-    retryAttempts: configManager.get('THIRDPARTY_API_RETRY_ATTEMPTS', 3),
-    retryDelayMs: configManager.get('THIRDPARTY_API_RETRY_DELAY', 1000),
+    apiVersion: configManager.get("THIRDPARTY_API_VERSION", "v1"),
+    timeout: configManager.get("THIRDPARTY_API_TIMEOUT", 30000),
+    retryAttempts: configManager.get("THIRDPARTY_API_RETRY_ATTEMPTS", 3),
+    retryDelayMs: configManager.get("THIRDPARTY_API_RETRY_DELAY", 1000),
     userAgent: `ExampleCorp-MCP-Server/1.0 (Deno/${Deno.version.deno})`,
   };
 
   // 🎯 Create ExampleCorp API client
   const thirdpartyApiClient = new ExampleApiClient(
     apiClientConfig,
-    oAuthConsumer,
+    oauthConsumer,
     logger,
   );
 
@@ -241,7 +275,7 @@ export async function createManualDependencies(
 
   const toolRegistry = await getToolRegistry(logger, errorHandler);
 
-  const instructions = await Deno.readTextFile('instructions.md');
+  const instructions = await Deno.readTextFile("instructions.md");
   const serverOptions: {
     capabilities?: {
       tools?: {};
@@ -260,17 +294,18 @@ export async function createManualDependencies(
   };
   toolRegistry.sdkMcpServer = new SdkMcpServer(
     {
-      name: 'examplecorp-mcp-server',
-      version: '1.0.0',
-      title: 'ExampleCorp API Integration',
-      description: 'MCP server for ExampleCorp API integration with bb-mcp-server library',
+      name: "examplecorp-mcp-server",
+      version: "1.0.0",
+      title: "ExampleCorp API Integration",
+      description:
+        "MCP server for ExampleCorp API integration with bb-mcp-server library",
     },
     serverOptions,
   );
 
   const exampleTools = new ExampleTools({
     apiClient: thirdpartyApiClient,
-    oauthConsumer: oAuthConsumer,
+    oauthConsumer: oauthConsumer,
     logger: logger,
     auditLogger: auditLogger,
   });
@@ -305,26 +340,26 @@ export async function createManualDependencies(
   workflowRegistry.registerWorkflow(queryWorkflow);
   workflowRegistry.registerWorkflow(operationWorkflow);
 
-  logger.info('Manually registered workflows:', {
+  logger.info("Manually registered workflows:", {
     workflows: [queryWorkflow.name, operationWorkflow.name],
   });
 
   // 🎯 Initialize library transport manager with minimal config
   const transportManager = new TransportManager({
-    type: configManager.get('MCP_TRANSPORT', 'stdio') as 'stdio' | 'http',
+    type: configManager.get("MCP_TRANSPORT", "stdio") as "stdio" | "http",
     http: {
-      hostname: configManager.get('HTTP_HOST', 'localhost'),
-      port: parseInt(configManager.get('HTTP_PORT', '3000'), 10),
+      hostname: configManager.get("HTTP_HOST", "localhost"),
+      port: parseInt(configManager.get("HTTP_PORT", "3000"), 10),
       sessionTimeout: 30 * 60 * 1000, // 30 minutes
       maxConcurrentSessions: 1000,
       enableSessionPersistence: true,
       sessionCleanupInterval: 5 * 60 * 1000, // 5 minutes
       requestTimeout: 30 * 1000, // 30 seconds
       maxRequestSize: 1024 * 1024, // 1MB
-      enableCORS: configManager.get('HTTP_CORS_ENABLED', 'true') === 'true',
+      enableCORS: configManager.get("HTTP_CORS_ENABLED", "true") === "true",
       corsOrigins: (() => {
-        const origins = configManager.get('HTTP_CORS_ORIGINS', '*');
-        return typeof origins === 'string' ? origins.split(',') : origins;
+        const origins = configManager.get("HTTP_CORS_ORIGINS", "*");
+        return typeof origins === "string" ? origins.split(",") : origins;
       })(),
       preserveCompatibilityMode: true,
     },
@@ -340,13 +375,13 @@ export async function createManualDependencies(
   // =============================================================================
 
   // Validate required configuration (OAuth consumer is required for this example)
-  await validateConfiguration(configManager, logger, { oAuthConsumer });
+  await validateConfiguration(configManager, logger, { oauthConsumer });
 
   // Perform health checks on external dependencies
   await performHealthChecks(
     {
       thirdpartyApiClient,
-      oAuthConsumer,
+      oauthConsumer,
       oauthProvider,
       kvManager,
     },
@@ -354,19 +389,19 @@ export async function createManualDependencies(
     // addition health checks
     [
       {
-        name: 'Workflow Registry (Manual)',
+        name: "Workflow Registry (Manual)",
         check: async () => {
           const workflowNames = workflowRegistry.getWorkflowNames();
           if (workflowNames.length === 0) {
             throw new Error(
-              'No workflows registered - manual registration may have failed',
+              "No workflows registered - manual registration may have failed",
             );
           }
           return {
             healthy: true,
-            status: 'Workflows registered',
+            status: "Workflows registered",
             workflowCount: workflowNames.length,
-            discoveryMode: 'manual',
+            discoveryMode: "manual",
           };
         },
       },
@@ -374,20 +409,20 @@ export async function createManualDependencies(
   );
 
   // Log successful initialization
-  logger.info('ExampleCorp MCP server dependencies initialized successfully', {
+  logger.info("ExampleCorp MCP server dependencies initialized successfully", {
     libraryComponents: [
-      'Logger',
-      'AuditLogger',
-      'KVManager',
-      'WorkflowRegistry',
-      'OAuthProvider',
-      'TransportManager',
+      "Logger",
+      "AuditLogger",
+      "KVManager",
+      "WorkflowRegistry",
+      "OAuthProvider",
+      "TransportManager",
     ],
     consumerComponents: [
-      'ExampleOAuthConsumer',
-      'ExampleApiClient',
+      "ExampleOAuthConsumer",
+      "ExampleApiClient",
     ],
-    transportType: configManager.get('MCP_TRANSPORT', 'stdio'),
+    transportType: configManager.get("MCP_TRANSPORT", "stdio"),
     exampleCorpApiUrl: apiClientConfig.baseUrl,
   });
 
@@ -410,7 +445,7 @@ export async function createManualDependencies(
 
     // 🎯 Consumer dependencies (ExampleCorp-specific)
     thirdpartyApiClient,
-    oAuthConsumer,
+    oauthConsumer,
   };
 }
 
@@ -424,20 +459,22 @@ export async function createTestExampleDependencies(): Promise<
   const testConfigManager = new ConfigManager();
   const testLogger = getLogger(testConfigManager);
   const testKvManager = await getKvManager(testConfigManager, testLogger);
-  testConfigManager.set('EXAMPLECORP_CLIENT_ID', 'test-client-id');
-  testConfigManager.set('EXAMPLECORP_CLIENT_SECRET', 'test-client-secret');
+  const testCredentialStore = getCredentialStore(testKvManager, testLogger);
+  testConfigManager.set("EXAMPLECORP_CLIENT_ID", "test-client-id");
+  testConfigManager.set("EXAMPLECORP_CLIENT_SECRET", "test-client-secret");
   testConfigManager.set(
-    'EXAMPLECORP_API_BASE_URL',
-    'http://localhost:3001/api',
+    "EXAMPLECORP_API_BASE_URL",
+    "http://localhost:3001/api",
   );
-  testConfigManager.set('LOG_LEVEL', 'debug');
-  testConfigManager.set('MCP_TRANSPORT', 'stdio');
+  testConfigManager.set("LOG_LEVEL", "debug");
+  testConfigManager.set("MCP_TRANSPORT", "stdio");
 
   // Create dependencies with test configuration
   return await createManualDependencies({
     configManager: testConfigManager,
     logger: testLogger,
     kvManager: testKvManager,
+    credentialStore: testCredentialStore,
   });
 }
 

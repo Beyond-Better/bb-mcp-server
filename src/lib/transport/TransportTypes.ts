@@ -8,6 +8,7 @@ import type { Logger } from '../utils/Logger.ts';
 import type { KVManager } from '../storage/KVManager.ts';
 import type { SessionStore } from '../storage/SessionStore.ts';
 import type { TransportEventStore } from '../storage/TransportEventStore.ts';
+import type { TransportEventStoreChunked } from '../storage/TransportEventStoreChunked.ts';
 import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
 
 // Core transport interfaces
@@ -274,7 +275,7 @@ export interface TransportDependencies {
   logger: Logger;
   kvManager: KVManager;
   sessionStore: SessionStore;
-  eventStore: TransportEventStore;
+  eventStore: TransportEventStore | TransportEventStoreChunked;
 
   // 🔒 SECURITY: OAuth authentication components (optional)
   oauthProvider?: any; // OAuthProvider for MCP token validation
