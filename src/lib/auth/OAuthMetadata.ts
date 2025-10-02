@@ -71,20 +71,7 @@ export class OAuthMetadata {
 
   constructor(config: OAuthMetadataConfig, logger?: Logger) {
     // Apply config with proper defaults
-    this.config = {
-      authorizationEndpoint: config.authorizationEndpoint ?? '/authorize',
-      tokenEndpoint: config.tokenEndpoint ?? '/token',
-      registrationEndpoint: config.registrationEndpoint ?? '/register',
-      revocationEndpoint: config.revocationEndpoint ?? '/revoke',
-      metadataEndpoint: config.metadataEndpoint ?? '/.well-known/oauth-authorization-server',
-      supportedGrantTypes: config.supportedGrantTypes ?? ['authorization_code', 'refresh_token'],
-      supportedResponseTypes: config.supportedResponseTypes ?? ['code'],
-      supportedScopes: config.supportedScopes ?? ['read', 'write'],
-      enablePKCE: config.enablePKCE ?? true,
-      enableDynamicRegistration: config.enableDynamicRegistration ?? true,
-      issuer: config.issuer,
-      ...(config.mcpExtensions && { mcpExtensions: config.mcpExtensions }),
-    };
+    this.config = config;
     this.logger = logger;
 
     this.logger?.info('OAuthMetadata: Initialized', {
@@ -107,10 +94,19 @@ export class OAuthMetadata {
     const metadataId = Math.random().toString(36).substring(2, 15);
 
     this.logger?.info(`OAuthMetadata: Generating authorization server metadata [${metadataId}]`, {
+      config: this.config.issuer,
+    });
+    this.logger?.info(`OAuthMetadata: Generating authorization server metadata [${metadataId}]`, {
       metadataId,
       issuer: this.config.issuer,
       enableDynamicRegistration: this.config.enableDynamicRegistration,
       registrationEndpoint: this.config.registrationEndpoint,
+    });
+    this.logger?.info(`OAuthMetadata: Registration endpoint decision [${metadataId}]`, {
+      metadataId,
+      enableDynamicRegistration: this.config.enableDynamicRegistration,
+      registrationEndpoint: this.config.registrationEndpoint,
+      willIncludeInMetadata: !!this.config.enableDynamicRegistration,
     });
 
     try {
@@ -127,13 +123,6 @@ export class OAuthMetadata {
         }),
         // Always include revocation endpoint
         revocation_endpoint: this.buildEndpointUrl(this.config.revocationEndpoint!),
-
-      this.logger?.debug(`OAuthMetadata: Registration endpoint decision [${metadataId}]`, {
-        metadataId,
-        enableDynamicRegistration: this.config.enableDynamicRegistration,
-        registrationEndpoint: this.config.registrationEndpoint,
-        willIncludeInMetadata: !!this.config.enableDynamicRegistration,
-      });
 
         // Supported capabilities
         grant_types_supported: [...this.config.supportedGrantTypes],
@@ -343,12 +332,21 @@ export class OAuthMetadata {
     logger?: Logger,
   ): OAuthMetadata {
     const metadataConfig: OAuthMetadataConfig = {
+      // endpoints are hard-coded values from http handlers
+      authorizationEndpoint: '/authorize',
+      tokenEndpoint: '/token',
+      registrationEndpoint: '/register',
+      revocationEndpoint: '/revoke',
+      metadataEndpoint: '/.well-known/oauth-authorization-server',
+
+      supportedResponseTypes: providerConfig.authorization.supportedResponseTypes ?? ['code'],
+      supportedGrantTypes: providerConfig.authorization.supportedGrantTypes ??
+        ['authorization_code', 'refresh_token'],
+      supportedScopes: providerConfig.authorization.supportedScopes ?? ['read', 'write'],
+      enablePKCE: providerConfig.authorization.enablePKCE ?? true,
+      enableDynamicRegistration: providerConfig.clients.enableDynamicRegistration ?? true,
       issuer: providerConfig.issuer,
-      supportedGrantTypes: providerConfig.authorization.supportedGrantTypes,
-      supportedResponseTypes: providerConfig.authorization.supportedResponseTypes,
-      supportedScopes: providerConfig.authorization.supportedScopes,
-      enablePKCE: providerConfig.authorization.enablePKCE,
-      enableDynamicRegistration: providerConfig.clients.enableDynamicRegistration,
+      //...(providerConfig.mcpExtensions && { mcpExtensions: providerConfig.mcpExtensions }),
     };
 
     return new OAuthMetadata(metadataConfig, logger);

@@ -21,10 +21,10 @@ import { toError } from '../utils/Error.ts';
 import type { ToolRegistry } from '../tools/ToolRegistry.ts';
 import type {
   CoreToolsDependencies,
-  CreateMessageRequest,
-  CreateMessageResult,
-  ElicitInputRequest,
-  ElicitInputResult,
+  //CreateMessageRequest,
+  //CreateMessageResult,
+  //ElicitInputRequest,
+  //ElicitInputResult,
 } from '../types/BeyondMcpTypes.ts';
 import { ToolHandlerMode } from '../types/BeyondMcpTypes.ts';
 

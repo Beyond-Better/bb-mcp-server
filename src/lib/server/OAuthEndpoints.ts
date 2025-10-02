@@ -473,13 +473,12 @@ export class OAuthEndpoints {
 
         try {
           // Exchange ActionStep code for tokens and store them
-          const exchangeResult = await this.oauthConsumer.handleCallback(code, state);
+          const exchangeResult = await this.oauthConsumer.handleAuthorizationCallback(code, state);
 
           if (!exchangeResult.success) {
             const errorMsg = exchangeResult.error || 'Failed to exchange authorization code';
-            this.logger.error(`OAuthEndpoints: Token exchange failed [${callbackId}]`, {
+            this.logger.error(`OAuthEndpoints: Token exchange failed [${callbackId}]`, toError(errorMsg), {
               callbackId,
-              error: errorMsg,
             });
             return this.generateErrorPage(errorMsg);
           }

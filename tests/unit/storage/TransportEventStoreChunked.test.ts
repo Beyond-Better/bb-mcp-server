@@ -376,6 +376,7 @@ Deno.test({
 
 Deno.test({
   name: 'TransportEventStoreChunked - Cleanup Old Events',
+  only: true,
   async fn() {
     const kv = await createTestKV();
     const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger);

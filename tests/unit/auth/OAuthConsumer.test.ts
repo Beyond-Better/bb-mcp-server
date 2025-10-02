@@ -14,13 +14,16 @@
  */
 
 import { assert, assertEquals, assertExists, assertRejects } from '@std/assert';
-import { OAuthConsumer } from '../../../src/lib/auth/OAuthConsumer.ts';
+import {
+  OAuthConsumer,
+  type OAuthConsumerDependencies,
+} from '../../../src/lib/auth/OAuthConsumer.ts';
 import { KVManager } from '../../../src/lib/storage/KVManager.ts';
 import { CredentialStore } from '../../../src/lib/storage/CredentialStore.ts';
 import type { Logger } from '../../../src/types/library.types.ts';
 import type {
-  AuthFlowResult,
   AuthCallbackResult,
+  AuthFlowResult,
   OAuthConsumerConfig,
   OAuthCredentials,
   TokenResult,
@@ -41,16 +44,19 @@ class TestOAuthConsumer extends OAuthConsumer {
   private shouldFailTokenExchange = false;
   private shouldFailRefresh = false;
 
-  constructor(config: OAuthConsumerConfig, logger?: Logger, kvManager?: any, credentialStore?: any) {
-    super(config, logger, kvManager, credentialStore);
+  constructor(config: OAuthConsumerConfig, dependencies: OAuthConsumerDependencies) {
+    super(config, dependencies);
   }
 
   // Override abstract methods for testing
-  protected override async exchangeCodeForTokens(code: string, state: string): Promise<TokenResult> {
+  protected override async exchangeCodeForTokens(
+    code: string,
+    state: string,
+  ): Promise<TokenResult> {
     if (this.shouldFailTokenExchange) {
       return { success: false, error: 'Token exchange failed' };
     }
-    
+
     // Mock successful token exchange
     const credentials: OAuthCredentials = {
       accessToken: `test_access_token_${code}`,
@@ -59,7 +65,7 @@ class TestOAuthConsumer extends OAuthConsumer {
       expiresAt: Date.now() + 3600000, // 1 hour from now
       scopes: this.config.scopes,
     };
-    
+
     return {
       success: true,
       credentials,
@@ -71,7 +77,7 @@ class TestOAuthConsumer extends OAuthConsumer {
     if (this.shouldFailRefresh) {
       return { success: false, error: 'Token refresh failed' };
     }
-    
+
     // Mock successful token refresh
     const credentials: OAuthCredentials = {
       accessToken: `refreshed_access_token_${Date.now()}`,
@@ -80,7 +86,7 @@ class TestOAuthConsumer extends OAuthConsumer {
       expiresAt: Date.now() + 3600000, // 1 hour from now
       scopes: this.config.scopes,
     };
-    
+
     return {
       success: true,
       credentials,
@@ -123,7 +129,7 @@ function createTestConsumer(config: Partial<OAuthConsumerConfig> = {}) {
   const credentialStore = new CredentialStore(kvManager, {
     tokenRefreshBuffer: tokenRefreshBufferMinutes * 60 * 1000, // Convert to milliseconds
   }, mockLogger);
-  
+
   const fullConfig: OAuthConsumerConfig = {
     providerId: 'test_provider',
     authUrl: 'https://test.example.com/oauth/authorize',
@@ -138,7 +144,7 @@ function createTestConsumer(config: Partial<OAuthConsumerConfig> = {}) {
   };
 
   return {
-    consumer: new TestOAuthConsumer(fullConfig, mockLogger, kvManager, credentialStore),
+    consumer: new TestOAuthConsumer(fullConfig, { logger: mockLogger, kvManager, credentialStore }),
     kvManager,
     credentialStore,
     config: fullConfig,
@@ -149,9 +155,9 @@ Deno.test({
   name: 'OAuthConsumer - Initialize with Configuration',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     assertExists(consumer);
-    
+
     await kvManager.initialize();
     await consumer.initialize();
     await kvManager.close();
@@ -162,7 +168,7 @@ Deno.test({
   name: 'OAuthConsumer - Configuration Defaults',
   fn() {
     const { consumer } = createTestConsumer();
-    
+
     // Test that configuration is properly applied
     assertExists(consumer);
   },
@@ -172,17 +178,17 @@ Deno.test({
   name: 'OAuthConsumer - Generate Secure State (🔒 SECURITY CRITICAL)',
   fn() {
     const { consumer } = createTestConsumer();
-    
+
     const state1 = consumer.testGenerateSecureState();
     const state2 = consumer.testGenerateSecureState();
-    
+
     // States should be unique
     assert(state1 !== state2);
-    
+
     // States should be sufficiently long (32 characters)
     assertEquals(state1.length, 32);
     assertEquals(state2.length, 32);
-    
+
     // States should only contain URL-safe characters
     const urlSafePattern = /^[A-Za-z0-9\-._~]+$/;
     assert(urlSafePattern.test(state1));
@@ -194,14 +200,14 @@ Deno.test({
   name: 'OAuthConsumer - Build Authorization URL',
   fn() {
     const { consumer } = createTestConsumer();
-    
+
     const state = 'test_state_123';
     const authUrl = consumer.testBuildAuthUrl(state);
     const parsedUrl = new URL(authUrl);
-    
+
     // Verify base URL
     assertEquals(parsedUrl.origin + parsedUrl.pathname, 'https://test.example.com/oauth/authorize');
-    
+
     // Verify required OAuth 2.0 parameters
     assertEquals(parsedUrl.searchParams.get('response_type'), 'code');
     assertEquals(parsedUrl.searchParams.get('client_id'), 'test_client_id');
@@ -215,20 +221,20 @@ Deno.test({
   name: 'OAuthConsumer - Start Authorization Flow (🔒 SECURITY CRITICAL)',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     const result = await consumer.startAuthorizationFlow('test_user_123');
-    
+
     assertExists(result.authorizationUrl);
     assertExists(result.state);
-    
+
     // Verify URL format
     const parsedUrl = new URL(result.authorizationUrl);
     assertEquals(parsedUrl.searchParams.get('state'), result.state);
     assertEquals(parsedUrl.searchParams.get('client_id'), 'test_client_id');
-    
+
     await kvManager.close();
   },
 });
@@ -237,17 +243,17 @@ Deno.test({
   name: 'OAuthConsumer - Start Authorization Flow with Custom Scopes',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     const customScopes = ['admin', 'delete'];
     const result = await consumer.startAuthorizationFlow('test_user_123', customScopes);
-    
+
     const parsedUrl = new URL(result.authorizationUrl);
     // Note: Default implementation might not use custom scopes, depends on implementation
     assertExists(parsedUrl.searchParams.get('scope'));
-    
+
     await kvManager.close();
   },
 });
@@ -256,22 +262,22 @@ Deno.test({
   name: 'OAuthConsumer - Handle Authorization Callback Success (🔒 SECURITY CRITICAL)',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     // Start flow to generate state
     const flowResult = await consumer.startAuthorizationFlow('test_user_456');
-    
+
     // Mock successful callback with authorization code
     const callbackResult = await consumer.handleAuthorizationCallback(
       'test_auth_code_123',
       flowResult.state,
     );
-    
+
     assertEquals(callbackResult.success, true);
     assertEquals(callbackResult.userId, 'test_user_456');
-    
+
     await kvManager.close();
   },
 });
@@ -280,19 +286,19 @@ Deno.test({
   name: 'OAuthConsumer - Handle Authorization Callback with Invalid State',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     // Try callback with invalid state (not from a real flow)
     const callbackResult = await consumer.handleAuthorizationCallback(
       'test_auth_code_123',
       'invalid_state_xyz',
     );
-    
+
     assertEquals(callbackResult.success, false);
     assert(callbackResult.error?.includes('Invalid or expired authorization state'));
-    
+
     await kvManager.close();
   },
 });
@@ -301,24 +307,24 @@ Deno.test({
   name: 'OAuthConsumer - Handle Authorization Callback with Token Exchange Failure',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     // Configure consumer to fail token exchange
     consumer.setShouldFailTokenExchange(true);
-    
+
     // Start flow to generate valid state
     const flowResult = await consumer.startAuthorizationFlow('test_user_789');
-    
+
     const callbackResult = await consumer.handleAuthorizationCallback(
       'failing_auth_code',
       flowResult.state,
     );
-    
+
     assertEquals(callbackResult.success, false);
     assertEquals(callbackResult.error, 'Token exchange failed');
-    
+
     await kvManager.close();
   },
 });
@@ -327,20 +333,20 @@ Deno.test({
   name: 'OAuthConsumer - Get Valid Access Token (🔒 SECURITY CRITICAL)',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     // Complete OAuth flow to get stored credentials
     const flowResult = await consumer.startAuthorizationFlow('token_user');
     await consumer.handleAuthorizationCallback('auth_code_token', flowResult.state);
-    
+
     // Get access token
     const accessToken = await consumer.getValidAccessToken('token_user');
-    
+
     assertExists(accessToken);
     assert(accessToken.startsWith('test_access_token_'));
-    
+
     await kvManager.close();
   },
 });
@@ -349,15 +355,15 @@ Deno.test({
   name: 'OAuthConsumer - Get Access Token for Non-existent User',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     // Try to get token for user that hasn't completed OAuth flow
     const accessToken = await consumer.getValidAccessToken('nonexistent_user');
-    
+
     assertEquals(accessToken, null);
-    
+
     await kvManager.close();
   },
 });
@@ -368,21 +374,21 @@ Deno.test({
     const { consumer, kvManager } = createTestConsumer({
       tokenRefreshBufferMinutes: 60, // 1 hour buffer to trigger refresh
     });
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     // Complete OAuth flow
     const flowResult = await consumer.startAuthorizationFlow('refresh_user');
     await consumer.handleAuthorizationCallback('auth_code_refresh', flowResult.state);
-    
+
     // Get access token (should trigger refresh due to large buffer)
     const accessToken = await consumer.getValidAccessToken('refresh_user');
-    
+
     assertExists(accessToken);
     // Token should be refreshed (different from original)
     assert(accessToken.startsWith('refreshed_access_token_'));
-    
+
     await kvManager.close();
   },
 });
@@ -393,22 +399,22 @@ Deno.test({
     const { consumer, kvManager } = createTestConsumer({
       tokenRefreshBufferMinutes: 60, // Force refresh
     });
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     // Configure refresh to fail
     consumer.setShouldFailRefresh(true);
-    
+
     // Complete OAuth flow
     const flowResult = await consumer.startAuthorizationFlow('cleanup_user');
     await consumer.handleAuthorizationCallback('auth_code_cleanup', flowResult.state);
-    
+
     // Try to get access token (refresh should fail and clean up credentials)
     const accessToken = await consumer.getValidAccessToken('cleanup_user');
-    
+
     assertEquals(accessToken, null);
-    
+
     await kvManager.close();
   },
 });
@@ -417,20 +423,20 @@ Deno.test({
   name: 'OAuthConsumer - Is User Authenticated',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     // User should not be authenticated initially
     assert(!await consumer.isUserAuthenticated('auth_test_user'));
-    
+
     // Complete OAuth flow
     const flowResult = await consumer.startAuthorizationFlow('auth_test_user');
     await consumer.handleAuthorizationCallback('auth_code_auth', flowResult.state);
-    
+
     // User should now be authenticated
     assert(await consumer.isUserAuthenticated('auth_test_user'));
-    
+
     await kvManager.close();
   },
 });
@@ -439,24 +445,24 @@ Deno.test({
   name: 'OAuthConsumer - Get User Credentials',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     // No credentials initially
     const noCreds = await consumer.getUserCredentials('cred_user');
     assertEquals(noCreds, null);
-    
+
     // Complete OAuth flow
     const flowResult = await consumer.startAuthorizationFlow('cred_user');
     await consumer.handleAuthorizationCallback('auth_code_cred', flowResult.state);
-    
+
     // Should have credentials now
     const credentials = await consumer.getUserCredentials('cred_user');
     assertExists(credentials);
     assertEquals(credentials.userId, 'cred_user');
     assertExists(credentials.tokens);
-    
+
     await kvManager.close();
   },
 });
@@ -465,24 +471,24 @@ Deno.test({
   name: 'OAuthConsumer - Revoke User Credentials',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     // Complete OAuth flow
     const flowResult = await consumer.startAuthorizationFlow('revoke_user');
     await consumer.handleAuthorizationCallback('auth_code_revoke', flowResult.state);
-    
+
     // Verify user is authenticated
     assert(await consumer.isUserAuthenticated('revoke_user'));
-    
+
     // Revoke credentials
     const revokeResult = await consumer.revokeUserCredentials('revoke_user');
     assertEquals(revokeResult, true);
-    
+
     // User should no longer be authenticated
     assert(!await consumer.isUserAuthenticated('revoke_user'));
-    
+
     await kvManager.close();
   },
 });
@@ -491,27 +497,27 @@ Deno.test({
   name: 'OAuthConsumer - Get Authenticated Users',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     // No authenticated users initially
     let users = await consumer.getAuthenticatedUsers();
     assertEquals(users.length, 0);
-    
+
     // Add multiple authenticated users
     const user1Flow = await consumer.startAuthorizationFlow('list_user_1');
     await consumer.handleAuthorizationCallback('auth_code_list_1', user1Flow.state);
-    
+
     const user2Flow = await consumer.startAuthorizationFlow('list_user_2');
     await consumer.handleAuthorizationCallback('auth_code_list_2', user2Flow.state);
-    
+
     // Should have 2 authenticated users
     users = await consumer.getAuthenticatedUsers();
     assertEquals(users.length, 2);
     assert(users.includes('list_user_1'));
     assert(users.includes('list_user_2'));
-    
+
     await kvManager.close();
   },
 });
@@ -520,16 +526,16 @@ Deno.test({
   name: 'OAuthConsumer - Error Handling in Authorization Flow',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     await kvManager.initialize();
-    
+
     // Test error handling during initialization
     try {
       await consumer.initialize();
     } catch (error) {
       // Initialization might fail in test environment, that's OK
     }
-    
+
     await kvManager.close();
   },
 });
@@ -547,9 +553,9 @@ Deno.test({
       redirectUri: 'http://localhost/callback',
       scopes: ['read'],
     });
-    
+
     assertExists(minimalConsumer.consumer);
-    
+
     // Test with extended configuration
     const extendedConsumer = createTestConsumer({
       providerId: 'extended',
@@ -565,7 +571,7 @@ Deno.test({
         'X-Custom-Header': 'test-value',
       },
     });
-    
+
     assertExists(extendedConsumer.consumer);
   },
 });
@@ -574,14 +580,14 @@ Deno.test({
   name: 'OAuthConsumer - Cleanup Resources',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     // Complete OAuth flow to create some data
     const flowResult = await consumer.startAuthorizationFlow('cleanup_test');
     await consumer.handleAuthorizationCallback('auth_code_cleanup_test', flowResult.state);
-    
+
     // Cleanup should not throw
     await kvManager.close();
   },
@@ -591,10 +597,10 @@ Deno.test({
   name: 'OAuthConsumer - Thread Safety and Concurrent Operations',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     // Start multiple concurrent OAuth flows
     const promises = Array.from({ length: 3 }, async (_, i) => {
       const userId = `concurrent_user_${i}`;
@@ -602,17 +608,17 @@ Deno.test({
       await consumer.handleAuthorizationCallback(`auth_code_concurrent_${i}`, flowResult.state);
       return consumer.getValidAccessToken(userId);
     });
-    
+
     const tokens = await Promise.all(promises);
-    
+
     // All flows should succeed
     assertEquals(tokens.length, 3);
-    tokens.forEach(token => assertExists(token));
-    
+    tokens.forEach((token) => assertExists(token));
+
     // Tokens should be unique
     const uniqueTokens = new Set(tokens);
     assertEquals(uniqueTokens.size, 3);
-    
+
     await kvManager.close();
   },
 });
@@ -621,10 +627,10 @@ Deno.test({
   name: 'OAuthConsumer - Memory Management with Large Number of Users',
   async fn() {
     const { consumer, kvManager } = createTestConsumer();
-    
+
     await kvManager.initialize();
     await consumer.initialize();
-    
+
     // Create many users (test memory usage)
     const userCount = 50;
     for (let i = 0; i < userCount; i++) {
@@ -632,11 +638,11 @@ Deno.test({
       const flowResult = await consumer.startAuthorizationFlow(userId);
       await consumer.handleAuthorizationCallback(`auth_code_bulk_${i}`, flowResult.state);
     }
-    
+
     // Verify all users are authenticated
     const authenticatedUsers = await consumer.getAuthenticatedUsers();
     assertEquals(authenticatedUsers.length, userCount);
-    
+
     // Cleanup should handle large number of users
     await kvManager.close();
   },

@@ -19,6 +19,7 @@ import type { OAuthProvider } from '../auth/OAuthProvider.ts';
 import type { OAuthConsumer } from '../auth/OAuthConsumer.ts';
 import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
 import { OAuthEndpoints } from './OAuthEndpoints.ts';
+import { BeyondMcpServer } from './BeyondMcpServer.ts';
 import { APIRouter } from './APIRouter.ts';
 import { StatusEndpoints } from './StatusEndpoints.ts';
 import { CORSHandler } from './CORSHandler.ts';
@@ -56,6 +57,8 @@ export interface HttpServerConfig {
 export interface HttpServerDependencies {
   /** Logger for request logging */
   logger: Logger;
+  /** BeyondMcpServer for Auth Context */
+  beyondMcpServer: BeyondMcpServer;
   /** Transport manager for MCP endpoint */
   transportManager: TransportManager;
   /** OAuth provider for OAuth endpoints */
@@ -90,6 +93,7 @@ export class HttpServer {
   private errorPages: ErrorPages;
 
   // Integration components
+  private beyondMcpServer: BeyondMcpServer;
   private transportManager: TransportManager;
   private oauthProvider: OAuthProvider;
 
@@ -106,6 +110,7 @@ export class HttpServer {
     this.errorPages = new ErrorPages(this.httpServerConfig);
 
     // Integration components
+    this.beyondMcpServer = dependencies.beyondMcpServer;
     this.transportManager = dependencies.transportManager;
     this.oauthProvider = dependencies.oauthProvider;
 
@@ -239,7 +244,7 @@ export class HttpServer {
    * MCP endpoint integration
    */
   private async handleMCPEndpoint(request: Request): Promise<Response> {
-    return await this.transportManager.handleHttpRequest(request);
+    return await this.transportManager.handleHttpRequest(request, this.beyondMcpServer);
   }
 
   /**

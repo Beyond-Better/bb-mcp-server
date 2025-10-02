@@ -14,11 +14,17 @@ import {
   type CreateCustomAppServerDependencies,
   ToolHandlerMode,
   WorkflowToolNaming,
-} from '@beyondbetter/bb-mcp-server';
+} from "@beyondbetter/bb-mcp-server";
 
 // 🎯 Consumer-specific imports - business logic components
-import { type ExampleOAuthConfig, ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts';
-import { ExampleApiClient, type ExampleApiClientConfig } from '../api/ExampleApiClient.ts';
+import {
+  type ExampleOAuthConfig,
+  ExampleOAuthConsumer,
+} from "../auth/ExampleOAuthConsumer.ts";
+import {
+  ExampleApiClient,
+  type ExampleApiClientConfig,
+} from "../api/ExampleApiClient.ts";
 
 /**
  * Create ExampleCorp dependencies using library infrastructure
@@ -28,14 +34,15 @@ import { ExampleApiClient, type ExampleApiClientConfig } from '../api/ExampleApi
  * 🎯 Consumer provides: API client, custom OAuth consumer, business config
  */
 export async function createExampleDependencies(
-  { configManager, logger, kvManager }: CreateCustomAppServerDependencies,
+  { configManager, logger, kvManager, credentialStore }:
+    CreateCustomAppServerDependencies,
 ): Promise<Partial<AppServerDependencies>> {
   // =============================================================================
   // LIBRARY COMPONENT INITIALIZATION
   // 🎯 Most dependencies come from bb-mcp-server library - zero consumer implementation
   // =============================================================================
 
-  logger.info('Initializing ExampleCorp MCP server dependencies...');
+  logger.info("Initializing ExampleCorp MCP server dependencies...");
 
   // =============================================================================
   // CONSUMER COMPONENT INITIALIZATION
@@ -44,56 +51,73 @@ export async function createExampleDependencies(
 
   // 🎯 Create ExampleCorp OAuth consumer configuration using standard config keys
   const apiBaseUrl = configManager.get(
-    'THIRDPARTY_API_BASE_URL',
-    'https://jsonplaceholder.typicode.com',
+    "THIRDPARTY_API_BASE_URL",
+    "https://jsonplaceholder.typicode.com",
   );
   const exampleOAuthConfig: ExampleOAuthConfig = {
     // Standard OAuth 2.0 configuration (using standard config keys)
-    provider: 'examplecorp',
+    providerId: "examplecorp",
     authUrl: configManager.get(
-      'OAUTH_CONSUMER_AUTH_URL',
-      'https://httpbin.org/anything/oauth/authorize',
+      "OAUTH_CONSUMER_AUTH_URL",
+      "https://httpbin.org/anything/oauth/authorize",
     ),
     tokenUrl: configManager.get(
-      'OAUTH_CONSUMER_TOKEN_URL',
-      'https://httpbin.org/anything/oauth/token',
+      "OAUTH_CONSUMER_TOKEN_URL",
+      "https://httpbin.org/anything/oauth/token",
     ),
-    clientId: configManager.get('OAUTH_CONSUMER_CLIENT_ID', 'demo-client-id'),
-    clientSecret: configManager.get('OAUTH_CONSUMER_CLIENT_SECRET', 'demo-client-secret'),
+    clientId: configManager.get("OAUTH_CONSUMER_CLIENT_ID", "demo-client-id"),
+    clientSecret: configManager.get(
+      "OAUTH_CONSUMER_CLIENT_SECRET",
+      "demo-client-secret",
+    ),
     redirectUri: configManager.get(
-      'OAUTH_CONSUMER_REDIRECT_URI',
-      'http://localhost:3000/oauth/consumer/callback',
+      "OAUTH_CONSUMER_REDIRECT_URI",
+      "http://localhost:3000/oauth/consumer/callback",
     ),
-    scopes: configManager.get('OAUTH_CONSUMER_SCOPES', ['read', 'write']),
+    scopes: configManager.get("OAUTH_CONSUMER_SCOPES", ["read", "write"]),
+
+    tokenRefreshBufferMinutes: 5,
+    maxTokenRefreshRetries: 3,
 
     // ExampleCorp-specific configuration
     exampleCorp: {
       apiBaseUrl,
-      apiVersion: configManager.get('THIRDPARTY_API_VERSION', 'v1'),
-      scopes: configManager.get('OAUTH_CONSUMER_SCOPES', ['read', 'write']),
+      apiVersion: configManager.get("THIRDPARTY_API_VERSION", "v1"),
+      scopes: configManager.get("OAUTH_CONSUMER_SCOPES", ["read", "write"]),
       customClaims: {
         // ExampleCorp-specific OAuth claims
-        organization: configManager.get('THIRDPARTY_ORGANIZATION'),
-        department: configManager.get('THIRDPARTY_DEPARTMENT'),
+        organization: configManager.get("THIRDPARTY_ORGANIZATION"),
+        department: configManager.get("THIRDPARTY_DEPARTMENT"),
       },
     },
   };
 
   // 🎯 Create ExampleCorp OAuth consumer (extends library OAuthConsumer)
-  const oAuthConsumer = new ExampleOAuthConsumer(exampleOAuthConfig, logger, kvManager);
+  const oauthConsumer = new ExampleOAuthConsumer(exampleOAuthConfig, {
+    logger,
+    kvManager,
+    credentialStore,
+  });
 
   // 🎯 Create ExampleCorp API client configuration using standard config keys
   const apiClientConfig: ExampleApiClientConfig = {
-    baseUrl: configManager.get('THIRDPARTY_API_BASE_URL', 'https://jsonplaceholder.typicode.com'),
-    apiVersion: configManager.get('THIRDPARTY_API_VERSION', 'v1'),
-    timeout: configManager.get('THIRDPARTY_API_TIMEOUT', 30000),
-    retryAttempts: configManager.get('THIRDPARTY_API_RETRY_ATTEMPTS', 3),
-    retryDelayMs: configManager.get('THIRDPARTY_API_RETRY_DELAY', 1000),
+    baseUrl: configManager.get(
+      "THIRDPARTY_API_BASE_URL",
+      "https://jsonplaceholder.typicode.com",
+    ),
+    apiVersion: configManager.get("THIRDPARTY_API_VERSION", "v1"),
+    timeout: configManager.get("THIRDPARTY_API_TIMEOUT", 30000),
+    retryAttempts: configManager.get("THIRDPARTY_API_RETRY_ATTEMPTS", 3),
+    retryDelayMs: configManager.get("THIRDPARTY_API_RETRY_DELAY", 1000),
     userAgent: `ExampleCorp-MCP-Server/1.0 (Deno/${Deno.version.deno})`,
   };
 
   // 🎯 Create ExampleCorp API client
-  const thirdpartyApiClient = new ExampleApiClient(apiClientConfig, oAuthConsumer, logger);
+  const thirdpartyApiClient = new ExampleApiClient(
+    apiClientConfig,
+    oauthConsumer,
+    logger,
+  );
 
   // =============================================================================
   // RETURN COMBINED DEPENDENCIES
@@ -107,14 +131,15 @@ export async function createExampleDependencies(
 
     // 🎯 Consumer dependencies (ExampleCorp-specific)
     thirdpartyApiClient,
-    oAuthConsumer,
+    oauthConsumer,
 
     // 🎯 Server configuration for SDK MCP server creation
     serverConfig: {
-      name: 'examplecorp-mcp-server',
-      version: '1.0.0',
-      title: 'ExampleCorp API Integration',
-      description: 'MCP server for ExampleCorp API integration with bb-mcp-server library',
+      name: "examplecorp-mcp-server",
+      version: "1.0.0",
+      title: "ExampleCorp API Integration",
+      description:
+        "MCP server for ExampleCorp API integration with bb-mcp-server library",
     },
     // 🎯 Tool registration configuration - demonstrates new flexible system
     // NOTE: This would be used when creating BeyondMcpServer, not returned from dependencies

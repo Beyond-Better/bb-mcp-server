@@ -270,7 +270,7 @@ export class SessionManager {
    * Clean up expired sessions
    */
   async cleanupExpiredSessions(): Promise<number> {
-    const now = Date.now();
+    //const now = Date.now();
     let cleanedCount = 0;
 
     // Get all session IDs

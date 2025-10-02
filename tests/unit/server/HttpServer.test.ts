@@ -16,6 +16,7 @@ import type {
   HttpServerConfig,
   HttpServerDependencies,
 } from '../../../src/lib/server/HttpServer.ts';
+import { TestBeyondMcpServer, createTestBeyondMcpServer } from '../../utils/test-helpers.ts';
 
 // Mock dependencies for testing
 class MockLogger {
@@ -138,7 +139,7 @@ class MockWorkflowRegistry {
 }
 
 // Helper function to create test dependencies
-function createTestDependencies(): HttpServerDependencies {
+async function createTestDependencies(): Promise<HttpServerDependencies> {
   const httpServerConfig: HttpServerConfig = {
     hostname: 'localhost',
     port: 3500,
@@ -160,6 +161,7 @@ function createTestDependencies(): HttpServerDependencies {
     oauthProvider: new MockOAuthProvider() as any,
     workflowRegistry: new MockWorkflowRegistry() as any,
     httpServerConfig,
+    beyondMcpServer: await createTestBeyondMcpServer(),
   };
 }
 
@@ -181,7 +183,7 @@ async function makeRequest(
 }
 
 Deno.test('HttpServer - Initialization', async () => {
-  const dependencies = createTestDependencies();
+  const dependencies = await createTestDependencies();
   const server = new HttpServer(dependencies);
 
   assertExists(server);
@@ -190,7 +192,7 @@ Deno.test('HttpServer - Initialization', async () => {
 });
 
 Deno.test('HttpServer - Root Endpoint', async () => {
-  const dependencies = createTestDependencies();
+  const dependencies = await createTestDependencies();
   dependencies.httpServerConfig.port = 3501; // Use different port for each test
   const server = new HttpServer(dependencies);
 
@@ -217,7 +219,7 @@ Deno.test('HttpServer - Root Endpoint', async () => {
 });
 
 Deno.test('HttpServer - CORS Headers', async () => {
-  const dependencies = createTestDependencies();
+  const dependencies = await createTestDependencies();
   dependencies.httpServerConfig.port = 3502;
   const server = new HttpServer(dependencies);
 
@@ -254,7 +256,7 @@ Deno.test('HttpServer - CORS Headers', async () => {
 });
 
 Deno.test('HttpServer - OAuth Endpoints Integration', async () => {
-  const dependencies = createTestDependencies();
+  const dependencies = await createTestDependencies();
   dependencies.httpServerConfig.port = 3503;
   const server = new HttpServer(dependencies);
 
@@ -307,7 +309,7 @@ Deno.test('HttpServer - OAuth Endpoints Integration', async () => {
 });
 
 Deno.test('HttpServer - API Endpoints', async () => {
-  const dependencies = createTestDependencies();
+  const dependencies = await createTestDependencies();
   dependencies.httpServerConfig.port = 3504;
   const server = new HttpServer(dependencies);
 
@@ -346,7 +348,7 @@ Deno.test('HttpServer - API Endpoints', async () => {
 });
 
 Deno.test('HttpServer - MCP Endpoint Integration', async () => {
-  const dependencies = createTestDependencies();
+  const dependencies = await createTestDependencies();
   dependencies.httpServerConfig.port = 3505;
   const server = new HttpServer(dependencies);
 
@@ -380,7 +382,7 @@ Deno.test('HttpServer - MCP Endpoint Integration', async () => {
 });
 
 Deno.test('HttpServer - Well-Known OAuth Metadata', async () => {
-  const dependencies = createTestDependencies();
+  const dependencies = await createTestDependencies();
   dependencies.httpServerConfig.port = 3506;
   const server = new HttpServer(dependencies);
 
@@ -403,7 +405,7 @@ Deno.test('HttpServer - Well-Known OAuth Metadata', async () => {
 });
 
 Deno.test('HttpServer - Error Handling', async () => {
-  const dependencies = createTestDependencies();
+  const dependencies = await createTestDependencies();
   dependencies.httpServerConfig.port = 3507;
   const server = new HttpServer(dependencies);
 
@@ -434,7 +436,7 @@ Deno.test('HttpServer - Error Handling', async () => {
 });
 
 Deno.test('HttpServer - Legacy Health Endpoint', async () => {
-  const dependencies = createTestDependencies();
+  const dependencies = await createTestDependencies();
   dependencies.httpServerConfig.port = 3508;
   const server = new HttpServer(dependencies);
 

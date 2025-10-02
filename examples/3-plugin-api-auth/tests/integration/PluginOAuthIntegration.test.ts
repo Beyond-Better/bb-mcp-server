@@ -64,7 +64,7 @@ describe('Plugin OAuth Integration', () => {
     // Create complete dependency set
     dependencies = {
       thirdpartyApiClient: mockApiClient,
-      oAuthConsumer: mockOAuth,
+      oauthConsumer: mockOAuth,
       logger: mockLogger,
       auditLogger: mockLogger,
     };
@@ -123,7 +123,7 @@ describe('Plugin OAuth Integration', () => {
       // Create plugin without OAuth dependencies
       const pluginWithoutOAuth = createPlugin({
         thirdpartyApiClient: null,
-        oAuthConsumer: null,
+        oauthConsumer: null,
         logger: mockLogger,
         auditLogger: mockLogger,
       } as any);

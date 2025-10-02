@@ -19,10 +19,10 @@ import type { Logger } from '../utils/Logger.ts';
 import type { AuditLogger } from '../utils/AuditLogger.ts';
 import type { ToolRegistry } from './ToolRegistry.ts';
 import type {
-  ToolDefinition,
-  ToolHandler,
+  //ToolDefinition,
+  //ToolHandler,
   ToolRegistration,
-  ToolRegistrationOptions,
+  //ToolRegistrationOptions,
 } from '../types/BeyondMcpTypes.ts';
 
 import type { PluginCategory, RateLimitConfig } from '../types/PluginTypes.ts';

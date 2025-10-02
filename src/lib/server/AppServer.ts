@@ -16,10 +16,10 @@ import { ConfigManager } from '../config/ConfigManager.ts';
 import { BeyondMcpServer } from './BeyondMcpServer.ts';
 import { HttpServer } from './HttpServer.ts';
 import { Logger } from '../utils/Logger.ts';
-import { KVManager } from '../storage/KVManager.ts';
+//import { KVManager } from '../storage/KVManager.ts';
 import { toError } from '../utils/Error.ts';
 import type {
-  AppServerConfig,
+  //AppServerConfig,
   AppServerDependencies,
   CreateCustomAppServerDependencies,
 } from '../types/AppServerTypes.ts';
@@ -27,6 +27,7 @@ import type { TransportConfig } from '../transport/TransportTypes.ts';
 import {
   getAllDependencies,
   getConfigManager,
+  getCredentialStore,
   getKvManager,
   getLogger,
   performHealthChecks,
@@ -89,13 +90,23 @@ export class AppServer {
       const configManager = await getConfigManager();
       const logger = getLogger(configManager);
       const kvManager = await getKvManager(configManager, logger);
+      const credentialStore = getCredentialStore(kvManager, logger);
+      // logger.info('AppServer: Calling client dependencies function', {
+      //   kvManager,
+      //   credentialStore,
+      // });
       appDependencies = await dependenciesOrFunction({
         configManager,
         logger,
         kvManager,
+        credentialStore,
       });
     } else {
       appDependencies = dependenciesOrFunction || {};
+      // appDependencies.logger.info('AppServer: Got client dependencies values', {
+      //   kvManager: appDependencies.kvManager,
+      //   credentialStore: appDependencies.credentialStore,
+      // });
     }
     const resolvedDependencies: AppServerDependencies = await getAllDependencies(
       appDependencies,
@@ -107,7 +118,7 @@ export class AppServer {
 
     // Validate required configuration (only validates OAuth consumer config if OAuth consumer is actually used)
     await validateConfiguration(resolvedDependencies.configManager, resolvedDependencies.logger, {
-      oAuthConsumer: resolvedDependencies.oAuthConsumer,
+      oauthConsumer: resolvedDependencies.oauthConsumer,
     });
 
     // Perform health checks on external dependencies
@@ -115,7 +126,7 @@ export class AppServer {
       {
         kvManager: resolvedDependencies.kvManager,
         oauthProvider: resolvedDependencies.oauthProvider,
-        oAuthConsumer: resolvedDependencies.oAuthConsumer,
+        oauthConsumer: resolvedDependencies.oauthConsumer,
         thirdpartyApiClient: resolvedDependencies.thirdpartyApiClient,
       },
       resolvedDependencies.logger,
@@ -131,7 +142,7 @@ export class AppServer {
       'TransportManager',
     ];
     const componentsCreatedConsumer = [];
-    if (resolvedDependencies.oAuthConsumer) componentsCreatedConsumer.push('OAuthConsumer');
+    if (resolvedDependencies.oauthConsumer) componentsCreatedConsumer.push('OAuthConsumer');
     if (resolvedDependencies.thirdpartyApiClient) {
       componentsCreatedConsumer.push('ThirdPartyApiClient');
     }
@@ -235,8 +246,10 @@ export class AppServer {
     if (this.dependencies.httpServerConfig) {
       this.httpServer = new HttpServer({
         logger: this._logger,
+        beyondMcpServer: this.dependencies.beyondMcpServer,
         transportManager: this.dependencies.transportManager,
         oauthProvider: this.dependencies.oauthProvider!,
+        oauthConsumer: this.dependencies.oauthConsumer,
         workflowRegistry: this.dependencies.workflowRegistry,
         httpServerConfig: this.dependencies.httpServerConfig,
       });
@@ -261,8 +274,10 @@ export class AppServer {
     if (this.dependencies.httpServerConfig && this.dependencies.oauthProvider) {
       this.httpServer = new HttpServer({
         logger: this._logger,
+        beyondMcpServer: this.dependencies.beyondMcpServer,
         transportManager: this.dependencies.transportManager,
         oauthProvider: this.dependencies.oauthProvider,
+        oauthConsumer: this.dependencies.oauthConsumer,
         workflowRegistry: this.dependencies.workflowRegistry,
         httpServerConfig: this.dependencies.httpServerConfig,
       });

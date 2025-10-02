@@ -1071,7 +1071,7 @@ export function createAuthenticatedToolContext(overrides: any = {}): any {
     clientId: 'test-client',
     startTime: new Date(),
     logger: mockLogger,
-    oAuthConsumer: mockOAuth,
+    oauthConsumer: mockOAuth,
     apiClient: mockApiClient,
     authenticated: true,
     ...overrides,

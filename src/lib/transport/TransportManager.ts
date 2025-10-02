@@ -9,9 +9,9 @@ import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
 import { HttpTransport } from './HttpTransport.ts';
 import { StdioTransport } from './StdioTransport.ts';
 import type {
-  BeyondMcpAuthContext,
-  MCPRequest,
-  MCPResponse,
+  //BeyondMcpAuthContext,
+  //MCPRequest,
+  //MCPResponse,
   SessionData,
   Transport,
   TransportConfig,
@@ -19,6 +19,7 @@ import type {
   TransportMetrics,
   TransportType,
 } from './TransportTypes.ts';
+import type { BeyondMcpServer } from '../server/BeyondMcpServer.ts';
 import type { Logger } from '../utils/Logger.ts';
 import { toError } from '../utils/Error.ts';
 
@@ -178,7 +179,7 @@ export class TransportManager {
    */
   async handleHttpRequest(
     request: Request,
-    beyondMcpServer?: any, // BeyondMcpServer instance for auth context execution
+    beyondMcpServer: BeyondMcpServer, // BeyondMcpServer instance for auth context execution
   ): Promise<Response> {
     if (!this.initialized) {
       throw new Error('TransportManager not initialized');

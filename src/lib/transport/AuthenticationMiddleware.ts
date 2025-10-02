@@ -1,16 +1,20 @@
 /**
  * Authentication Middleware for MCP Transport
- * 
+ *
  * 🔒 SECURITY-CRITICAL: Implements MCP authorization per RFC specification
  * with optional third-party session binding and automatic token refresh.
- * 
+ *
  * Based on legacy MCPRequestHandler.authenticateRequest() with exact
  * security preservation and MCP specification compliance.
  */
 
 import type { Logger } from '../../types/library.types.ts';
 import { toError } from '../utils/Error.ts';
-import type { OAuthProvider, ThirdPartyAuthService, ThirdPartyApiClient } from '../auth/OAuthProvider.ts';
+import type {
+  OAuthProvider,
+  //ThirdPartyApiClient,
+  //ThirdPartyAuthService,
+} from '../auth/OAuthProvider.ts';
 import type { OAuthConsumer } from '../auth/OAuthConsumer.ts';
 
 /**
@@ -83,7 +87,7 @@ export interface AuthenticationContext {
 
 /**
  * 🔒 SECURITY-CRITICAL: Authentication Middleware
- * 
+ *
  * Provides authentication for MCP requests with optional third-party session binding.
  * Preserves exact authentication logic from legacy MCPRequestHandler.authenticateRequest()
  * while following MCP specification requirements.
@@ -133,18 +137,18 @@ export class AuthenticationMiddleware {
       '/status',
       '/health',
       '/.well-known/oauth-authorization-server',
-      '/authorize',  // OAuth authorization endpoint must be open
-      '/token',      // OAuth token endpoint must be open  
-      '/register',   // OAuth registration endpoint must be open for client registration
+      '/authorize', // OAuth authorization endpoint must be open
+      '/token', // OAuth token endpoint must be open
+      '/register', // OAuth registration endpoint must be open for client registration
     ];
 
-    if (openEndpoints.some(endpoint => pathname === endpoint || pathname.startsWith(endpoint))) {
+    if (openEndpoints.some((endpoint) => pathname === endpoint || pathname.startsWith(endpoint))) {
       return false;
     }
 
     // Always authenticate MCP endpoints
     const mcpEndpoints = ['/mcp'];
-    if (mcpEndpoints.some(endpoint => pathname === endpoint || pathname.startsWith(endpoint))) {
+    if (mcpEndpoints.some((endpoint) => pathname === endpoint || pathname.startsWith(endpoint))) {
       return true;
     }
 
@@ -154,28 +158,31 @@ export class AuthenticationMiddleware {
 
   /**
    * 🔒 SECURITY-CRITICAL: Authenticate MCP request
-   * 
+   *
    * Preserves exact authentication logic from legacy MCPRequestHandler.authenticateRequest()
    * with full session binding and automatic third-party token refresh.
    */
   async authenticateRequest(
     request: Request,
-    requestId: string
+    requestId: string,
   ): Promise<AuthenticationResult> {
     const startTime = Date.now();
 
     // Extract Bearer token from Authorization header
     const authHeader = request.headers.get('authorization');
-    
+
     this.logger?.info(`AuthenticationMiddleware: Authenticating request [${requestId}]`, {
       requestId,
       hasAuthHeader: !!authHeader,
       authHeaderLength: authHeader?.length || 0,
       startsWithBearer: authHeader?.startsWith('Bearer '),
     });
-    
+
     if (!authHeader) {
       // Provide OAuth challenge for flow initiation
+      this.logger?.warn(
+        `AuthenticationMiddleware: Authenticating request [${requestId}] - no authorization header`,
+      );
       return {
         authenticated: false,
         error: 'Missing Authorization header',
@@ -184,32 +191,50 @@ export class AuthenticationMiddleware {
     }
 
     if (!authHeader.startsWith('Bearer ')) {
+      this.logger?.warn(
+        `AuthenticationMiddleware: Authenticating request [${requestId}] - authorization header has no bearer`,
+      );
       return {
         authenticated: false,
-        error: `Invalid Authorization header format. Expected "Bearer <token>" but received "${authHeader}". Header length: ${authHeader.length}. This appears to be a bug in the MCP client - it should send "Bearer <access_token>".`,
-        oauthChallenge: this.getOAuthChallenge('invalid_request', 'Invalid Authorization header format'),
+        error:
+          `Invalid Authorization header format. Expected "Bearer <token>" but received "${authHeader}". Header length: ${authHeader.length}. This appears to be a bug in the MCP client - it should send "Bearer <access_token>".`,
+        oauthChallenge: this.getOAuthChallenge(
+          'invalid_request',
+          'Invalid Authorization header format',
+        ),
       };
     }
 
     const token = authHeader.slice(7).trim(); // Remove 'Bearer ' prefix and trim whitespace
-    
+
     if (!token || token.length === 0) {
+      this.logger?.warn(
+        `AuthenticationMiddleware: Authenticating request [${requestId}] - authorization header has no bearer token`,
+      );
       return {
         authenticated: false,
-        error: `Authorization header missing token. Received "${authHeader}" but expected "Bearer <access_token>". This appears to be a bug in the MCP client.`,
-        oauthChallenge: this.getOAuthChallenge('invalid_token', 'Authorization header missing token'),
+        error:
+          `Authorization header missing token. Received "${authHeader}" but expected "Bearer <access_token>". This appears to be a bug in the MCP client.`,
+        oauthChallenge: this.getOAuthChallenge(
+          'invalid_token',
+          'Authorization header missing token',
+        ),
       };
     }
-    
+
     if (token.length < 10) {
+      this.logger?.warn(
+        `AuthenticationMiddleware: Authenticating request [${requestId}] - authorization header bearer token isn't valid format`,
+      );
       return {
         authenticated: false,
-        error: `Authorization token too short. Received token "${token}" (length: ${token.length}) but expected valid access token. This appears to be a bug in the MCP client.`,
+        error:
+          `Authorization token too short. Received token "${token}" (length: ${token.length}) but expected valid access token. This appears to be a bug in the MCP client.`,
         oauthChallenge: this.getOAuthChallenge('invalid_token', 'Authorization token too short'),
       };
     }
 
-    this.logger?.debug(`AuthenticationMiddleware: Validating OAuth token [${requestId}]`, {
+    this.logger?.info(`AuthenticationMiddleware: Validating OAuth token [${requestId}]`, {
       requestId,
       tokenPrefix: token.substring(0, 12) + '...',
     });
@@ -223,7 +248,7 @@ export class AuthenticationMiddleware {
         authResult = await this.dependencies.oauthProvider!.authorizeMCPRequest(
           authHeader,
           this.dependencies.oauthConsumer as any, // Cast to ThirdPartyAuthService interface
-          this.dependencies.thirdPartyApiClient
+          this.dependencies.thirdPartyApiClient,
         );
       } else if (this.dependencies.oauthConsumer) {
         // Session binding without auto-refresh: validate MCP token AND third-party token
@@ -244,6 +269,10 @@ export class AuthenticationMiddleware {
           actionTaken: validation.actionTaken,
         };
       }
+      this.logger?.info(
+        `AuthenticationMiddleware: Authenticating request [${requestId}] - authResult`,
+        authResult,
+      );
 
       if (!authResult.authorized) {
         this.logger?.warn(`AuthenticationMiddleware: Token validation failed [${requestId}]`, {
@@ -258,15 +287,20 @@ export class AuthenticationMiddleware {
         // Generate OAuth challenge with third-party authorization URL if needed
         let oauthChallenge = this.getOAuthChallenge(
           this.mapErrorCodeToOAuthError(authResult.errorCode),
-          authResult.error || 'Invalid access token'
+          authResult.error || 'Invalid access token',
         );
 
         // If third-party auth is required and we have an OAuth consumer, generate the auth URL
-        if (authResult.errorCode === 'third_party_auth_required' && this.dependencies.oauthConsumer && authResult.userId) {
+        if (
+          authResult.errorCode === 'third_party_auth_required' && this.dependencies.oauthConsumer &&
+          authResult.userId
+        ) {
           try {
             // Start the third-party authorization flow to get the URL
-            const authFlow = await this.dependencies.oauthConsumer.startAuthorizationFlow(authResult.userId);
-            
+            const authFlow = await this.dependencies.oauthConsumer.startAuthorizationFlow(
+              authResult.userId,
+            );
+
             // Replace the OAuth challenge with the third-party authorization URL
             oauthChallenge = {
               realm: 'third-party-api',
@@ -275,17 +309,24 @@ export class AuthenticationMiddleware {
               errorDescription: authResult.error || 'Third-party authentication required',
             };
 
-            this.logger?.info(`AuthenticationMiddleware: Generated third-party OAuth challenge [${requestId}]`, {
-              requestId,
-              userId: authResult.userId,
-              authorizationUrl: authFlow.authorizationUrl,
-              state: authFlow.state,
-            });
+            this.logger?.info(
+              `AuthenticationMiddleware: Generated third-party OAuth challenge [${requestId}]`,
+              {
+                requestId,
+                userId: authResult.userId,
+                authorizationUrl: authFlow.authorizationUrl,
+                state: authFlow.state,
+              },
+            );
           } catch (error) {
-            this.logger?.error(`AuthenticationMiddleware: Failed to generate third-party auth URL [${requestId}]:`, toError(error), {
-              requestId,
-              userId: authResult.userId,
-            });
+            this.logger?.error(
+              `AuthenticationMiddleware: Failed to generate third-party auth URL [${requestId}]:`,
+              toError(error),
+              {
+                requestId,
+                userId: authResult.userId,
+              },
+            );
           }
         }
 
@@ -317,10 +358,14 @@ export class AuthenticationMiddleware {
         ...(authResult.scope && { scope: authResult.scope }),
       };
     } catch (error) {
-      this.logger?.error(`AuthenticationMiddleware: Authentication error [${requestId}]:`, toError(error), {
-        requestId,
-        duration: Date.now() - startTime,
-      });
+      this.logger?.error(
+        `AuthenticationMiddleware: Authentication error [${requestId}]:`,
+        toError(error),
+        {
+          requestId,
+          duration: Date.now() - startTime,
+        },
+      );
 
       return {
         authenticated: false,
@@ -384,12 +429,18 @@ export class AuthenticationMiddleware {
    */
   getOAuthChallenge(
     error?: string,
-    errorDescription?: string
-  ): { realm: string; authorizationUri: string; registrationUri?: string; error?: string; errorDescription?: string } {
+    errorDescription?: string,
+  ): {
+    realm: string;
+    authorizationUri: string;
+    registrationUri?: string;
+    error?: string;
+    errorDescription?: string;
+  } {
     // Build authorization URI from OAuth provider if available
     let authorizationUri = '/authorize';
     let registrationUri = '/register';
-    
+
     if (this.dependencies.oauthProvider) {
       try {
         const metadata = this.dependencies.oauthProvider.getAuthorizationServerMetadata();
@@ -407,7 +458,7 @@ export class AuthenticationMiddleware {
         });
       }
     }
-    
+
     return {
       realm: 'mcp-server',
       authorizationUri,
@@ -420,24 +471,26 @@ export class AuthenticationMiddleware {
   /**
    * Build WWW-Authenticate header value from OAuth challenge
    */
-  buildWWWAuthenticateHeader(challenge: NonNullable<AuthenticationResult['oauthChallenge']>): string {
+  buildWWWAuthenticateHeader(
+    challenge: NonNullable<AuthenticationResult['oauthChallenge']>,
+  ): string {
     const parts = [
       `realm="${challenge.realm}"`,
       `authorization_uri="${challenge.authorizationUri}"`,
     ];
-    
+
     if (challenge.registrationUri) {
       parts.push(`registration_uri="${challenge.registrationUri}"`);
     }
-    
+
     if (challenge.error) {
       parts.push(`error="${challenge.error}"`);
     }
-    
+
     if (challenge.errorDescription) {
       parts.push(`error_description="${challenge.errorDescription}"`);
     }
-    
+
     return `Bearer ${parts.join(', ')}`;
   }
 
@@ -461,7 +514,7 @@ export class AuthenticationMiddleware {
    */
   addAuthContextToRequest(
     request: Request,
-    authResult: AuthenticationResult
+    authResult: AuthenticationResult,
   ): Request {
     // Create new request with additional auth context headers
     const headers = new Headers(request.headers);

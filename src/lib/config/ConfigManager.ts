@@ -13,7 +13,7 @@ import type {
   AuditConfig,
   ConfigLoaderOptions,
   ConfigValidationResult,
-  EnvironmentMapping,
+  //EnvironmentMapping,
   LoggingConfig,
   OAuthConsumerConfig,
   OAuthProviderConfig,
@@ -22,6 +22,9 @@ import type {
   StorageConfig,
   ThirdPartyApiConfig,
   TransportConfig,
+  TransportEventStoreChunkedConfig,
+  TransportEventStoreConfig,
+  TransportEventStoreType,
 } from './ConfigTypes.ts';
 
 /**
@@ -66,6 +69,8 @@ export class ConfigManager {
         server: this.loadServerConfig(),
         transport: this.loadTransportConfig(),
         storage: this.loadStorageConfig(),
+        //transportEventStore: this.loadTransportEventStoreConfig(),
+        transportEventStore: this.loadTransportEventStoreChunkedConfig(),
         logging: this.loadLoggingConfig(),
         audit: this.loadAuditConfig(),
         rateLimit: this.loadRateLimitConfig(),
@@ -227,7 +232,7 @@ export class ConfigManager {
       name: this.getEnvOptional('SERVER_NAME', 'mcp-server'),
       version: this.getEnvOptional('SERVER_VERSION', '1.0.0'),
       transport: this.getEnvOptional('MCP_TRANSPORT', 'stdio') as 'stdio' | 'http',
-      httpPort: parseInt(this.getEnvOptional('HTTP_PORT', '3001')),
+      httpPort: parseInt(this.getEnvOptional('HTTP_PORT', '3000')),
       httpHost: this.getEnvOptional('HTTP_HOST', 'localhost'),
       devMode: this.getEnvBoolean('DEV_MODE', false),
     };
@@ -247,14 +252,15 @@ export class ConfigManager {
     if (transport === 'http') {
       config.http = {
         hostname: this.getEnvOptional('HTTP_HOST', 'localhost'),
-        port: parseInt(this.getEnvOptional('HTTP_PORT', '3001')),
+        port: parseInt(this.getEnvOptional('HTTP_PORT', '3000')),
         // Session configuration for HTTP transport (primary environment variables)
         sessionTimeout: parseInt(this.getEnvOptional('MCP_SESSION_TIMEOUT', '1800000')), // 30 minutes default
         sessionCleanupInterval: parseInt(
           this.getEnvOptional('MCP_SESSION_CLEANUP_INTERVAL', '300000'),
         ), // 5 minutes default
         maxConcurrentSessions: parseInt(this.getEnvOptional('MCP_MAX_CONCURRENT_SESSIONS', '1000')),
-        enableSessionPersistence: this.getEnvBoolean('MCP_ENABLE_SESSION_PERSISTENCE', true),
+        enableSessionPersistence: this.getEnvBoolean('MCP_SESSION_PERSISTENCE_ENABLED', true),
+        enableSessionRestore: this.getEnvBoolean('MCP_SESSION_RESTORE_ENABLED', true),
         requestTimeout: parseInt(this.getEnvOptional('MCP_REQUEST_TIMEOUT', '30000')), // 30 seconds default
         maxRequestSize: parseInt(this.getEnvOptional('MCP_MAX_REQUEST_SIZE', '1048576')), // 1MB default
         enableCORS: this.getEnvBoolean('HTTP_CORS_ENABLED', true),
@@ -262,12 +268,11 @@ export class ConfigManager {
         preserveCompatibilityMode: this.getEnvBoolean('PRESERVE_COMPATIBILITY_MODE', true),
         allowInsecure: this.getEnvBoolean('HTTP_ALLOW_INSECURE', false),
         // Optional transport persistence settings (for compatibility)
-        enableTransportPersistence: this.getEnvBoolean('MCP_ENABLE_TRANSPORT_PERSISTENCE', false),
-        sessionRestoreEnabled: this.getEnvBoolean('MCP_SESSION_RESTORE_ENABLED', false),
+        enableTransportPersistence: this.getEnvBoolean('MCP_TRANSPORT_PERSISTENCE_ENABLED', false),
       };
     } else {
       config.stdio = {
-        enableLogging: this.getEnvBoolean('STDIO_ENABLE_LOGGING', true),
+        enableLogging: this.getEnvBoolean('STDIO_LOGGING_ENABLED', true),
         bufferSize: parseInt(this.getEnvOptional('STDIO_BUFFER_SIZE', '8192')),
         encoding: this.getEnvOptional('STDIO_ENCODING', 'utf8'),
       };
@@ -290,8 +295,73 @@ export class ConfigManager {
   private loadStorageConfig(): StorageConfig {
     return {
       denoKvPath: this.getEnvOptional('DENO_KV_PATH', './data/mcp-server.db'),
-      enablePersistence: this.getEnvBoolean('STORAGE_PERSISTENCE', true),
+      enablePersistence: this.getEnvBoolean('STORAGE_PERSISTENCE_ENABLED', true),
       cleanupInterval: parseInt(this.getEnvOptional('STORAGE_CLEANUP_INTERVAL', '3600000')), // 1 hour
+    };
+  }
+
+  /**
+   * Load base transport event store configuration from environment
+   */
+  private loadTransportEventStoreConfig(): TransportEventStoreConfig {
+    return {
+      //useChunkedStorage: this.getEnvBoolean('TRANSPORT_USE_CHUNKED_STORAGE', true),
+      storageType: this.getEnvOptional(
+        'TRANSPORT_STORAGE_TYPE',
+        'chunked',
+      ) as TransportEventStoreType,
+
+      monitoring: {
+        enableDebugLogging: this.getEnvBoolean('TRANSPORT_CHUNKED_DEBUG_LOGGING', false),
+      },
+
+      maintenance: {
+        enableAutoCleanup: this.getEnvBoolean('TRANSPORT_AUTO_CLEANUP_ENABLED', true),
+        keepEventCount: parseInt(
+          this.getEnvOptional('TRANSPORT_KEEP_EVENT_COUNT', '1000'),
+          10,
+        ),
+        cleanupIntervalMs: parseInt(
+          this.getEnvOptional('TRANSPORT_CLEANUP_INTERVAL_MS', '86400000'),
+          10,
+        ),
+      },
+    };
+  }
+
+  /**
+   * Load chunked transport event store configuration from environment
+   * Includes all base config plus chunked-specific settings
+   */
+  private loadTransportEventStoreChunkedConfig(): TransportEventStoreChunkedConfig {
+    const baseConfig = this.loadTransportEventStoreConfig();
+
+    return {
+      ...baseConfig,
+
+      chunking: {
+        maxChunkSize: parseInt(
+          this.getEnvOptional('TRANSPORT_MAX_CHUNK_SIZE', '61440'),
+          10,
+        ),
+        maxMessageSize: parseInt(
+          this.getEnvOptional('TRANSPORT_MAX_MESSAGE_SIZE', '10485760'),
+          10,
+        ),
+      },
+
+      compression: {
+        enable: this.getEnvBoolean('TRANSPORT_COMPRESSION_ENABLED', true),
+        threshold: parseInt(
+          this.getEnvOptional('TRANSPORT_COMPRESSION_THRESHOLD', '1024'),
+          10,
+        ),
+      },
+
+      monitoring: {
+        ...baseConfig.monitoring,
+        logCompressionStats: this.getEnvBoolean('TRANSPORT_LOG_COMPRESSION_STATS', true),
+      },
     };
   }
 
@@ -342,7 +412,7 @@ export class ConfigManager {
     const redirectUri = this.getEnvRequired('OAUTH_PROVIDER_REDIRECT_URI');
 
     return {
-      issuer: this.getEnvOptional('OAUTH_PROVIDER_ISSUER', 'http://localhost:3001'),
+      issuer: this.getEnvOptional('OAUTH_PROVIDER_ISSUER', 'http://localhost:3000'),
       clientId,
       clientSecret,
       redirectUri,

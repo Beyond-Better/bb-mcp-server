@@ -7,7 +7,10 @@
  */
 
 import { ConfigManager } from '../config/ConfigManager.ts';
-import type { OAuthProviderConfig } from '../config/ConfigTypes.ts';
+import type {
+  OAuthProviderConfig,
+  TransportEventStoreChunkedConfig,
+} from '../config/ConfigTypes.ts';
 import { Logger } from '../utils/Logger.ts';
 import { AuditLogger } from '../utils/AuditLogger.ts';
 import { KVManager } from '../storage/KVManager.ts';
@@ -25,7 +28,7 @@ import { TransportManager } from '../transport/TransportManager.ts';
 import { BeyondMcpServer } from './BeyondMcpServer.ts';
 import { toError } from '../utils/Error.ts';
 import type {
-  AppServerConfig,
+  //AppServerConfig,
   AppServerDependencies,
   AppServerOverrides,
   DependenciesHealthCheck,
@@ -48,7 +51,7 @@ export async function getConfigManager(): Promise<ConfigManager> {
  * Create standard logger instance
  */
 export function getLogger(configManager: ConfigManager): Logger {
-  const logger =  new Logger({
+  const logger = new Logger({
     level: configManager.get('LOG_LEVEL', 'info'),
     format: configManager.get('LOG_FORMAT', 'json'),
   });
@@ -95,7 +98,11 @@ export function getSessionStore(kvManager: KVManager, logger: Logger): SessionSt
 /**
  * Create standard transport event store instance
  */
-export function getTransportEventStore(kvManager: KVManager, logger: Logger): TransportEventStore {
+export function getTransportEventStoreBase(
+  transportEventStoreConfig: TransportEventStoreChunkedConfig, //TransportEventStoreConfig,
+  logger: Logger,
+  kvManager: KVManager,
+): TransportEventStore {
   return new TransportEventStore(kvManager.getKV(), ['events'], logger);
 }
 
@@ -103,40 +110,43 @@ export function getTransportEventStore(kvManager: KVManager, logger: Logger): Tr
  * Create chunked transport event store instance for handling large messages
  */
 export function getTransportEventStoreChunked(
-  kvManager: KVManager,
+  transportEventStoreConfig: TransportEventStoreChunkedConfig,
   logger: Logger,
-  config?: {
-    maxChunkSize?: number;
-    enableCompression?: boolean;
-    compressionThreshold?: number;
-    maxMessageSize?: number;
-  }
+  kvManager: KVManager,
 ): TransportEventStoreChunked {
-  return new TransportEventStoreChunked(kvManager.getKV(), ['events'], logger, config);
+  const chunkedConfig = {
+    maxChunkSize: transportEventStoreConfig.chunking.maxChunkSize,
+    enableCompression: transportEventStoreConfig.compression.enable,
+    compressionThreshold: transportEventStoreConfig.compression.threshold,
+    maxMessageSize: transportEventStoreConfig.chunking.maxMessageSize,
+  };
+  return new TransportEventStoreChunked(
+    kvManager.getKV(),
+    ['events'],
+    logger,
+    chunkedConfig,
+  );
 }
 
 /**
  * Create transport event store instance with automatic chunked storage selection
- * Uses chunked storage if TRANSPORT_USE_CHUNKED_STORAGE=true or large message support is needed
+ * Uses chunked storage if TRANSPORT_STORAGE_TYPE=chunked or large message support is needed
  */
-export function getSmartTransportEventStore(
-  kvManager: KVManager,
+export function getTransportEventStore(
+  configManager: ConfigManager,
   logger: Logger,
-  configManager?: ConfigManager
+  kvManager: KVManager,
 ): TransportEventStore | TransportEventStoreChunked {
-  const useChunked = (configManager?.get('TRANSPORT_USE_CHUNKED_STORAGE', 'false') as string) === 'true';
-  
-  if (useChunked && configManager) {
+  const transportEventStoreConfig = configManager?.get<TransportEventStoreChunkedConfig>(
+    'transportEventStore',
+  );
+
+  if (transportEventStoreConfig.storageType === 'chunked') {
     logger.info('Using chunked transport event store for large message support');
-    return getTransportEventStoreChunked(kvManager, logger, {
-      maxChunkSize: parseInt(configManager.get('TRANSPORT_MAX_CHUNK_SIZE', '61440'), 10), // 60KB
-      enableCompression: configManager.get('TRANSPORT_ENABLE_COMPRESSION', 'true') === 'true',
-      compressionThreshold: parseInt(configManager.get('TRANSPORT_COMPRESSION_THRESHOLD', '1024'), 10), // 1KB
-      maxMessageSize: parseInt(configManager.get('TRANSPORT_MAX_MESSAGE_SIZE', '10485760'), 10), // 10MB
-    });
+    return getTransportEventStoreChunked(transportEventStoreConfig, logger, kvManager);
   }
-  
-  return getTransportEventStore(kvManager, logger);
+
+  return getTransportEventStoreBase(transportEventStoreConfig, logger, kvManager);
 }
 
 /**
@@ -236,7 +246,7 @@ export function getOAuthProvider(
   thirdPartyApiClient?: any,
 ): OAuthProvider | undefined {
   const oauthConfig = configManager.get<OAuthProviderConfig>('oauthProvider');
-  
+
   if (!oauthConfig) {
     logger.debug('OAuthProvider: No OAuth provider configuration found');
     return undefined;
@@ -298,11 +308,12 @@ export function getTransportManager(
       requireAuthentication: configManager.get('MCP_AUTH_HTTP_REQUIRE', 'true') === 'true',
     },
     stdio: {
-      enableLogging: configManager.get('STDIO_ENABLE_LOGGING', 'true') === 'true',
+      enableLogging: configManager.get('STDIO_LOGGING_ENABLED', 'true') === 'true',
       bufferSize: parseInt(configManager.get('STDIO_BUFFER_SIZE', '8192'), 10),
       encoding: configManager.get('STDIO_ENCODING', 'utf8'),
       // 🔒 NEW: STDIO authentication (discouraged by MCP spec)
-      enableAuthentication: (configManager.get('MCP_AUTH_STDIO_ENABLED', 'false') as string) === 'true',
+      enableAuthentication:
+        (configManager.get('MCP_AUTH_STDIO_ENABLED', 'false') as string) === 'true',
       skipAuthentication: (configManager.get('MCP_AUTH_STDIO_SKIP', 'false') as string) === 'true',
     },
   }, {
@@ -661,7 +672,8 @@ export async function getAllDependencies(
 
   const kvManager = overrides.kvManager || await getKvManager(configManager, logger);
   const sessionStore = overrides.sessionStore || getSessionStore(kvManager, logger);
-  const eventStore = overrides.eventStore || getSmartTransportEventStore(kvManager, logger, configManager);
+  const eventStore = overrides.eventStore ||
+    getTransportEventStore(configManager, logger, kvManager);
   const credentialStore = overrides.credentialStore || getCredentialStore(kvManager, logger);
   const errorHandler = overrides.errorHandler || getErrorHandler();
   const workflowRegistry = overrides.workflowRegistry || getWorkflowRegistry(logger, errorHandler);
@@ -731,13 +743,6 @@ export async function getAllDependencies(
   // Use pre-built MCP server instance if it exists
   const beyondMcpServer = overrides.beyondMcpServer || (() => {
     // Fallback: create generic MCP server if no consumer server provided
-    const serverConfig = overrides.serverConfig || {
-      name: configManager.get('SERVER_NAME', 'generic-mcp-server'),
-      version: configManager.get('SERVER_VERSION', '1.0.0'),
-      title: configManager.get('SERVER_TITLE', 'Generic MCP Server'),
-      description: configManager.get('SERVER_DESCRIPTION', 'MCP server built with bb-mcp-server'),
-    };
-
     const server = new BeyondMcpServer({
       server: {
         name: serverConfig.name,

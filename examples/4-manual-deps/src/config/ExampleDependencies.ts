@@ -29,6 +29,7 @@ import {
   SessionStore,
   TransportEventStore,
   TransportEventStoreChunked,
+  TransportEventStoreChunkedConfig,
   TransportManager,
   validateConfiguration,
   WorkflowRegistry,
@@ -118,27 +119,33 @@ export async function createManualDependencies(
     logger,
   );
 
+  const transportEventStoreConfig = configManager?.get<
+    TransportEventStoreChunkedConfig
+  >(
+    "transportEventStore",
+  );
+
   // 🎯 Initialize library event store (required by TransportManager)
   // Use chunked storage for handling large messages (recommended)
-  const useChunkedStorage = configManager.get("TRANSPORT_USE_CHUNKED_STORAGE", "true") === "true";
-  
+  const useChunkedStorage = transportEventStoreConfig.storageType === "chunked";
+
   const eventStore = useChunkedStorage
     ? new TransportEventStoreChunked(
-        kvManager.getKV(),
-        ["events"],
-        logger,
-        {
-          maxChunkSize: parseInt(configManager.get("TRANSPORT_MAX_CHUNK_SIZE", "61440"), 10), // 60KB
-          enableCompression: configManager.get("TRANSPORT_ENABLE_COMPRESSION", "true") === "true",
-          compressionThreshold: parseInt(configManager.get("TRANSPORT_COMPRESSION_THRESHOLD", "1024"), 10), // 1KB
-          maxMessageSize: parseInt(configManager.get("TRANSPORT_MAX_MESSAGE_SIZE", "10485760"), 10), // 10MB
-        }
-      )
+      kvManager.getKV(),
+      ["events"],
+      logger,
+      {
+        maxChunkSize: transportEventStoreConfig.chunking.maxChunkSize,
+        enableCompression: transportEventStoreConfig.compression.enable,
+        compressionThreshold: transportEventStoreConfig.compression.threshold,
+        maxMessageSize: transportEventStoreConfig.chunking.maxMessageSize,
+      },
+    )
     : new TransportEventStore(
-        kvManager.getKV(),
-        ["events"],
-        logger,
-      );
+      kvManager.getKV(),
+      ["events"],
+      logger,
+    );
 
   // 🎯 Initialize library error handler
   const errorHandler = new ErrorHandler();
@@ -157,11 +164,14 @@ export async function createManualDependencies(
     ),
     tokens: {
       accessTokenExpiryMs: parseInt(
-        configManager.get("OAUTH_TOKEN_EXPIRATION", "3600000"),
+        configManager.get("OAUTH_PROVIDER_TOKEN_EXPIRATION", "3600000"),
         10,
       ),
       refreshTokenExpiryMs: parseInt(
-        configManager.get("OAUTH_REFRESH_TOKEN_EXPIRATION", "2592000000"),
+        configManager.get(
+          "OAUTH_PROVIDER_REFRESH_TOKEN_EXPIRATION",
+          "2592000000",
+        ),
         10,
       ),
       authorizationCodeExpiryMs: parseInt(

@@ -10,7 +10,7 @@ TypeError: Value too large (max 65536 bytes)
 
 ## Solution: Chunked Storage
 
-The new `ChunkedTransportEventStore` implements a chunked storage strategy that:
+The new `TransportEventStoreChunked` implements a chunked storage strategy that:
 
 1. **Breaks large messages into smaller chunks** (default: 60KB each)
 2. **Compresses data** when beneficial (configurable)
@@ -68,7 +68,7 @@ import { TransportEventStore } from './lib/storage/TransportEventStore.ts';
 
 **After:**
 ```typescript
-import { ChunkedTransportEventStore } from './lib/storage/ChunkedTransportEventStore.ts';
+import { TransportEventStoreChunked } from './lib/storage/TransportEventStoreChunked.ts';
 ```
 
 ### Step 2: Update Instantiation
@@ -80,7 +80,7 @@ const eventStore = new TransportEventStore(kv, ['events'], logger);
 
 **After:**
 ```typescript
-const eventStore = new ChunkedTransportEventStore(
+const eventStore = new TransportEventStoreChunked(
   kv, 
   ['events'], 
   logger, 
@@ -95,7 +95,7 @@ const eventStore = new ChunkedTransportEventStore(
 
 ### Step 3: No Code Changes Required
 
-The `ChunkedTransportEventStore` implements the same `EventStore` interface, so no other code changes are needed:
+The `TransportEventStoreChunked` implements the same `EventStore` interface, so no other code changes are needed:
 
 - `storeEvent()` - automatically handles chunking
 - `replayEventsAfter()` - automatically reassembles messages

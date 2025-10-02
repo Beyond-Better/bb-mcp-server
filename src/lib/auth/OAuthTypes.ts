@@ -90,7 +90,7 @@ export interface OAuthConsumerConfig {
   /** Maximum token refresh retries */
   maxTokenRefreshRetries: number;
   /** Custom headers for requests */
-  customHeaders?: Record<string, string>;
+  customHeaders?: Record<string, string> | undefined;
 }
 
 // ============================================================================

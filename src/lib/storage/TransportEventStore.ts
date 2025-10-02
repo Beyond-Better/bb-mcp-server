@@ -243,6 +243,8 @@ export class TransportEventStore implements EventStore {
         streamId,
         lastEventId,
         replayedCount,
+        foundLastEvent,
+        lastEventTimestamp,
       });
 
       return streamId;

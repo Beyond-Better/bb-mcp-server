@@ -162,6 +162,9 @@ export type {
   OAuthProviderConfig,
   ServerConfig,
   ThirdPartyApiConfig,
+  TransportEventStoreChunkedConfig,
+  TransportEventStoreConfig,
+  TransportEventStoreType,
 } from './lib/config/ConfigTypes.ts';
 
 // Workflow types (avoiding conflicts with consumer.types.ts)

@@ -139,13 +139,13 @@ export class PluginManager {
 
       await this.registerPlugin(plugin);
 
-      this.logger?.info('Loaded plugin', {
-        name: plugin.name,
-        version: plugin.version,
-        workflows: plugin.workflows.length,
-        path: pluginPath,
-        absolutePath,
-      });
+      // this.logger?.info('Loaded plugin', {
+      //   name: plugin.name,
+      //   version: plugin.version,
+      //   workflows: plugin.workflows.length,
+      //   path: pluginPath,
+      //   absolutePath,
+      // });
 
       return plugin;
     } catch (error) {
@@ -386,12 +386,12 @@ export class PluginManager {
     try {
       // Check if path exists
       const stat = await Deno.stat(basePath);
-      this.logger?.info('Checking path for plugins', {
-        basePath,
-        stat,
-      });
+      // this.logger?.info('Checking path for plugins', {
+      //   basePath,
+      //   stat,
+      // });
       if (!stat.isDirectory) {
-        this.logger?.warn('Plugin path is not a directory', { path: basePath });
+        // this.logger?.warn('Plugin path is not a directory', { path: basePath });
         return plugins;
       }
 
@@ -399,11 +399,11 @@ export class PluginManager {
       for await (const entry of Deno.readDir(basePath)) {
         if (entry.isFile && this.isPluginFile(entry.name)) {
           const pluginPath = resolve(basePath, entry.name);
-          this.logger?.info('Checking plugin', {
-            basePath,
-            entry,
-            pluginPath,
-          });
+          // this.logger?.info('Checking plugin', {
+          //   basePath,
+          //   entry,
+          //   pluginPath,
+          // });
 
           try {
             if (this.shouldLoadPlugin(entry.name)) {
@@ -438,9 +438,9 @@ export class PluginManager {
         throw error;
       }
     }
-    this.logger?.info('Found plugins', {
-      plugins,
-    });
+    // this.logger?.info('Found plugins', {
+    //   plugins,
+    // });
 
     return plugins;
   }
@@ -479,11 +479,11 @@ export class PluginManager {
   private shouldLoadPlugin(filename: string): boolean {
     const pluginName = this.extractPluginName(filename);
 
-    this.logger?.info('Should load plugin', {
-      pluginName,
-      allowedPlugins: this.discoveryOptions.allowedPlugins,
-      blockedPlugins: this.discoveryOptions.blockedPlugins,
-    });
+    // this.logger?.info('Should load plugin', {
+    //   pluginName,
+    //   allowedPlugins: this.discoveryOptions.allowedPlugins,
+    //   blockedPlugins: this.discoveryOptions.blockedPlugins,
+    // });
 
     // Check blocked plugins
     if (this.discoveryOptions.blockedPlugins?.includes(pluginName)) {

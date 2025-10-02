@@ -13,7 +13,9 @@ import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
 import { StdioServerTransport } from 'mcp/server/stdio.js';
 import type { CallToolResult } from 'mcp/types.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { z, type ZodSchema } from 'zod';
+import { //z,
+  type ZodSchema,
+} from 'zod';
 
 // Import library components from previous phases
 import { Logger } from '../utils/Logger.ts';
@@ -237,7 +239,7 @@ export class BeyondMcpServer {
     context: BeyondMcpRequestContext,
     operation: () => Promise<T>,
   ): Promise<T> {
-    this.logger.debug('MCPServer: Executing with auth context', {
+    this.logger.info('MCPServer: Executing with auth context', {
       authenticatedUserId: context.authenticatedUserId,
       clientId: context.clientId,
       requestId: context.requestId,
@@ -247,15 +249,22 @@ export class BeyondMcpServer {
   }
 
   /**
-   * Get the current authenticated user context from AsyncLocalStorage
+   * Get the current authenticated user context from AsyncLocalStorage (both as static class and protected instance methods)
    */
+  static getCurrentAuthContext(): BeyondMcpRequestContext | null {
+    return BeyondMcpServer.contextStorage.getStore() || null;
+  }
   protected getAuthContext(): BeyondMcpRequestContext | null {
     return BeyondMcpServer.contextStorage.getStore() || null;
   }
 
   /**
-   * Get the current authenticated user ID (backward compatibility)
+   * Get the current authenticated user ID  (both as static class and protected instance methods)
    */
+  static getCurrentAuthenticatedUserId(): string | null {
+    const context = BeyondMcpServer.getCurrentAuthContext();
+    return context?.authenticatedUserId || null;
+  }
   getAuthenticatedUserId(): string | null {
     const context = this.getAuthContext();
     return context?.authenticatedUserId || null;
@@ -391,12 +400,16 @@ export class BeyondMcpServer {
    * Register workflow tools if workflows exist and tools are enabled
    */
   private async registerWorkflowTools(): Promise<void> {
+    this.logger.info('BeyondMcpServer: Registering workflow tools', {
+      toolRegistrationConfig: this.toolRegistrationConfig,
+    });
     if (!this.toolRegistrationConfig.workflowTools.enabled) {
       this.logger.debug('BeyondMcpServer: Workflow tools disabled in configuration');
       return;
     }
 
     const workflowData = this.workflowRegistry.getWorkflowToolData();
+    this.logger.info('BeyondMcpServer: Registering workflow tools', { workflowData });
 
     if (!workflowData.hasWorkflows) {
       this.logger.debug('BeyondMcpServer: No workflows registered, skipping workflow tools');

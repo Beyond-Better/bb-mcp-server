@@ -1,6 +1,6 @@
 # Chunked Storage Demo
 
-This example demonstrates how to use the `ChunkedTransportEventStore` to handle large MCP messages that exceed Deno KV's 64KB limit.
+This example demonstrates how to use the `TransportEventStoreChunked` to handle large MCP messages that exceed Deno KV's 64KB limit.
 
 ## Problem Solved
 
@@ -10,7 +10,7 @@ The original `TransportEventStore` fails when trying to store messages larger th
 TypeError: Value too large (max 65536 bytes)
 ```
 
-The `ChunkedTransportEventStore` solves this by:
+The `TransportEventStoreChunked` solves this by:
 
 - **Breaking large messages into smaller chunks** (default: 60KB each)
 - **Compressing data** when beneficial (configurable)
@@ -109,9 +109,9 @@ The demo supports the following environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TRANSPORT_USE_CHUNKED_STORAGE` | `true` | Enable chunked storage |
+| `TRANSPORT_STORAGE_TYPE` | `chunked` | Enable chunked storage |
 | `TRANSPORT_MAX_CHUNK_SIZE` | `61440` | Maximum size per chunk (60KB) |
-| `TRANSPORT_ENABLE_COMPRESSION` | `true` | Enable compression |
+| `TRANSPORT_COMPRESSION_ENABLED` | `true` | Enable compression |
 | `TRANSPORT_COMPRESSION_THRESHOLD` | `1024` | Compress messages > 1KB |
 | `TRANSPORT_MAX_MESSAGE_SIZE` | `10485760` | Maximum total message size (10MB) |
 
@@ -120,14 +120,14 @@ The demo supports the following environment variables:
 #### High-throughput, small messages
 ```bash
 TRANSPORT_MAX_CHUNK_SIZE=51200          # 50KB chunks
-TRANSPORT_ENABLE_COMPRESSION=false       # Skip compression overhead
+TRANSPORT_COMPRESSION_ENABLED=false       # Skip compression overhead
 TRANSPORT_MAX_MESSAGE_SIZE=1048576       # 1MB max
 ```
 
 #### Large file transfers
 ```bash
 TRANSPORT_MAX_CHUNK_SIZE=46080           # 45KB chunks (more reliable)
-TRANSPORT_ENABLE_COMPRESSION=true        # Compress everything
+TRANSPORT_COMPRESSION_ENABLED=true        # Compress everything
 TRANSPORT_COMPRESSION_THRESHOLD=512      # Low threshold
 TRANSPORT_MAX_MESSAGE_SIZE=52428800      # 50MB max
 ```
@@ -170,10 +170,10 @@ To use chunked storage in your own MCP server:
 ### Option 1: Direct Usage
 
 ```typescript
-import { ChunkedTransportEventStore, KVManager, Logger } from '@beyondbetter/bb-mcp-server';
+import { TransportEventStoreChunked, KVManager, Logger } from '@beyondbetter/bb-mcp-server';
 
 const kvManager = new KVManager({ kvPath: './data/my-server.db' }, logger);
-const eventStore = new ChunkedTransportEventStore(
+const eventStore = new TransportEventStoreChunked(
   kvManager.getKV(),
   ['events'],
   logger,
@@ -191,8 +191,8 @@ const eventStore = new ChunkedTransportEventStore(
 ```typescript
 import { getSmartTransportEventStore } from '@beyondbetter/bb-mcp-server';
 
-// Automatically chooses chunked storage if TRANSPORT_USE_CHUNKED_STORAGE=true
-const eventStore = getSmartTransportEventStore(kvManager, logger, configManager);
+// Automatically chooses chunked storage if TRANSPORT_STORAGE_TYPE=chunked
+const eventStore = getTransportEventStore(configManager, kvManager, logger);
 ```
 
 ### Option 3: Library Integration
@@ -200,7 +200,7 @@ const eventStore = getSmartTransportEventStore(kvManager, logger, configManager)
 The chunked storage is automatically used when you configure:
 
 ```bash
-TRANSPORT_USE_CHUNKED_STORAGE=true
+TRANSPORT_STORAGE_TYPE=chunked
 ```
 
 All library helper functions (`getAllDependencies`, `getSmartTransportEventStore`) will automatically use chunked storage.

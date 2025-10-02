@@ -3,13 +3,13 @@
  * Comprehensive type definitions for transport layer
  */
 
-import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
+//import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
 import type { Logger } from '../utils/Logger.ts';
 import type { KVManager } from '../storage/KVManager.ts';
 import type { SessionStore } from '../storage/SessionStore.ts';
 import type { TransportEventStore } from '../storage/TransportEventStore.ts';
 import type { TransportEventStoreChunked } from '../storage/TransportEventStoreChunked.ts';
-import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
+//import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
 
 // Core transport interfaces
 export interface Transport {
@@ -37,6 +37,7 @@ export interface HttpTransportConfig {
   sessionTimeout: number; // default: 30 minutes
   maxConcurrentSessions: number; // default: 1000
   enableSessionPersistence: boolean; // default: true
+  enableSessionRestore?: boolean;
   sessionCleanupInterval: number; // default: 5 minutes
   requestTimeout: number; // default: 30 seconds
   maxRequestSize: number; // default: 1MB
@@ -46,7 +47,6 @@ export interface HttpTransportConfig {
   // 🚨 Compatibility configuration - DO NOT DISABLE
   preserveCompatibilityMode: boolean; // default: true - CRITICAL FOR MCP SDK
   enableTransportPersistence?: boolean;
-  sessionRestoreEnabled?: boolean;
 
   // 🔒 Authentication configuration
   enableAuthentication?: boolean; // Auto-enabled if oauthProvider available
@@ -224,6 +224,7 @@ export interface StdioTransportMetrics extends TransportMetrics {
     messagesSent: number;
     bytesReceived: number;
     bytesSent: number;
+    averageMessageSize: number;
   };
 }
 

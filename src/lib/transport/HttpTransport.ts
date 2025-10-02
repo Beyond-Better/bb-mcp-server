@@ -12,25 +12,27 @@ import { StreamableHTTPServerTransport } from 'mcp/server/streamableHttp.js';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { toError } from '../utils/Error.ts';
 import type {
-  AuthenticationResult,
-  BeyondMcpAuthContext,
+  //AuthenticationResult,
+  //BeyondMcpAuthContext,
   HttpTransportConfig,
   HttpTransportMetrics,
-  MCPRequest,
-  MCPResponse,
+  //MCPRequest,
+  //MCPResponse,
   SSEStreamCapture,
   Transport,
   TransportDependencies,
-  TransportMetrics,
+  //TransportMetrics,
   TransportType,
 } from './TransportTypes.ts';
+import type { BeyondMcpServer } from '../server/BeyondMcpServer.ts';
+import type { BeyondMcpRequestContext } from '../types/BeyondMcpTypes.ts';
 import type { Logger } from '../utils/Logger.ts';
 import { reconstructOriginalUrl } from '../utils/UrlUtils.ts';
 import {
-  AuthenticationMiddleware,
   type AuthenticationConfig,
-  type AuthenticationContext,
+  //type AuthenticationContext,
   type AuthenticationDependencies,
+  AuthenticationMiddleware,
 } from './AuthenticationMiddleware.ts';
 
 /**
@@ -68,7 +70,7 @@ export class HttpTransport implements Transport {
       ...config,
       preserveCompatibilityMode: config.preserveCompatibilityMode ?? true, // 🚨 CRITICAL - DO NOT DISABLE
       enableTransportPersistence: config.enableTransportPersistence ?? false,
-      sessionRestoreEnabled: config.sessionRestoreEnabled ?? false,
+      enableSessionRestore: config.enableSessionRestore ?? false,
     };
     this.dependencies = dependencies;
     this.logger = dependencies.logger;
@@ -149,13 +151,13 @@ export class HttpTransport implements Transport {
   /**
    * Main HTTP request handling entry point
    * Delegates to method-specific handlers with preserved compatibility and authentication
-   * 
+   *
    * 🔒 SECURITY-CRITICAL: Integrates authentication middleware with MCP request execution
    */
   async handleHttpRequest(
     request: Request,
     sdkMcpServer: SdkMcpServer,
-    beyondMcpServer?: any, // BeyondMcpServer instance for auth context execution
+    beyondMcpServer: BeyondMcpServer, // BeyondMcpServer instance for auth context execution
   ): Promise<Response> {
     const requestId = Math.random().toString(36).substring(2, 15);
     const startTime = performance.now();
@@ -171,7 +173,7 @@ export class HttpTransport implements Transport {
     try {
       let response: Response;
       let authenticatedRequest = request;
-      let mcpAuthContext: AuthenticationContext | undefined;
+      let mcpAuthContext: BeyondMcpRequestContext | undefined;
 
       // 🔒 SECURITY-CRITICAL: Check if authentication is required
       if (this.authenticationMiddleware.isAuthenticationRequired(url)) {
@@ -215,7 +217,11 @@ export class HttpTransport implements Transport {
         }
 
         // Create authentication context for request execution
-        mcpAuthContext = this.authenticationMiddleware.createAuthContext(authResult, requestId);
+        mcpAuthContext = {
+          ...this.authenticationMiddleware.createAuthContext(authResult, requestId),
+          startTime: performance.now(),
+          metadata: {},
+        } as BeyondMcpRequestContext;
 
         // Add authentication context to request headers
         authenticatedRequest = this.authenticationMiddleware.addAuthContextToRequest(
@@ -223,7 +229,7 @@ export class HttpTransport implements Transport {
           authResult,
         );
 
-        this.logger.debug(`HttpTransport: Authentication successful [${requestId}]`, {
+        this.logger.info(`HttpTransport: Authentication successful [${requestId}]`, {
           requestId,
           clientId: authResult.clientId,
           userId: authResult.userId,
@@ -238,7 +244,10 @@ export class HttpTransport implements Transport {
       }
 
       // 🔒 SECURITY-CRITICAL: Execute request within authentication context
-      if (mcpAuthContext && beyondMcpServer) {
+      if (mcpAuthContext) {
+        this.logger.info(`HttpTransport: Handling request with auth context [${requestId}]`, {
+          mcpAuthContext,
+        });
         // Execute MCP operations within authenticated context using BeyondMcpServer's AsyncLocalStorage
         response = await beyondMcpServer.executeWithAuthContext(mcpAuthContext, async () => {
           switch (method) {
@@ -261,6 +270,7 @@ export class HttpTransport implements Transport {
           }
         });
       } else {
+        this.logger.info(`HttpTransport: Handling request WITHOUT auth context [${requestId}]`);
         // Execute without authentication context for open endpoints
         switch (method) {
           case 'POST':
@@ -291,7 +301,7 @@ export class HttpTransport implements Transport {
       this.totalResponseTime += performance.now() - startTime;
 
       this.logger.info(
-        `HttpTransport: HTTP request completed successfully [${requestId}] ${method} ${response.status}`,
+        `HttpTransport: HTTP request completed successfully [${requestId}] ${method} ${response.status} ${authenticatedRequest.url}`,
       );
       return response;
     } catch (error) {
@@ -315,9 +325,8 @@ export class HttpTransport implements Transport {
   }
 
   /**
-   * 🚨 CRITICAL COMPATIBILITY CODE - PRESERVED FROM MCPRequestHandler.ts
+   * 🚨 CRITICAL COMPATIBILITY CODE
    * Handle POST requests with session persistence
-   * Lines ~187-337 from original MCPRequestHandler.ts
    */
   private async handleMCPPost(
     request: Request,
@@ -451,9 +460,8 @@ export class HttpTransport implements Transport {
   }
 
   /**
-   * 🚨 CRITICAL COMPATIBILITY CODE - PRESERVED FROM MCPRequestHandler.ts
+   * 🚨 CRITICAL COMPATIBILITY CODE
    * Handle GET requests (SSE) with session activity tracking
-   * Lines ~345-426 from original MCPRequestHandler.ts
    */
   private async handleMCPGet(
     request: Request,
@@ -574,9 +582,8 @@ export class HttpTransport implements Transport {
   }
 
   /**
-   * 🚨 CRITICAL COMPATIBILITY CODE - PRESERVED FROM MCPRequestHandler.ts
+   * 🚨 CRITICAL COMPATIBILITY CODE
    * Handle DELETE requests (session termination) with persistence cleanup
-   * Lines ~432-508 from original MCPRequestHandler.ts
    */
   private async handleMCPDelete(
     request: Request,
@@ -681,7 +688,6 @@ export class HttpTransport implements Transport {
   /**
    * 🚨 PRESERVED COMPATIBILITY METHOD - DO NOT MODIFY
    * Create Node.js-style request object from Deno Request
-   * Line ~629 from original MCPRequestHandler.ts
    */
   private createNodeStyleRequest(request: Request, method: string, body?: any): any {
     const url = reconstructOriginalUrl(request);
@@ -758,7 +764,6 @@ export class HttpTransport implements Transport {
 
   /**
    * Force close any active SSE stream for a session
-   * Preserved from MCPRequestHandler.ts lines ~784-808
    */
   private async forceCloseActiveSSEStream(sessionId: string): Promise<void> {
     const activeSSEStream = this.activeSSEStreams.get(sessionId);
@@ -809,7 +814,6 @@ export class HttpTransport implements Transport {
 
   /**
    * Create standardized error response
-   * Preserved from MCPRequestHandler.ts
    */
   private createErrorResponse(message: string, status: number, details?: string): Response {
     const error = {
@@ -896,7 +900,7 @@ export class HttpTransport implements Transport {
         oauthChallenge,
       );
       headers['WWW-Authenticate'] = wwwAuthenticateValue;
-      
+
       // Log OAuth challenge for debugging
       this.logger.debug('HttpTransport: Added OAuth challenge to response', {
         authorizationUri: oauthChallenge.authorizationUri,
@@ -967,7 +971,6 @@ export class HttpTransport implements Transport {
 /**
  * Simple response capture for POST/DELETE requests
  * Always completes normally, never handles SSE
- * Preserved from MCPRequestHandler.ts lines ~806-948
  */
 class SimpleResponseCapture implements SSEStreamCapture {
   private statusCode = 200;
@@ -1094,7 +1097,6 @@ class SimpleResponseCapture implements SSEStreamCapture {
 /**
  * ReadableStream adapter that implements Node.js ServerResponse interface
  * Bridges MCP SDK transport with Deno's ReadableStream for SSE
- * Preserved from MCPRequestHandler.ts lines ~956-1175
  */
 class ReadableStreamServerResponse {
   private streamController: ReadableStreamDefaultController<Uint8Array>;

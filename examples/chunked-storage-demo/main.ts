@@ -12,15 +12,16 @@
  */
 
 import {
-  BeyondMcpServer,
-  TransportEventStoreChunked,
-  ConfigManager,
-  KVManager,
-  Logger,
   AuditLogger,
+  BeyondMcpServer,
+  ConfigManager,
   ErrorHandler,
   getToolRegistry,
   getWorkflowRegistry,
+  KVManager,
+  Logger,
+  TransportEventStoreChunked,
+  TransportEventStoreChunkedConfig,
 } from '@beyondbetter/bb-mcp-server';
 
 /**
@@ -63,7 +64,7 @@ class LargeMessageTool {
         const data = [];
         const itemSize = 200; // Approximate size per item
         const itemCount = Math.floor(sizeBytes / itemSize);
-        
+
         for (let i = 0; i < itemCount; i++) {
           data.push({
             id: i,
@@ -76,7 +77,7 @@ class LargeMessageTool {
             },
           });
         }
-        
+
         message = {
           type: 'large_json_response',
           size: `${sizeKB}KB`,
@@ -86,12 +87,13 @@ class LargeMessageTool {
         };
         break;
       }
-      
+
       case 'text': {
         // Generate large text content
-        const paragraph = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris. ';
+        const paragraph =
+          'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris. ';
         const repeatCount = Math.floor(sizeBytes / paragraph.length);
-        
+
         message = {
           type: 'large_text_response',
           size: `${sizeKB}KB`,
@@ -100,19 +102,19 @@ class LargeMessageTool {
         };
         break;
       }
-      
+
       case 'mixed': {
         // Generate mixed content
         const baseContent = 'Mixed content with various data types. ';
         const repeatCount = Math.floor(sizeBytes / (baseContent.length + 100));
-        
+
         const mixedData = [];
         for (let i = 0; i < repeatCount; i++) {
           mixedData.push({
             text: baseContent + i,
             number: Math.random() * 1000,
             boolean: i % 2 === 0,
-            array: new Array(10).fill(i).map(n => n + Math.random()),
+            array: new Array(10).fill(i).map((n) => n + Math.random()),
             nested: {
               level1: {
                 level2: {
@@ -122,7 +124,7 @@ class LargeMessageTool {
             },
           });
         }
-        
+
         message = {
           type: 'large_mixed_response',
           size: `${sizeKB}KB`,
@@ -142,7 +144,9 @@ class LargeMessageTool {
     return {
       content: [{
         type: 'text' as const,
-        text: `Generated ${contentType} message of ${Math.round(actualSize / 1024)}KB (requested: ${sizeKB}KB)`,
+        text: `Generated ${contentType} message of ${
+          Math.round(actualSize / 1024)
+        }KB (requested: ${sizeKB}KB)`,
       }],
       result: message,
     } as any;
@@ -181,7 +185,7 @@ class StorageStatsTool {
     }
 
     const stats = await StorageStatsTool.eventStore.getChunkStatistics(args.streamId);
-    
+
     return {
       content: [{
         type: 'text' as const,
@@ -220,17 +224,21 @@ async function main() {
   const toolRegistry = await getToolRegistry(logger, errorHandler);
   const workflowRegistry = await getWorkflowRegistry(logger, errorHandler);
 
+  const transportEventStoreConfig = configManager?.get<TransportEventStoreChunkedConfig>(
+    'transportEventStore',
+  );
+
   // Create chunked event store
   const eventStore = new TransportEventStoreChunked(
     kvManager.getKV(),
     ['demo_events'],
     logger,
     {
-      maxChunkSize: parseInt(configManager.get('TRANSPORT_MAX_CHUNK_SIZE', '61440'), 10),
-      enableCompression: configManager.get('TRANSPORT_ENABLE_COMPRESSION', 'true') === 'true',
-      compressionThreshold: parseInt(configManager.get('TRANSPORT_COMPRESSION_THRESHOLD', '1024'), 10),
-      maxMessageSize: parseInt(configManager.get('TRANSPORT_MAX_MESSAGE_SIZE', '10485760'), 10),
-    }
+      maxChunkSize: transportEventStoreConfig.chunking.maxChunkSize,
+      enableCompression: transportEventStoreConfig.compression.enable,
+      compressionThreshold: transportEventStoreConfig.compression.threshold,
+      maxMessageSize: transportEventStoreConfig.chunking.maxMessageSize,
+    },
   );
 
   // Make event store available to tools
@@ -306,20 +314,20 @@ generate_large_message({"size": 2048, "content": "mixed"})
   server.registerTool(
     LargeMessageTool.definition.name,
     LargeMessageTool.definition as any,
-    LargeMessageTool.handler
+    LargeMessageTool.handler,
   );
 
   server.registerTool(
     StorageStatsTool.definition.name,
     StorageStatsTool.definition as any,
-    StorageStatsTool.handler
+    StorageStatsTool.handler,
   );
 
   logger.info('Chunked Storage Demo Server configured with:', {
-    maxChunkSize: configManager.get('TRANSPORT_MAX_CHUNK_SIZE', '61440'),
-    enableCompression: configManager.get('TRANSPORT_ENABLE_COMPRESSION', 'true'),
-    compressionThreshold: configManager.get('TRANSPORT_COMPRESSION_THRESHOLD', '1024'),
-    maxMessageSize: configManager.get('TRANSPORT_MAX_MESSAGE_SIZE', '10485760'),
+    maxChunkSize: transportEventStoreConfig.chunking.maxChunkSize,
+    enableCompression: transportEventStoreConfig.compression.enable,
+    compressionThreshold: transportEventStoreConfig.compression.threshold,
+    maxMessageSize: transportEventStoreConfig.chunking.maxMessageSize,
     transport: configManager.get('MCP_TRANSPORT', 'stdio'),
   });
 

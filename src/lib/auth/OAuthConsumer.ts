@@ -59,8 +59,8 @@ export interface OAuthConsumerDependencies {
  * - Allows MCP token validation to check third-party token status
  * - Supports automatic token refresh for seamless session management
  */
-export abstract class OAuthConsumer {
-  protected config: OAuthConsumerConfig;
+export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> {
+  protected config: T;
   protected logger: Logger;
 
   // Dependencies
@@ -70,20 +70,21 @@ export abstract class OAuthConsumer {
   // 🔒 SECURITY-CRITICAL: KV key prefixes for secure storage
   protected readonly AUTH_STATE_PREFIX = ['oauth', 'consumer_auth_state'];
 
-  constructor(config: OAuthConsumerConfig, dependencies: OAuthConsumerDependencies) {
+  constructor(config: T, dependencies: OAuthConsumerDependencies) {
     // Apply config with proper defaults
-    this.config = {
-      providerId: config.providerId,
-      authUrl: config.authUrl,
-      tokenUrl: config.tokenUrl,
-      clientId: config.clientId,
-      clientSecret: config.clientSecret,
-      redirectUri: config.redirectUri,
-      scopes: config.scopes,
-      tokenRefreshBufferMinutes: config.tokenRefreshBufferMinutes ?? 5,
-      maxTokenRefreshRetries: config.maxTokenRefreshRetries ?? 3,
-      ...(config.customHeaders && { customHeaders: config.customHeaders }),
-    };
+    this.config = config;
+    // this.config = {
+    //   providerId: config.providerId,
+    //   authUrl: config.authUrl,
+    //   tokenUrl: config.tokenUrl,
+    //   clientId: config.clientId,
+    //   clientSecret: config.clientSecret,
+    //   redirectUri: config.redirectUri,
+    //   scopes: config.scopes,
+    //   tokenRefreshBufferMinutes: config.tokenRefreshBufferMinutes,
+    //   maxTokenRefreshRetries: config.maxTokenRefreshRetries,
+    //   ...(config.customHeaders !== undefined && { customHeaders: config.customHeaders }),
+    // };
     this.kvManager = dependencies.kvManager;
     this.credentialStore = dependencies.credentialStore;
     this.logger = dependencies.logger;
@@ -603,6 +604,37 @@ export abstract class OAuthConsumer {
         userId,
       });
       return false;
+    }
+  }
+
+
+  /**
+   * 🎯 Public: Force token refresh by clearing cached credentials
+   * This will cause the next getAccessToken() call to trigger refresh
+   */
+  async clearUserCredentials(userId: string): Promise<void> {
+    try {
+      this.logger?.info(`OAuthConsumer: clearing cached credentials for user ${userId}`);
+
+      // Clear cached credentials to force refresh on next access
+      if (this.credentialStore) {
+        const credentials = await this.credentialStore.getCredentials(userId, this.config.providerId);
+        if (credentials) {
+          // Keep the refresh token but mark access token as expired
+          const expiredCredentials = {
+            ...credentials,
+            expiresAt: Date.now() - 1000, // Expired 1 second ago
+          };
+          await this.credentialStore.updateCredentials(userId, this.config.providerId, expiredCredentials);
+        }
+      }
+
+      this.logger?.info(`OAuthConsumer: cleared cached credentials for user ${userId}`);
+    } catch (error) {
+      this.logger?.error('OAuthConsumer: clear credentials failed', toError(error), {
+        userId,
+      });
+      throw error;
     }
   }
 

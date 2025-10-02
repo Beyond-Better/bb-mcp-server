@@ -18,9 +18,11 @@ import type { KVManager } from '../storage/KVManager.ts';
 import { toError } from '../utils/Error.ts';
 import type { PKCEHandler, PKCEMethod } from './PKCEHandler.ts';
 import type { ClientRegistry } from './ClientRegistry.ts';
-import type { MCPAuthorizationCode, TokenManager } from './TokenManager.ts';
+import type { //MCPAuthorizationCode,
+  TokenManager,
+} from './TokenManager.ts';
 import type {
-  AuthorizationRequestResult,
+  //AuthorizationRequestResult,
   AuthorizationValidation,
   AuthorizeRequest,
   AuthorizeResponse,
@@ -120,7 +122,7 @@ export class AuthorizationHandler {
     this.config = {
       supportedGrantTypes: config.supportedGrantTypes ?? ['authorization_code', 'refresh_token'],
       supportedResponseTypes: config.supportedResponseTypes ?? ['code'],
-      supportedScopes: config.supportedScopes ?? ['read', 'write'],
+      supportedScopes: config.supportedScopes ?? ['all', 'read', 'write'],
       enablePKCE: config.enablePKCE ?? true,
       requirePKCE: config.requirePKCE ?? true,
       issuer: config.issuer,
@@ -129,6 +131,7 @@ export class AuthorizationHandler {
     this.logger?.info('AuthorizationHandler: Initialized', {
       supportedGrantTypes: this.config.supportedGrantTypes,
       supportedResponseTypes: this.config.supportedResponseTypes,
+      supportedScopes: this.config.supportedScopes,
       enablePKCE: this.config.enablePKCE,
       requirePKCE: this.config.requirePKCE,
     });

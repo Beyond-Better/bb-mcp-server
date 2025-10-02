@@ -24,6 +24,7 @@ import type {
   TransportConfig,
   TransportDependencies,
 } from '../../../src/lib/transport/TransportTypes.ts';
+import { createTestBeyondMcpServer, TestBeyondMcpServer } from '../../utils/test-helpers.ts';
 
 // Mock logger for testing
 const mockLogger: Logger = {
@@ -48,7 +49,11 @@ const mockSdkMcpServer = {
 
 // Helper function to create test dependencies
 async function createTestDependencies(): Promise<
-  TransportDependencies & { eventStoreKv: Deno.Kv; sessionManager: SessionManager }
+  TransportDependencies & {
+    eventStoreKv: Deno.Kv;
+    sessionManager: SessionManager;
+    beyondMcpServer: TestBeyondMcpServer;
+  }
 > {
   const kvManager = new KVManager({ kvPath: ':memory:' });
   await kvManager.initialize();
@@ -70,6 +75,8 @@ async function createTestDependencies(): Promise<
 
   const sessionManager = new SessionManager(sessionConfig, sessionStore, mockLogger);
 
+  const beyondMcpServer = await createTestBeyondMcpServer();
+
   return {
     kvManager,
     eventStore,
@@ -77,6 +84,7 @@ async function createTestDependencies(): Promise<
     logger: mockLogger,
     eventStoreKv,
     sessionManager,
+    beyondMcpServer,
   };
 }
 
@@ -291,9 +299,11 @@ Deno.test({
       requestId: 'test_request_123',
     };
 
+    const beyondMcpServer = await createTestBeyondMcpServer();
+
     // Handle HTTP request with OAuth context
     try {
-      const response = await transportManager.handleHttpRequest(testRequest, authContext);
+      const response = await transportManager.handleHttpRequest(testRequest, beyondMcpServer);
       assertExists(response);
       assert(response instanceof Response);
     } catch (error) {
@@ -326,9 +336,10 @@ Deno.test({
     const testRequest = new Request('http://localhost:3000/mcp', {
       method: 'POST',
     });
+    const beyondMcpServer = await createTestBeyondMcpServer();
 
     try {
-      await transportManager.handleHttpRequest(testRequest);
+      await transportManager.handleHttpRequest(testRequest, beyondMcpServer);
       assert(false, 'Should have thrown error for HTTP request on STDIO transport');
     } catch (error) {
       assert(error instanceof Error);
@@ -369,8 +380,10 @@ Deno.test({
       method: 'POST',
     });
 
+    const beyondMcpServer = await createTestBeyondMcpServer();
+
     try {
-      await transportManager.handleHttpRequest(testRequest);
+      await transportManager.handleHttpRequest(testRequest, beyondMcpServer);
       assert(false, 'Should have thrown error for uninitialized transport manager');
     } catch (error) {
       assert(error instanceof Error);
