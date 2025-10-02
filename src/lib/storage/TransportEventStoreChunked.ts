@@ -76,33 +76,51 @@ export class TransportEventStoreChunked extends TransportEventStore {
 
 
   /**
-   * Compress data using Deno's built-in compression
+   * Compress data using Deno's built-in compression with pipeTo
+   * Uses Web Streams API pipeTo for proper stream coordination
    */
   private async compressData(data: string): Promise<Uint8Array> {
+    this.logger?.info('TransportEventStoreChunked: Starting compression', {
+      dataLength: data.length,
+    });
+    
     const encoder = new TextEncoder();
     const inputData = encoder.encode(data);
     
+    // Create a ReadableStream from the input data
+    const inputStream = new ReadableStream({
+      start(controller) {
+            controller.enqueue(inputData);
+        controller.close();
+          },
+    });
+    
     const compressionStream = new CompressionStream('gzip');
-    const writer = compressionStream.writable.getWriter();
-    const reader = compressionStream.readable.getReader();
+    
+    // Collect compressed chunks
+    const chunks: Uint8Array[] = [];
+    const outputStream = new WritableStream({
+      write(chunk) {
+            chunks.push(chunk);
+      },
+    });
     
     try {
-      await writer.write(inputData);
-      await writer.close();
+        this.logger?.info('TransportEventStoreChunked: Piping through compression stream');
       
-      const chunks: Uint8Array[] = [];
-      let done = false;
+      // Use pipeTo for proper stream coordination
+      // This handles backpressure and cleanup automatically
+      await inputStream
+        .pipeThrough(compressionStream)
+        .pipeTo(outputStream);
       
-      while (!done) {
-        const { value, done: readerDone } = await reader.read();
-        done = readerDone;
-        if (value) {
-          chunks.push(value);
-        }
-      }
+        this.logger?.info('TransportEventStoreChunked: Compression pipe completed', {
+        chunkCount: chunks.length,
+      });
       
+      // Assemble result
       const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-      const result = new Uint8Array(totalLength);
+        const result = new Uint8Array(totalLength);
       let offset = 0;
       
       for (const chunk of chunks) {
@@ -110,40 +128,59 @@ export class TransportEventStoreChunked extends TransportEventStore {
         offset += chunk.length;
       }
       
+        this.logger?.info('TransportEventStoreChunked: Compression complete', {
+        originalSize: inputData.length,
+        compressedSize: result.length,
+      });
+      
       return result;
-    } finally {
-      // Ensure streams are properly cleaned up to prevent hanging promises
-      try {
-        reader.releaseLock();
-      } catch {
-        // Ignore cleanup errors
-      }
+    } catch (error) {
+        this.logger?.error('TransportEventStoreChunked: Compression failed', toError(error));
+      throw error;
     }
   }
 
   /**
-   * Decompress data using Deno's built-in decompression
+   * Decompress data using Deno's built-in decompression with pipeTo
+   * Uses Web Streams API pipeTo for proper stream coordination
    */
   private async decompressData(compressedData: Uint8Array): Promise<string> {
+    this.logger?.info('TransportEventStoreChunked: Starting decompression', {
+      compressedSize: compressedData.length,
+    });
+    
+    // Create a ReadableStream from the compressed data
+    const inputStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(compressedData);
+        controller.close();
+      },
+    });
+    
     const decompressionStream = new DecompressionStream('gzip');
-    const writer = decompressionStream.writable.getWriter();
-    const reader = decompressionStream.readable.getReader();
+    
+    // Collect decompressed chunks
+    const chunks: Uint8Array[] = [];
+    const outputStream = new WritableStream({
+      write(chunk) {
+        chunks.push(chunk);
+      },
+    });
     
     try {
-      await writer.write(new Uint8Array(compressedData));
-      await writer.close();
+      this.logger?.info('TransportEventStoreChunked: Piping through decompression stream');
       
-      const chunks: Uint8Array[] = [];
-      let done = false;
+      // Use pipeTo for proper stream coordination
+      // This handles backpressure and cleanup automatically
+      await inputStream
+        .pipeThrough(decompressionStream)
+        .pipeTo(outputStream);
       
-      while (!done) {
-        const { value, done: readerDone } = await reader.read();
-        done = readerDone;
-        if (value) {
-          chunks.push(value);
-        }
-      }
+      this.logger?.info('TransportEventStoreChunked: Decompression pipe completed', {
+        chunkCount: chunks.length,
+      });
       
+      // Assemble result
       const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
       const result = new Uint8Array(totalLength);
       let offset = 0;
@@ -154,14 +191,16 @@ export class TransportEventStoreChunked extends TransportEventStore {
       }
       
       const decoder = new TextDecoder();
-      return decoder.decode(result);
-    } finally {
-      // Ensure streams are properly cleaned up to prevent hanging promises
-      try {
-        reader.releaseLock();
-      } catch {
-        // Ignore cleanup errors
-      }
+      const decompressed = decoder.decode(result);
+      
+      this.logger?.info('TransportEventStoreChunked: Decompression complete', {
+        decompressedSize: decompressed.length,
+      });
+      
+      return decompressed;
+    } catch (error) {
+      this.logger?.error('TransportEventStoreChunked: Decompression failed', toError(error));
+      throw error;
     }
   }
 
@@ -180,16 +219,28 @@ export class TransportEventStoreChunked extends TransportEventStore {
 
   /**
    * Break message into chunks and store them
+   * Includes KV expiry as a fallback safety net (default: 90 days)
    */
   private async storeMessageInChunks(
     eventId: string,
     streamId: string,
     message: JSONRPCMessage,
     timestamp: number,
+    expiryMs: number = 90 * 24 * 60 * 60 * 1000,
   ): Promise<void> {
+    this.logger?.info('TransportEventStoreChunked: storeMessageInChunks started', {
+      eventId,
+      streamId,
+    });
+    
     // Serialize the message
     const messageJson = JSON.stringify(message);
     const messageSize = new TextEncoder().encode(messageJson).length;
+    
+    this.logger?.info('TransportEventStoreChunked: Message serialized', {
+      eventId,
+      messageSize,
+    });
 
     // Check if message exceeds maximum allowed size
     if (messageSize > this.config.maxMessageSize) {
@@ -203,25 +254,71 @@ export class TransportEventStoreChunked extends TransportEventStore {
 
     // Compress if enabled and data is above threshold
     if (this.config.enableCompression && messageSize >= this.config.compressionThreshold) {
+      this.logger?.info('TransportEventStoreChunked: Compression enabled, starting compression', {
+        eventId,
+        messageSize,
+        threshold: this.config.compressionThreshold,
+        enableCompression: this.config.enableCompression,
+      });
+      
       try {
-        const compressedData = await this.compressData(messageJson);
-        const compressedBase64 = btoa(String.fromCharCode(...compressedData));
+            const compressedData = await this.compressData(messageJson);
+        
+            
+        this.logger?.info('TransportEventStoreChunked: Compression completed', {
+          eventId,
+          compressedSize: compressedData.length,
+        });
+        
+        // Convert Uint8Array to base64 without spread operator (which fails for large arrays)
+        // Use chunked conversion to avoid stack overflow
+            let binaryString = '';
+        const chunkSize = 8192; // Process 8KB at a time
+        for (let i = 0; i < compressedData.length; i += chunkSize) {
+          const chunk = compressedData.subarray(i, i + chunkSize);
+          binaryString += String.fromCharCode(...chunk);
+        }
+            
+        const compressedBase64 = btoa(binaryString);
+            
+        this.logger?.info('TransportEventStoreChunked: Base64 conversion completed', {
+          eventId,
+          base64Length: compressedBase64.length,
+          originalLength: messageJson.length,
+          compressionThreshold: messageJson.length * 0.9,
+        });
         
         // Only use compression if it actually reduces size significantly
         if (compressedBase64.length < messageJson.length * 0.9) {
-          dataToStore = compressedBase64;
+                dataToStore = compressedBase64;
           compressed = true;
-          this.logger?.debug('TransportEventStoreChunked: Compressed message', {
+          this.logger?.info('TransportEventStoreChunked: Using compressed data', {
+            originalSize: messageSize,
+            compressedSize: compressedBase64.length,
+            compressionRatio: (compressedBase64.length / messageSize).toFixed(2),
+          });
+        } else {
+                this.logger?.info('TransportEventStoreChunked: Compression not beneficial, using original', {
             originalSize: messageSize,
             compressedSize: compressedBase64.length,
             compressionRatio: (compressedBase64.length / messageSize).toFixed(2),
           });
         }
       } catch (error) {
-        this.logger?.warn('TransportEventStoreChunked: Failed to compress message, storing uncompressed', {
+            this.logger?.warn('TransportEventStoreChunked: Failed to compress message, storing uncompressed', {
           error: toError(error),
+          errorMessage: error instanceof Error ? error.message : String(error),
+          errorStack: error instanceof Error ? error.stack : undefined,
         });
       }
+    } else {
+      this.logger?.info('TransportEventStoreChunked: Compression not enabled or below threshold', {
+        eventId,
+        enableCompression: this.config.enableCompression,
+        messageSize,
+        threshold: this.config.compressionThreshold,
+        meetsThreshold: messageSize >= this.config.compressionThreshold,
+      });
     }
 
     const chunks: StoredEventChunk[] = [];
@@ -256,23 +353,42 @@ export class TransportEventStoreChunked extends TransportEventStore {
       compressed,
     };
 
-    // Store everything in a transaction
+    // Store everything in a transaction with KV expiry as fallback
     const atomic = this.kv.atomic();
     
-    // Store metadata
-    atomic.set([...this.keyPrefix, 'stream', streamId, 'metadata', eventId], metadata);
+    // Store metadata with expiry
+    atomic.set(
+      [...this.keyPrefix, 'stream', streamId, 'metadata', eventId], 
+      metadata,
+      { expireIn: expiryMs }
+    );
     
-    // Store all chunks
+    // Store all chunks with the same expiry
     for (const chunk of chunks) {
-      atomic.set([...this.keyPrefix, 'stream', streamId, 'chunks', eventId, chunk.chunkIndex], chunk);
+      atomic.set(
+        [...this.keyPrefix, 'stream', streamId, 'chunks', eventId, chunk.chunkIndex], 
+        chunk,
+        { expireIn: expiryMs }
+      );
     }
 
+    this.logger?.info('TransportEventStoreChunked: About to commit KV transaction', {
+      eventId,
+      chunkCount,
+    });
+    
     const result = await atomic.commit();
+    
+    this.logger?.info('TransportEventStoreChunked: KV transaction committed', {
+      eventId,
+      success: result.ok,
+    });
+    
     if (!result.ok) {
       throw new Error('Failed to store chunked event in KV transaction');
     }
 
-    this.logger?.debug('TransportEventStoreChunked: Stored chunked event', {
+    this.logger?.info('TransportEventStoreChunked: Stored chunked event', {
       streamId,
       eventId,
       chunkCount,
@@ -330,11 +446,16 @@ export class TransportEventStoreChunked extends TransportEventStore {
       
       // Decompress if needed
       if (metadata.compressed) {
-        try {
-          const compressedData = Uint8Array.from(atob(reassembledData), c => c.charCodeAt(0));
-          reassembledData = await this.decompressData(compressedData);
-        } catch (error) {
-          throw new Error(`Failed to decompress event ${eventId}: ${error}`);
+            try {
+          // Convert base64 to Uint8Array
+          const binaryString = atob(reassembledData);
+                const compressedData = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            compressedData[i] = binaryString.charCodeAt(i);
+          }
+                reassembledData = await this.decompressData(compressedData);
+              } catch (error) {
+                throw new Error(`Failed to decompress event ${eventId}: ${error}`);
         }
       }
       
@@ -354,11 +475,26 @@ export class TransportEventStoreChunked extends TransportEventStore {
    * Implements EventStore.storeEvent
    */
   override async storeEvent(streamId: string, message: JSONRPCMessage): Promise<string> {
+    this.logger?.info('TransportEventStoreChunked: storeEvent called', {
+      streamId,
+      messageMethod: (message as any).method,
+    });
+    
     const eventId = this.generateEventId(streamId);
     const timestamp = Date.now();
 
     try {
+      this.logger?.info('TransportEventStoreChunked: About to store message in chunks', {
+        eventId,
+        streamId,
+      });
+      
       await this.storeMessageInChunks(eventId, streamId, message, timestamp);
+      
+      this.logger?.info('TransportEventStoreChunked: Message stored in chunks successfully', {
+        eventId,
+        streamId,
+      });
 
       // Update stream metadata separately (non-critical)
       try {
@@ -371,6 +507,11 @@ export class TransportEventStoreChunked extends TransportEventStore {
         });
       }
 
+      this.logger?.info('TransportEventStoreChunked: storeEvent completed', {
+        eventId,
+        streamId,
+      });
+      
       return eventId;
     } catch (error) {
       this.logger?.error('TransportEventStoreChunked: Failed to store event', toError(error), {
@@ -388,8 +529,57 @@ export class TransportEventStoreChunked extends TransportEventStore {
     lastEventId: string,
     { send }: { send: (eventId: string, message: JSONRPCMessage) => Promise<void> },
   ): Promise<string> {
+    
+    // If lastEventId is empty, this is a request to replay ALL events
+    // We need to iterate through all streams and replay everything
     if (!lastEventId) {
-      return '';
+        try {
+        const allEvents: Array<{ eventId: string; streamId: string; metadata: StoredEventMetadata }> = [];
+        
+        // Collect all event metadata from all streams
+        const prefix = [...this.keyPrefix, 'stream'];
+        const iter = this.kv.list<StoredEventMetadata>({ prefix }, {
+          consistency: 'strong',
+          batchSize: 100,
+        });
+        
+        for await (const entry of iter) {
+          if (entry.value && entry.key.includes('metadata')) {
+            const metadata = entry.value;
+            allEvents.push({ 
+              eventId: metadata.eventId, 
+              streamId: metadata.streamId,
+              metadata 
+            });
+          }
+        }
+        
+            
+        // Sort events by timestamp for chronological replay
+        allEvents.sort((a, b) => a.metadata.timestamp - b.metadata.timestamp);
+        
+        // Replay all events
+        let replayedCount = 0;
+        for (const event of allEvents) {
+                const message = await this.reassembleMessage(event.eventId, event.streamId);
+          
+          if (message) {
+            await send(event.eventId, message);
+            replayedCount++;
+          } else {
+            this.logger?.warn('TransportEventStoreChunked: Failed to reassemble message for replay', {
+              eventId: event.eventId,
+              streamId: event.streamId,
+            });
+          }
+        }
+        
+            this.logger?.info('TransportEventStoreChunked: Replayed all events', { replayedCount });
+        return '';
+      } catch (error) {
+            this.logger?.error('TransportEventStoreChunked: Failed to replay all events', toError(error));
+        return '';
+      }
     }
 
     const streamId = this.getStreamIdFromEventId(lastEventId);
@@ -462,19 +652,21 @@ export class TransportEventStoreChunked extends TransportEventStore {
 
   /**
    * Clean up old events (for maintenance)
+   * Uses actual chunk count from metadata for efficient deletion
    */
   override async cleanupOldEvents(streamId: string, keepCount: number = 1000): Promise<number> {
     try {
       const metadataPrefix = [...this.keyPrefix, 'stream', streamId, 'metadata'];
-      const events: Array<{ eventId: string; timestamp: number }> = [];
+      const events: Array<{ eventId: string; timestamp: number; chunkCount: number }> = [];
 
-      // Collect all event metadata
+      // Collect all event metadata including chunk counts
       const iter = this.kv.list<StoredEventMetadata>({ prefix: metadataPrefix });
       for await (const entry of iter) {
         if (entry.value) {
           events.push({
             eventId: entry.value.eventId,
             timestamp: entry.value.timestamp,
+            chunkCount: entry.value.chunkCount,
           });
         }
       }
@@ -498,12 +690,12 @@ export class TransportEventStoreChunked extends TransportEventStore {
         try {
           const atomic = this.kv.atomic();
           
-          for (const { eventId } of batch) {
+          for (const { eventId, chunkCount } of batch) {
             // Delete metadata
             atomic.delete([...this.keyPrefix, 'stream', streamId, 'metadata', eventId]);
             
-            // Delete all chunks (we don't know the exact count, so we'll try a reasonable range)
-            for (let chunkIndex = 0; chunkIndex < 100; chunkIndex++) {
+            // Delete actual chunks using the stored chunk count
+            for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
               atomic.delete([...this.keyPrefix, 'stream', streamId, 'chunks', eventId, chunkIndex]);
             }
           }
@@ -539,6 +731,69 @@ export class TransportEventStoreChunked extends TransportEventStore {
 
 
   /**
+   * Clean up orphaned chunks (chunks without metadata)
+   * Should be run periodically as maintenance
+   */
+  async cleanupOrphanedChunks(streamId: string): Promise<number> {
+    try {
+      // Get all metadata event IDs
+      const validEventIds = new Set<string>();
+      const metadataIter = this.kv.list<StoredEventMetadata>({
+        prefix: [...this.keyPrefix, 'stream', streamId, 'metadata'],
+      });
+      
+      for await (const entry of metadataIter) {
+        if (entry.value) {
+          validEventIds.add(entry.value.eventId);
+        }
+      }
+      
+      // Find chunk event IDs
+      const chunkEventIds = new Set<string>();
+      const chunksIter = this.kv.list({
+        prefix: [...this.keyPrefix, 'stream', streamId, 'chunks'],
+      });
+      
+      for await (const entry of chunksIter) {
+        // Extract eventId from key: [..., 'chunks', eventId, chunkIndex]
+        const key = entry.key;
+        const eventId = key[key.length - 2] as string;
+        chunkEventIds.add(eventId);
+      }
+      
+      // Delete orphaned chunks
+      const orphanedEventIds = Array.from(chunkEventIds)
+        .filter(id => !validEventIds.has(id));
+      
+      let deletedCount = 0;
+      for (const eventId of orphanedEventIds) {
+        // Delete all chunks for this orphaned event
+        const orphanIter = this.kv.list({
+          prefix: [...this.keyPrefix, 'stream', streamId, 'chunks', eventId],
+        });
+        
+        for await (const entry of orphanIter) {
+          await this.kv.delete(entry.key);
+          deletedCount++;
+        }
+      }
+      
+      this.logger?.info('TransportEventStoreChunked: Cleaned up orphaned chunks', {
+        streamId,
+        orphanedEvents: orphanedEventIds.length,
+        chunksDeleted: deletedCount,
+      });
+      
+      return deletedCount;
+    } catch (error) {
+      this.logger?.error('TransportEventStoreChunked: Failed to cleanup orphaned chunks', toError(error), {
+        streamId,
+      });
+      return 0;
+    }
+  }
+
+  /**
    * Get statistics about chunk usage (for monitoring)
    */
   async getChunkStatistics(streamId?: string): Promise<{
@@ -565,6 +820,12 @@ export class TransportEventStoreChunked extends TransportEventStore {
 
       try {
         for await (const entry of iter) {
+          console.log('[DEBUG] getChunkStatistics: Processing entry', {
+            key: entry.key,
+            hasValue: !!entry.value,
+            keyIncludesMetadata: entry.key.includes('metadata'),
+            compressed: entry.value?.compressed,
+          });
           if (entry.value && entry.key.includes('metadata')) {
             const metadata = entry.value;
             stats.totalEvents++;
@@ -577,6 +838,7 @@ export class TransportEventStoreChunked extends TransportEventStore {
               };
             }
 
+        
             if (metadata.compressed) {
               stats.compressionStats.compressed++;
             } else {
@@ -593,6 +855,7 @@ export class TransportEventStoreChunked extends TransportEventStore {
 
       stats.averageChunksPerEvent = stats.totalEvents > 0 ? stats.totalChunks / stats.totalEvents : 0;
 
+  
       return stats;
     } catch (error) {
       this.logger?.error('TransportEventStoreChunked: Failed to get chunk statistics', toError(error));

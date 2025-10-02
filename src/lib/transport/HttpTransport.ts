@@ -58,6 +58,11 @@ export class HttpTransport implements Transport {
   private sseKeepaliveIntervals = new Map<string, number>();
   private readonly KEEPALIVE_INTERVAL_MS = 25000; // 25 seconds - safe margin before 60s timeout
 
+  // Event store cleanup mechanism
+  private cleanupIntervalId?: number;
+  private readonly CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+  private readonly EVENTS_TO_KEEP = 1000; // Keep last 1000 events per stream
+
   // Metrics tracking
   private startTime = performance.now();
   private requestCount = 0;
@@ -98,10 +103,19 @@ export class HttpTransport implements Transport {
       port: this.config.port,
       compatibilityMode: this.config.preserveCompatibilityMode,
     });
+
+    // Start periodic event cleanup if event store is available
+    if (this.dependencies.eventStore) {
+      this.startPeriodicCleanup();
+    }
   }
 
   async stop(): Promise<void> {
     this.logger.info('HttpTransport: Stopping HTTP transport');
+    
+    // Stop periodic cleanup
+    this.stopPeriodicCleanup();
+    
     await this.cleanup();
   }
 
@@ -245,9 +259,9 @@ export class HttpTransport implements Transport {
 
       // 🔒 SECURITY-CRITICAL: Execute request within authentication context
       if (mcpAuthContext) {
-        this.logger.info(`HttpTransport: Handling request with auth context [${requestId}]`, {
-          mcpAuthContext,
-        });
+        // this.logger.info(`HttpTransport: Handling request with auth context [${requestId}]`, {
+        //   mcpAuthContext,
+        // });
         // Execute MCP operations within authenticated context using BeyondMcpServer's AsyncLocalStorage
         response = await beyondMcpServer.executeWithAuthContext(mcpAuthContext, async () => {
           switch (method) {
@@ -270,7 +284,7 @@ export class HttpTransport implements Transport {
           }
         });
       } else {
-        this.logger.info(`HttpTransport: Handling request WITHOUT auth context [${requestId}]`);
+        // this.logger.info(`HttpTransport: Handling request WITHOUT auth context [${requestId}]`);
         // Execute without authentication context for open endpoints
         switch (method) {
           case 'POST':
@@ -327,6 +341,7 @@ export class HttpTransport implements Transport {
   /**
    * 🚨 CRITICAL COMPATIBILITY CODE
    * Handle POST requests with session persistence
+   * Creates the MCP session
    */
   private async handleMCPPost(
     request: Request,
@@ -348,7 +363,7 @@ export class HttpTransport implements Transport {
     if (sessionId && this.mcpTransports.has(sessionId)) {
       // Reuse existing transport
       transport = this.mcpTransports.get(sessionId)!;
-      this.logger.debug('HttpTransport: Using existing MCP session', { sessionId });
+      // this.logger.info('HttpTransport: Using existing MCP session', { sessionId });
 
       // Update session activity if persistence is enabled
       if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
@@ -358,6 +373,7 @@ export class HttpTransport implements Transport {
       if (!sessionId && isInitializeRequest(requestBody)) {
         // New initialization request
         const newSessionId = randomUUID();
+		// this.logger.info('HttpTransport: Creating new MCP session', { sessionId });
 
         // 🚨 PRESERVED MCP SDK INTEGRATION - DO NOT MODIFY
         transport = new StreamableHTTPServerTransport({
@@ -419,6 +435,11 @@ export class HttpTransport implements Transport {
       const responseCapture = new SimpleResponseCapture();
       const nodeRes = responseCapture.createNodeResponse();
 
+// this.logger.info('HttpTransport: About to call transport.handleRequest for POST', { 
+//   sessionId: transport.sessionId,
+//   requestBody: JSON.stringify(requestBody).substring(0, 100) + '...'
+// });
+
       // 🚨 PRESERVED TRANSPORT HANDLING - DO NOT MODIFY TYPE CASTING
       await transport.handleRequest(
         nodeReq,
@@ -444,6 +465,19 @@ export class HttpTransport implements Transport {
         ...responseCapture.getHeaders(),
       };
 
+      // logger.info('MCPRequestHandler: MCP handled request', {
+      //   resBody: (() => {
+      //     try {
+      //       return JSON.parse(resBody);
+      //     } catch {
+      //       return resBody;
+      //     }
+      //   })(),
+      //   resStatus,
+      //   resHeaders,
+      //   isNewSession,
+      // });
+
       // Return the captured response (non-SSE)
       return new Response(resBody, {
         status: resStatus,
@@ -462,11 +496,12 @@ export class HttpTransport implements Transport {
   /**
    * 🚨 CRITICAL COMPATIBILITY CODE
    * Handle GET requests (SSE) with session activity tracking
+   * Processes JSONP messages for session stream
    */
   private async handleMCPGet(
     request: Request,
     method: string,
-    sdkMcpServer: SdkMcpServer,
+    _sdkMcpServer: SdkMcpServer,
   ): Promise<Response> {
     const sessionId = request.headers.get('mcp-session-id') as string | undefined;
 
@@ -541,19 +576,19 @@ export class HttpTransport implements Transport {
       // Start SSE keepalive to prevent network timeout disconnections
       this.startSSEKeepalive(sessionId, serverResponse);
 
-      this.logger.debug(
-        'HttpTransport: Awaiting transport setup, then returning streaming response',
-        { sessionId },
-      );
+      // this.logger.debug(
+      //   'HttpTransport: Awaiting transport setup, then returning streaming response',
+      //   { sessionId },
+      // );
 
       try {
         // 🚨 CRITICAL: Await transport to let it set up SSE first
         await transport.handleRequest(nodeReq, nodeRes as any);
 
-        this.logger.debug(
-          'HttpTransport: Transport SSE setup completed, returning streaming response',
-          { sessionId },
-        );
+        // this.logger.debug(
+        //   'HttpTransport: Transport SSE setup completed, returning streaming response',
+        //   { sessionId },
+        // );
 
         // Now return streaming response - connection should stay open via ReadableStream
         return new Response(sseStream, {
@@ -584,11 +619,12 @@ export class HttpTransport implements Transport {
   /**
    * 🚨 CRITICAL COMPATIBILITY CODE
    * Handle DELETE requests (session termination) with persistence cleanup
+   * Tears down session stream
    */
   private async handleMCPDelete(
     request: Request,
     method: string,
-    sdkMcpServer: SdkMcpServer,
+    _sdkMcpServer: SdkMcpServer,
   ): Promise<Response> {
     const sessionId = request.headers.get('mcp-session-id') as string | undefined;
 
@@ -759,6 +795,81 @@ export class HttpTransport implements Transport {
       clearInterval(intervalId);
       this.sseKeepaliveIntervals.delete(sessionId);
       this.logger.debug('HttpTransport: SSE keepalive stopped', { sessionId });
+    }
+  }
+
+  /**
+   * Start periodic event store cleanup
+   * Runs cleanup every hour to maintain storage efficiency
+   */
+  private startPeriodicCleanup(): void {
+    this.logger.info('HttpTransport: Starting periodic event cleanup', {
+      intervalMs: this.CLEANUP_INTERVAL_MS,
+      eventsToKeep: this.EVENTS_TO_KEEP,
+    });
+
+    // Run cleanup immediately on startup
+    this.runEventCleanup().catch(error => {
+      this.logger.error('HttpTransport: Initial event cleanup failed', toError(error));
+    });
+
+    // Schedule periodic cleanup
+    this.cleanupIntervalId = setInterval(async () => {
+      try {
+        await this.runEventCleanup();
+      } catch (error) {
+        this.logger.error('HttpTransport: Scheduled event cleanup failed', toError(error));
+      }
+    }, this.CLEANUP_INTERVAL_MS);
+
+    this.logger.info('HttpTransport: Periodic event cleanup started');
+  }
+
+  /**
+   * Stop periodic event store cleanup
+   */
+  private stopPeriodicCleanup(): void {
+    if (this.cleanupIntervalId !== undefined) {
+      clearInterval(this.cleanupIntervalId);
+      this.cleanupIntervalId = undefined;
+      this.logger.info('HttpTransport: Periodic event cleanup stopped');
+    }
+  }
+
+  /**
+   * Run event cleanup for all active streams
+   */
+  private async runEventCleanup(): Promise<void> {
+    if (!this.dependencies.eventStore) {
+      return;
+    }
+
+    try {
+      const streams = await this.dependencies.eventStore.listStreams();
+      let totalDeleted = 0;
+
+      for (const streamId of streams) {
+        try {
+          const deletedCount = await this.dependencies.eventStore.cleanupOldEvents(
+            streamId,
+            this.EVENTS_TO_KEEP
+          );
+          totalDeleted += deletedCount;
+        } catch (error) {
+          this.logger.warn('HttpTransport: Failed to cleanup stream', {
+            streamId,
+            error: toError(error).message,
+          });
+        }
+      }
+
+      this.logger.info('HttpTransport: Event cleanup completed', {
+        streamsProcessed: streams.length,
+        eventsDeleted: totalDeleted,
+      });
+    } catch (error) {
+      this.logger.error('HttpTransport: Event cleanup failed', toError(error));
+      throw error;
     }
   }
 

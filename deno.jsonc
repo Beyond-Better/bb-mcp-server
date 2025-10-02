@@ -27,7 +27,10 @@
     "tool:test:all": "deno test --allow-all --unstable-kv --coverage=coverage tests/ examples/*/tests/",
     "tool:test:apps": "deno test --allow-all --unstable-kv --coverage=coverage examples/*/tests/",
     "tool:test:file": "deno test --allow-all --unstable-kv --coverage=coverage ",
-    "tool:format": "deno fmt src/ tests/"
+    "tool:format": "deno fmt src/ tests/",
+    "cleanup:orphaned-chunks": "deno run --allow-read --allow-write --allow-env scripts/cleanup-orphaned-chunks.ts",
+    "cleanup:orphaned-chunks:dry-run": "deno run --allow-read --allow-write --allow-env scripts/cleanup-orphaned-chunks.ts --dry-run",
+    "cleanup:orphaned-chunks:verbose": "deno run --allow-read --allow-write --allow-env scripts/cleanup-orphaned-chunks.ts --verbose"
   },
   "imports": {
     "mcp": "npm:@modelcontextprotocol/sdk@1.17.5",

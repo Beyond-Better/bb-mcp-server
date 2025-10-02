@@ -87,7 +87,7 @@ Deno.test({
     // Verify store is initialized
     assertExists(eventStore);
     
-    await kv.close();
+    kv.close();
   },
   sanitizeOps: false,
   sanitizeResources: false,
@@ -109,7 +109,7 @@ Deno.test({
     
     assertExists(eventStore);
     
-    await kv.close();
+    kv.close();
   },
 });
 
@@ -131,7 +131,7 @@ Deno.test({
     assertExists(eventId);
     assert(eventId.startsWith('test-stream-1|'));
     
-    await kv.close();
+    kv.close();
   },
 });
 
@@ -160,7 +160,7 @@ Deno.test({
       assertEquals(stats.totalEvents, 1);
       assert(stats.totalChunks > 1); // Should be chunked
     } finally {
-      await kv.close();
+      kv.close();
     }
   },
 });
@@ -189,7 +189,7 @@ Deno.test({
       assert(stats.totalChunks >= 8); // Should require multiple chunks
       assert(stats.averageChunksPerEvent >= 8);
     } finally {
-      await kv.close();
+      kv.close();
     }
   },
 });
@@ -213,7 +213,7 @@ Deno.test({
       'exceeds maximum allowed size'
     );
     
-    await kv.close();
+    kv.close();
   },
 });
 
@@ -252,7 +252,7 @@ Deno.test({
     assertEquals((replayedMessages[0]?.message as any)?.params?.size, '75KB');
     assertEquals((replayedMessages[1]?.message as any)?.params?.size, '100KB');
     
-    await kv.close();
+    kv.close();
   },
 });
 
@@ -299,7 +299,7 @@ Deno.test({
       assertEquals(replayedMessages.length, 1);
       assertEquals((replayedMessages[0] as any)?.params?.content, compressibleContent);
     } finally {
-      await kv.close();
+      kv.close();
     }
   },
 });
@@ -335,7 +335,7 @@ Deno.test({
       const stream2Stats = await eventStore.getChunkStatistics('stream-2');
       assertEquals(stream2Stats.totalEvents, 1);
     } finally {
-      await kv.close();
+      kv.close();
     }
   },
 });
@@ -370,13 +370,12 @@ Deno.test({
       assertExists(metadata.lastEventId);
     }
     
-    await kv.close();
+    kv.close();
   },
 });
 
 Deno.test({
   name: 'TransportEventStoreChunked - Cleanup Old Events',
-  only: true,
   async fn() {
     const kv = await createTestKV();
     const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger);
@@ -404,7 +403,7 @@ Deno.test({
     stats = await eventStore.getChunkStatistics(streamId);
     assertEquals(stats.totalEvents, 3);
     
-    await kv.close();
+    kv.close();
   },
 });
 
@@ -449,7 +448,7 @@ Deno.test({
     // Events should be logged without throwing errors
     // (Verification of log content would require more complex KV inspection)
     
-    await kv.close();
+    kv.close();
   },
 });
 
@@ -484,6 +483,6 @@ Deno.test({
     // Should not replay the corrupted message
     assertEquals(replayedMessages.length, 0);
     
-    await kv.close();
+    kv.close();
   },
 });
