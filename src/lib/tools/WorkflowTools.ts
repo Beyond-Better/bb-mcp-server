@@ -103,8 +103,8 @@ export class WorkflowTools {
         inputSchema: {
           workflow_name: ToolRegistryClass.createDynamicEnum(toolData.names),
           parameters: z.object({
-            userId: z.string().describe(
-              'User ID for authentication and audit logging (required for all workflows)',
+            userId: z.string().optional().describe(
+              'User ID for authentication (ONLY for admin/system delegation - DO NOT make up userIds - omit to use authenticated session user)',
             ),
             requestId: z.string().optional().describe('Optional request ID for tracking'),
             dryRun: z.boolean().optional().default(false).describe(
@@ -254,34 +254,43 @@ ${toolData.overviews}
         );
       }
 
-      // TODO: This is a simplified implementation - in a real scenario, you'd need:
-      // 1. Authentication context handling
-      // 2. Workflow context creation
-      // 3. User credential validation
-      // 4. Audit logging
-      // 5. Rate limiting
-      // For now, this demonstrates the structure
-
-	const userId = (parameters as any)?.userId || BeyondMcpServer.getCurrentAuthenticatedUserId();
+      // Extract authentication context from AsyncLocalStorage or extra parameter
+      const authContext = BeyondMcpServer.getCurrentAuthContext();
+      const userId = (parameters as any)?.userId || 
+                     authContext?.authenticatedUserId || 
+                     BeyondMcpServer.getCurrentAuthenticatedUserId();
 
       this.logger.info('WorkflowTools: Executing workflow', {
         userId,
+        authenticatedUserId: authContext?.authenticatedUserId,
+        clientId: authContext?.clientId,
         workflowName: workflow_name,
         hasParameters: !!parameters,
         parameterKeys: Object.keys(parameters || {}),
+        authContext,
       });
 
-      // Execute workflow with basic validation
-      const result = await workflow.executeWithValidation(parameters, {
-        userId: (parameters as any)?.userId || BeyondMcpServer.getCurrentAuthenticatedUserId(),
-        requestId: (parameters as any)?.requestId || crypto.randomUUID(),
+      // Build complete workflow context with authentication details
+      const workflowContext: any = {
+        userId: userId || '',
+        requestId: (parameters as any)?.requestId || authContext?.requestId || crypto.randomUUID(),
         workflowName: workflow_name,
         startTime: new Date(),
         auditLogger: this.auditLogger,
         logger: this.logger,
         _meta: (extra?._meta || {}) as Record<string, unknown>,
-        // TODO: Add other required context properties
-      } as any);
+        // Authentication context from AsyncLocalStorage
+        authenticatedUserId: authContext?.authenticatedUserId,
+        clientId: authContext?.clientId,
+        scopes: authContext?.scopes,
+        parameterUserId: (parameters as any)?.userId,
+        // Note: kvManager and thirdPartyClient would need to be injected via dependencies
+        kvManager: undefined,
+        thirdPartyClient: undefined,
+      };
+
+      // Execute workflow with full authentication context
+      const result = await workflow.executeWithValidation(parameters, workflowContext);
 
       return {
         content: [

@@ -43,11 +43,23 @@ export interface OAuthMetadataConfig {
   enablePKCE: boolean;
   /** Enable dynamic client registration */
   enableDynamicRegistration: boolean;
+  
+  // High Priority Optional Fields
+  /** URL to human-readable API documentation */
+  serviceDocumentation?: string;
+  /** Supported UI locales for internationalization */
+  uiLocalesSupported?: string[];
+  
   /** MCP server extensions */
   mcpExtensions?: {
     serverName: string;
     serverVersion: string;
     supportedWorkflows: string[];
+    mcpEndpoint?: string;
+    callbackUrl?: string;
+    upstreamProvider?: string;
+    description?: string;
+    documentationUrl?: string;
   };
 }
 
@@ -134,9 +146,29 @@ export class OAuthMetadata {
 
         // PKCE support (RFC 7636)
         code_challenge_methods_supported: this.getCodeChallengeMethods(),
+        
+        // High Priority Optional Fields
+        // Service documentation for API consumers (RFC 8414 optional)
+        ...(this.config.serviceDocumentation && {
+          service_documentation: this.config.serviceDocumentation,
+        }),
+        // UI locales for internationalization (RFC 8414 optional)
+        ...(this.config.uiLocalesSupported && {
+          ui_locales_supported: [...this.config.uiLocalesSupported],
+        }),
+        // Revocation endpoint auth methods (RFC 7009)
+        // Automatically included when revocation endpoint exists
+        revocation_endpoint_auth_methods_supported: this.getTokenEndpointAuthMethods(),
       };
 
-      // Add MCP-specific extensions (default or configured)
+      this.logger?.debug(`OAuthMetadata: Registration endpoint decision [${metadataId}]`, {
+        metadataId,
+        enableDynamicRegistration: this.config.enableDynamicRegistration,
+        registrationEndpoint: this.config.registrationEndpoint,
+        willIncludeInMetadata: !!this.config.enableDynamicRegistration,
+      });
+
+      // Add MCP-specific extensions (configurable via ConfigManager)
       const defaultMcpExtensions = {
         server_name: 'bb-mcp-server',
         server_version: '1.0.0',
@@ -149,7 +181,21 @@ export class OAuthMetadata {
           server_name: this.config.mcpExtensions.serverName,
           server_version: this.config.mcpExtensions.serverVersion,
           supported_workflows: [...this.config.mcpExtensions.supportedWorkflows],
-          mcp_endpoint: `${this.config.issuer}/mcp`,
+          mcp_endpoint: this.config.mcpExtensions.mcpEndpoint ||
+            `${this.config.issuer}/mcp`,
+          // Optional MCP extension fields (configurable via ConfigManager)
+          ...(this.config.mcpExtensions.callbackUrl && {
+            callback_url: this.config.mcpExtensions.callbackUrl,
+          }),
+          ...(this.config.mcpExtensions.upstreamProvider && {
+            upstream_provider: this.config.mcpExtensions.upstreamProvider,
+          }),
+          ...(this.config.mcpExtensions.description && {
+            description: this.config.mcpExtensions.description,
+          }),
+          ...(this.config.mcpExtensions.documentationUrl && {
+            documentation_url: this.config.mcpExtensions.documentationUrl,
+          }),
         }
         : defaultMcpExtensions;
 

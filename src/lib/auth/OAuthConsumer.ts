@@ -113,6 +113,18 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
   async initialize(): Promise<void> {}
 
   /**
+   * Get the userId to use for credential storage
+   * Override in consumer for provider-specific logic
+   * 
+   * For single-user OAuth systems, this should return a consistent default.
+   * For multi-user systems, this should return the validated userId.
+   */
+  protected getStorageUserId(validatedUserId?: string): string {
+    // Default: use validated userId or 'default-user'
+    return validatedUserId || 'default-user';
+  }
+
+  /**
    * Build authorization URL for the specific OAuth provider
    * Default implementation - override in consumer for provider-specific logic
    */
@@ -340,10 +352,20 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
       // Exchange code for tokens
       const tokenResult = await this.exchangeCodeForTokens(code, state);
 
+      // Use consistent storage userId
+      const storageUserId = this.getStorageUserId(storedAuthRequest.userId);
+
+      this.logger?.info(`OAuthConsumer: Using storage userId [${callbackId}]`, {
+        callbackId,
+        requestUserId: storedAuthRequest.userId,
+        storageUserId,
+        providerId: this.config.providerId,
+      });
+
       // Store user credentials (support both 'credentials' and 'tokens' for backward compatibility)
       const credentials = tokenResult.credentials || tokenResult.tokens;
       if (tokenResult.success && credentials) {
-        await this.storeUserCredentials(storedAuthRequest.userId, credentials);
+        await this.storeUserCredentials(storageUserId, credentials);
       } else {
         throw new Error(tokenResult.error || 'Token exchange failed');
       }
@@ -353,13 +375,14 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
 
       this.logger?.info(`OAuthConsumer: Authorization callback successful [${callbackId}]`, {
         callbackId,
-        userId: storedAuthRequest.userId,
+        requestUserId: storedAuthRequest.userId,
+        storageUserId,
         providerId: this.config.providerId,
       });
 
       return {
         success: true,
-        userId: storedAuthRequest.userId,
+        userId: storageUserId, // Return storage userId for consistency
       };
     } catch (error) {
       this.logger?.error(

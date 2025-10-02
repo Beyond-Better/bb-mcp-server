@@ -539,13 +539,25 @@ export class OAuthEndpoints {
   async handleWellKnown(request: Request, path: string, method: string): Promise<Response> {
     // Support both RFC 8414 and RFC 9068 endpoints
     // RFC 9728: Resource-specific metadata paths like oauth-protected-resource/mcp are also supported
-    const isAuthServerMetadata = path === 'oauth-authorization-server';
+    const isAuthServerMetadata = path === 'oauth-authorization-server' || path === 'oauth-authorization-server/mcp';
+    const isMcpSpecificMetadata = path === 'oauth-authorization-server/mcp';
     const isProtectedResourceMetadata = path === 'oauth-protected-resource' || path.startsWith('oauth-protected-resource/');
     
     if ((isAuthServerMetadata || isProtectedResourceMetadata) && method === 'GET') {
       try {
         // Delegate to OAuth Provider for metadata generation
         const metadata = await this.oauthProvider.getAuthorizationServerMetadata();
+        
+        // MCP-specific metadata endpoint: oauth-authorization-server/mcp
+        // Returns the same metadata but signals this is an MCP-enabled OAuth server
+        if (isMcpSpecificMetadata) {
+          this.logger.debug('OAuthEndpoints: Serving MCP-specific OAuth metadata', {
+            endpoint: '/.well-known/oauth-authorization-server/mcp',
+            hasMcpExtensions: !!metadata.mcp_extensions,
+          });
+          // No modifications needed - the metadata already includes mcp_extensions
+          // This endpoint serves as an MCP-specific discovery mechanism
+        }
         
         // RFC 9728: If this is a resource-specific metadata request, add the resource field
         if (isProtectedResourceMetadata && path.startsWith('oauth-protected-resource/')) {

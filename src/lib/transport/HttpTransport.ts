@@ -7,7 +7,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { isInitializeRequest } from 'mcp/types.js';
-import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
+import type { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
 import { StreamableHTTPServerTransport } from 'mcp/server/streamableHttp.js';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { toError } from '../utils/Error.ts';
@@ -59,8 +59,8 @@ export class HttpTransport implements Transport {
   private readonly KEEPALIVE_INTERVAL_MS = 25000; // 25 seconds - safe margin before 60s timeout
 
   // Event store cleanup mechanism
-  private cleanupIntervalId?: number;
-  private readonly CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+  private cleanupIntervalId?: number | undefined;
+  private readonly CLEANUP_INTERVAL_MS = 60 * 60 * 6000; // 6 hours
   private readonly EVENTS_TO_KEEP = 1000; // Keep last 1000 events per stream
 
   // Metrics tracking
@@ -97,6 +97,7 @@ export class HttpTransport implements Transport {
     this.authenticationMiddleware = new AuthenticationMiddleware(authConfig, authDependencies);
   }
 
+  // deno-lint-ignore require-await
   async start(): Promise<void> {
     this.logger.info('HttpTransport: Starting HTTP transport', {
       hostname: this.config.hostname,
@@ -110,15 +111,17 @@ export class HttpTransport implements Transport {
     }
   }
 
+  // deno-lint-ignore require-await
   async stop(): Promise<void> {
     this.logger.info('HttpTransport: Stopping HTTP transport');
-    
+
     // Stop periodic cleanup
     this.stopPeriodicCleanup();
-    
+
     await this.cleanup();
   }
 
+  // deno-lint-ignore require-await
   async cleanup(): Promise<void> {
     this.logger.info('HttpTransport: Cleaning up HTTP transport');
 
@@ -367,13 +370,13 @@ export class HttpTransport implements Transport {
 
       // Update session activity if persistence is enabled
       if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
-        this.updateSessionActivityAsync(sessionId);
+        this.updateSessionActivity(sessionId);
       }
     } else {
       if (!sessionId && isInitializeRequest(requestBody)) {
         // New initialization request
         const newSessionId = randomUUID();
-		// this.logger.info('HttpTransport: Creating new MCP session', { sessionId });
+        // this.logger.info('HttpTransport: Creating new MCP session', { sessionId });
 
         // 🚨 PRESERVED MCP SDK INTEGRATION - DO NOT MODIFY
         transport = new StreamableHTTPServerTransport({
@@ -386,7 +389,7 @@ export class HttpTransport implements Transport {
 
             // Persist the new session if enabled
             if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
-              this.persistSessionAsync(initializedSessionId, transport, request);
+              this.persistSession(initializedSessionId, transport, request);
             }
           },
           eventStore: this.dependencies.eventStore,
@@ -406,7 +409,7 @@ export class HttpTransport implements Transport {
 
             // Mark session as inactive in persistence if enabled
             if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
-              this.markSessionInactiveAsync(sessionIdToCleanup);
+              this.markSessionInactive(sessionIdToCleanup);
             }
 
             this.logger.info('HttpTransport: MCP session closed', {
@@ -435,10 +438,10 @@ export class HttpTransport implements Transport {
       const responseCapture = new SimpleResponseCapture();
       const nodeRes = responseCapture.createNodeResponse();
 
-// this.logger.info('HttpTransport: About to call transport.handleRequest for POST', { 
-//   sessionId: transport.sessionId,
-//   requestBody: JSON.stringify(requestBody).substring(0, 100) + '...'
-// });
+      // this.logger.info('HttpTransport: About to call transport.handleRequest for POST', {
+      //   sessionId: transport.sessionId,
+      //   requestBody: JSON.stringify(requestBody).substring(0, 100) + '...'
+      // });
 
       // 🚨 PRESERVED TRANSPORT HANDLING - DO NOT MODIFY TYPE CASTING
       await transport.handleRequest(
@@ -542,7 +545,7 @@ export class HttpTransport implements Transport {
 
     // Update session activity
     if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
-      this.updateSessionActivityAsync(sessionId);
+      this.updateSessionActivity(sessionId);
     }
 
     try {
@@ -682,7 +685,7 @@ export class HttpTransport implements Transport {
       this.activeSSEStreams.delete(sessionId);
 
       if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
-        this.markSessionInactiveAsync(sessionId);
+        this.markSessionInactive(sessionId);
       }
 
       this.logger.info('HttpTransport: MCP session terminated cleanly', {
@@ -809,7 +812,7 @@ export class HttpTransport implements Transport {
     });
 
     // Run cleanup immediately on startup
-    this.runEventCleanup().catch(error => {
+    this.runEventCleanup().catch((error) => {
       this.logger.error('HttpTransport: Initial event cleanup failed', toError(error));
     });
 
@@ -852,7 +855,7 @@ export class HttpTransport implements Transport {
         try {
           const deletedCount = await this.dependencies.eventStore.cleanupOldEvents(
             streamId,
-            this.EVENTS_TO_KEEP
+            this.EVENTS_TO_KEEP,
           );
           totalDeleted += deletedCount;
         } catch (error) {
@@ -904,7 +907,7 @@ export class HttpTransport implements Transport {
   }
 
   // Session management helpers (async)
-  private persistSessionAsync(
+  private persistSession(
     sessionId: string,
     transport: StreamableHTTPServerTransport,
     request: Request,
@@ -913,12 +916,12 @@ export class HttpTransport implements Transport {
     // Placeholder for future integration
   }
 
-  private updateSessionActivityAsync(sessionId: string): void {
+  private updateSessionActivity(sessionId: string): void {
     // Implementation depends on TransportPersistenceService availability
     // Placeholder for future integration
   }
 
-  private markSessionInactiveAsync(sessionId: string): void {
+  private markSessionInactive(sessionId: string): void {
     // Implementation depends on TransportPersistenceService availability
     // Placeholder for future integration
   }

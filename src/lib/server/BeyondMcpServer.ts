@@ -202,6 +202,7 @@ export class BeyondMcpServer {
       await this.setupTransport();
 
       this.initialized = true;
+
       this.logger.info('BeyondMcpServer: Beyond MCP server initialized successfully', {
         coreToolsCount: this.toolRegistry.getToolCount(),
         transport: this.config.transport?.type || 'stdio',
