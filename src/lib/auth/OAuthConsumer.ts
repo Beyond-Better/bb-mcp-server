@@ -90,7 +90,9 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
     this.logger = dependencies.logger;
 
     if (!this.kvManager) throw new Error(`OAuthConsumer constructor failed: must supply kvManager`);
-    if (!this.credentialStore) throw new Error(`OAuthConsumer constructor failed: must supply credentialStore`);
+    if (!this.credentialStore) {
+      throw new Error(`OAuthConsumer constructor failed: must supply credentialStore`);
+    }
 
     this.logger?.info('OAuthConsumer: Initialized OAuth consumer', {
       providerId: this.config.providerId,
@@ -111,18 +113,6 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
    */
 
   async initialize(): Promise<void> {}
-
-  /**
-   * Get the userId to use for credential storage
-   * Override in consumer for provider-specific logic
-   * 
-   * For single-user OAuth systems, this should return a consistent default.
-   * For multi-user systems, this should return the validated userId.
-   */
-  protected getStorageUserId(validatedUserId?: string): string {
-    // Default: use validated userId or 'default-user'
-    return validatedUserId || 'default-user';
-  }
 
   /**
    * Build authorization URL for the specific OAuth provider
@@ -297,12 +287,12 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
 
       await this.storeAuthState(state, authRequest);
 
-      this.logger?.info(`OAuthConsumer: Authorization flow started successfully [${flowId}]`, {
-        flowId,
-        userId,
-        state,
-        authorizationUrl,
-      });
+      // this.logger?.info(`OAuthConsumer: Authorization flow started successfully [${flowId}]`, {
+      //   flowId,
+      //   userId,
+      //   state,
+      //   authorizationUrl,
+      // });
 
       return {
         authorizationUrl,
@@ -336,11 +326,11 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
   ): Promise<AuthCallbackResult> {
     const callbackId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`OAuthConsumer: Handling authorization callback [${callbackId}]`, {
-      callbackId,
-      state,
-      hasCode: !!code,
-    });
+    // this.logger?.info(`OAuthConsumer: Handling authorization callback [${callbackId}]`, {
+    //   callbackId,
+    //   state,
+    //   hasCode: !!code,
+    // });
 
     try {
       // 🔒 SECURITY-CRITICAL: Validate state parameter
@@ -352,20 +342,15 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
       // Exchange code for tokens
       const tokenResult = await this.exchangeCodeForTokens(code, state);
 
-      // Use consistent storage userId
-      const storageUserId = this.getStorageUserId(storedAuthRequest.userId);
-
-      this.logger?.info(`OAuthConsumer: Using storage userId [${callbackId}]`, {
-        callbackId,
-        requestUserId: storedAuthRequest.userId,
-        storageUserId,
-        providerId: this.config.providerId,
-      });
-
       // Store user credentials (support both 'credentials' and 'tokens' for backward compatibility)
       const credentials = tokenResult.credentials || tokenResult.tokens;
       if (tokenResult.success && credentials) {
-        await this.storeUserCredentials(storageUserId, credentials);
+        await this.storeUserCredentials(storedAuthRequest.userId, credentials);
+        // this.logger?.info(`OAuthConsumer: Stored credentials [${callbackId}]`, {
+        //   callbackId,
+        //   userId: storedAuthRequest.userId,
+        //   credentials,
+        // });
       } else {
         throw new Error(tokenResult.error || 'Token exchange failed');
       }
@@ -373,16 +358,15 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
       // 🔒 SECURITY-CRITICAL: Clean up authorization state (one-time use)
       await this.deleteAuthState(state);
 
-      this.logger?.info(`OAuthConsumer: Authorization callback successful [${callbackId}]`, {
-        callbackId,
-        requestUserId: storedAuthRequest.userId,
-        storageUserId,
-        providerId: this.config.providerId,
-      });
+      // this.logger?.info(`OAuthConsumer: Authorization callback successful [${callbackId}]`, {
+      //   callbackId,
+      //   userId: storedAuthRequest.userId,
+      //   providerId: this.config.providerId,
+      // });
 
       return {
         success: true,
-        userId: storageUserId, // Return storage userId for consistency
+        userId: storedAuthRequest.userId,
       };
     } catch (error) {
       this.logger?.error(
@@ -454,11 +438,11 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
       }
 
       // Attempt token refresh
-      this.logger?.info(`OAuthConsumer: Attempting token refresh [${tokenId}]`, {
-        tokenId,
-        userId,
-        providerId: this.config.providerId,
-      });
+      // this.logger?.info(`OAuthConsumer: Attempting token refresh [${tokenId}]`, {
+      //   tokenId,
+      //   userId,
+      //   providerId: this.config.providerId,
+      // });
 
       try {
         const refreshResult = await this.refreshTokens(expiredCreds.refreshToken);
@@ -471,11 +455,11 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
             refreshResult.credentials,
           );
 
-          this.logger?.info(`OAuthConsumer: Token refresh successful [${tokenId}]`, {
-            tokenId,
-            userId,
-            providerId: this.config.providerId,
-          });
+          // this.logger?.info(`OAuthConsumer: Token refresh successful [${tokenId}]`, {
+          //   tokenId,
+          //   userId,
+          //   providerId: this.config.providerId,
+          // });
 
           return refreshResult.credentials.accessToken;
         } else {
@@ -566,11 +550,11 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
 
       await this.credentialStore.storeCredentials(userId, this.config.providerId, credentials);
 
-      this.logger?.info('OAuthConsumer: Stored user credentials', {
-        userId,
-        providerId: this.config.providerId,
-        expiresAt: new Date(credentials.expiresAt).toISOString(),
-      });
+      // this.logger?.info('OAuthConsumer: Stored user credentials', {
+      //   userId,
+      //   providerId: this.config.providerId,
+      //   expiresAt: new Date(credentials.expiresAt).toISOString(),
+      // });
     } catch (error) {
       this.logger?.error('OAuthConsumer: Failed to store user credentials:', toError(error), {
         userId,
@@ -590,11 +574,11 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
 
       await this.credentialStore.updateCredentials(userId, this.config.providerId, credentials);
 
-      this.logger?.info('OAuthConsumer: Updated user credentials', {
-        userId,
-        providerId: this.config.providerId,
-        expiresAt: new Date(credentials.expiresAt).toISOString(),
-      });
+      // this.logger?.info('OAuthConsumer: Updated user credentials', {
+      //   userId,
+      //   providerId: this.config.providerId,
+      //   expiresAt: new Date(credentials.expiresAt).toISOString(),
+      // });
 
       return true;
     } catch (error) {
@@ -630,7 +614,6 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
     }
   }
 
-
   /**
    * 🎯 Public: Force token refresh by clearing cached credentials
    * This will cause the next getAccessToken() call to trigger refresh
@@ -641,14 +624,21 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
 
       // Clear cached credentials to force refresh on next access
       if (this.credentialStore) {
-        const credentials = await this.credentialStore.getCredentials(userId, this.config.providerId);
+        const credentials = await this.credentialStore.getCredentials(
+          userId,
+          this.config.providerId,
+        );
         if (credentials) {
           // Keep the refresh token but mark access token as expired
           const expiredCredentials = {
             ...credentials,
             expiresAt: Date.now() - 1000, // Expired 1 second ago
           };
-          await this.credentialStore.updateCredentials(userId, this.config.providerId, expiredCredentials);
+          await this.credentialStore.updateCredentials(
+            userId,
+            this.config.providerId,
+            expiredCredentials,
+          );
         }
       }
 

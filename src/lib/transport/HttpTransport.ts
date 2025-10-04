@@ -246,13 +246,13 @@ export class HttpTransport implements Transport {
           authResult,
         );
 
-        this.logger.info(`HttpTransport: Authentication successful [${requestId}]`, {
-          requestId,
-          clientId: authResult.clientId,
-          userId: authResult.userId,
-          scopes: authResult.scope?.length || 0,
-          actionTaken: authResult.actionTaken,
-        });
+        // this.logger.info(`HttpTransport: Authentication successful [${requestId}]`, {
+        //   requestId,
+        //   clientId: authResult.clientId,
+        //   userId: authResult.userId,
+        //   scopes: authResult.scope?.length || 0,
+        //   actionTaken: authResult.actionTaken,
+        // });
       } else {
         this.logger.debug(`HttpTransport: Authentication not required [${requestId}]`, {
           requestId,
@@ -383,9 +383,7 @@ export class HttpTransport implements Transport {
           sessionIdGenerator: () => newSessionId,
           onsessioninitialized: (initializedSessionId) => {
             this.mcpTransports.set(initializedSessionId, transport);
-            this.logger.info('HttpTransport: New MCP session initialized', {
-              sessionId: initializedSessionId,
-            });
+            this.logger.info(`HttpTransport: New MCP session initialized: ${initializedSessionId}`);
 
             // Persist the new session if enabled
             if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
@@ -412,9 +410,7 @@ export class HttpTransport implements Transport {
               this.markSessionInactive(sessionIdToCleanup);
             }
 
-            this.logger.info('HttpTransport: MCP session closed', {
-              sessionId: sessionIdToCleanup,
-            });
+            this.logger.info(`HttpTransport: MCP session closed ${sessionIdToCleanup}`);
           }
         };
 
@@ -452,9 +448,9 @@ export class HttpTransport implements Transport {
 
       // POST requests ALWAYS return JSON and complete immediately
       // Use SimpleResponseCapture - no SSE handling
-      this.logger.debug('HttpTransport: POST request - waiting for normal completion', {
-        sessionId: transport.sessionId,
-      });
+      // this.logger.debug('HttpTransport: POST request - waiting for normal completion', {
+      //   sessionId: transport.sessionId,
+      // });
 
       // Wait for completion (always completes normally)
       await responseCapture.waitForCompletion();
@@ -688,10 +684,11 @@ export class HttpTransport implements Transport {
         this.markSessionInactive(sessionId);
       }
 
-      this.logger.info('HttpTransport: MCP session terminated cleanly', {
-        sessionId,
-        hadActiveSSE: this.activeSSEStreams.has(sessionId),
-      });
+      this.logger.info(
+        `HttpTransport: MCP session terminated cleanly ${sessionId} - ${
+          this.activeSSEStreams.has(sessionId) ? 'was active stream' : 'was not active stream'
+        }`,
+      );
 
       return new Response(responseCapture.getBody(), {
         status: responseCapture.getStatusCode(),
@@ -783,10 +780,9 @@ export class HttpTransport implements Transport {
     // Store interval for cleanup
     this.sseKeepaliveIntervals.set(sessionId, keepaliveInterval);
 
-    this.logger.info('HttpTransport: SSE keepalive started', {
-      sessionId,
-      intervalMs: this.KEEPALIVE_INTERVAL_MS,
-    });
+    this.logger.info(
+      `HttpTransport: SSE keepalive started - runs every ${this.KEEPALIVE_INTERVAL_MS}ms [${sessionId}]`,
+    );
   }
 
   /**
@@ -887,7 +883,7 @@ export class HttpTransport implements Transport {
       return;
     }
 
-    this.logger.info('HttpTransport: Force closing active SSE stream', { sessionId });
+    this.logger.info(`HttpTransport: Force closing active SSE stream ${sessionId}`);
 
     try {
       // Stop SSE keepalive first

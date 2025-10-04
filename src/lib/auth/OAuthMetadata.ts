@@ -43,13 +43,13 @@ export interface OAuthMetadataConfig {
   enablePKCE: boolean;
   /** Enable dynamic client registration */
   enableDynamicRegistration: boolean;
-  
+
   // High Priority Optional Fields
   /** URL to human-readable API documentation */
   serviceDocumentation?: string;
   /** Supported UI locales for internationalization */
   uiLocalesSupported?: string[];
-  
+
   /** MCP server extensions */
   mcpExtensions?: {
     serverName: string;
@@ -105,21 +105,13 @@ export class OAuthMetadata {
   generateMetadata(): AuthorizationServerMetadata {
     const metadataId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`OAuthMetadata: Generating authorization server metadata [${metadataId}]`, {
-      config: this.config.issuer,
-    });
-    this.logger?.info(`OAuthMetadata: Generating authorization server metadata [${metadataId}]`, {
-      metadataId,
-      issuer: this.config.issuer,
-      enableDynamicRegistration: this.config.enableDynamicRegistration,
-      registrationEndpoint: this.config.registrationEndpoint,
-    });
-    this.logger?.info(`OAuthMetadata: Registration endpoint decision [${metadataId}]`, {
-      metadataId,
-      enableDynamicRegistration: this.config.enableDynamicRegistration,
-      registrationEndpoint: this.config.registrationEndpoint,
-      willIncludeInMetadata: !!this.config.enableDynamicRegistration,
-    });
+    //this.logger?.info(`OAuthMetadata: Generating authorization server metadata [${metadataId}]`, {
+    //  metadataId,
+    //  issuer: this.config.issuer,
+    //  enableDynamicRegistration: this.config.enableDynamicRegistration,
+    //  registrationEndpoint: this.config.registrationEndpoint,
+    //  willIncludeInMetadata: !!this.config.enableDynamicRegistration,
+    //});
 
     try {
       // 🔒 SECURITY-CRITICAL: RFC 8414 compliant metadata structure
@@ -146,7 +138,7 @@ export class OAuthMetadata {
 
         // PKCE support (RFC 7636)
         code_challenge_methods_supported: this.getCodeChallengeMethods(),
-        
+
         // High Priority Optional Fields
         // Service documentation for API consumers (RFC 8414 optional)
         ...(this.config.serviceDocumentation && {
@@ -199,25 +191,25 @@ export class OAuthMetadata {
         }
         : defaultMcpExtensions;
 
-      this.logger?.info(
-        `OAuthMetadata: Generated authorization server metadata successfully [${metadataId}]`,
-        {
-          metadataId,
-          endpoints: {
-            authorization: !!metadata.authorization_endpoint,
-            token: !!metadata.token_endpoint,
-            registration: !!metadata.registration_endpoint,
-            revocation: !!metadata.revocation_endpoint,
-          },
-          capabilities: {
-            grantTypes: metadata.grant_types_supported.length,
-            responseTypes: metadata.response_types_supported.length,
-            scopes: metadata.scopes_supported.length,
-            pkce: metadata.code_challenge_methods_supported.length > 0,
-            mcpExtensions: !!metadata.mcp_extensions,
-          },
-        },
-      );
+      // this.logger?.info(
+      //   `OAuthMetadata: Generated authorization server metadata successfully [${metadataId}]`,
+      //   {
+      //     metadataId,
+      //     endpoints: {
+      //       authorization: !!metadata.authorization_endpoint,
+      //       token: !!metadata.token_endpoint,
+      //       registration: !!metadata.registration_endpoint,
+      //       revocation: !!metadata.revocation_endpoint,
+      //     },
+      //     capabilities: {
+      //       grantTypes: metadata.grant_types_supported.length,
+      //       responseTypes: metadata.response_types_supported.length,
+      //       scopes: metadata.scopes_supported.length,
+      //       pkce: metadata.code_challenge_methods_supported.length > 0,
+      //       mcpExtensions: !!metadata.mcp_extensions,
+      //     },
+      //   },
+      // );
 
       return metadata;
     } catch (error) {
@@ -355,11 +347,11 @@ export class OAuthMetadata {
 
     const isValid = errors.length === 0;
 
-    this.logger?.info('OAuthMetadata: Configuration validation completed', {
-      valid: isValid,
-      errorCount: errors.length,
-      errors: isValid ? undefined : errors,
-    });
+    // this.logger?.info('OAuthMetadata: Configuration validation completed', {
+    //   valid: isValid,
+    //   errorCount: errors.length,
+    //   errors: isValid ? undefined : errors,
+    // });
 
     return {
       valid: isValid,

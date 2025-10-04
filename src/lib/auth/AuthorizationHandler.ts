@@ -149,15 +149,15 @@ export class AuthorizationHandler {
   ): Promise<AuthorizeResponse> {
     const authId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`AuthorizationHandler: Processing authorization request [${authId}]`, {
-      authId,
-      clientId: request.client_id,
-      redirectUri: request.redirect_uri,
-      responseType: request.response_type,
-      scope: request.scope,
-      state: request.state,
-      hasPKCE: !!(request.code_challenge && request.code_challenge_method),
-    });
+    // this.logger?.info(`AuthorizationHandler: Processing authorization request [${authId}]`, {
+    //   authId,
+    //   clientId: request.client_id,
+    //   redirectUri: request.redirect_uri,
+    //   responseType: request.response_type,
+    //   scope: request.scope,
+    //   state: request.state,
+    //   hasPKCE: !!(request.code_challenge && request.code_challenge_method),
+    // });
 
     try {
       // Validate the authorization request
@@ -184,12 +184,12 @@ export class AuthorizationHandler {
         },
       );
 
-      this.logger?.info(`AuthorizationHandler: Authorization request successful [${authId}]`, {
-        authId,
-        clientId: request.client_id,
-        userId,
-        codeGenerated: true,
-      });
+      // this.logger?.info(`AuthorizationHandler: Authorization request successful [${authId}]`, {
+      //   authId,
+      //   clientId: request.client_id,
+      //   userId,
+      //   codeGenerated: true,
+      // });
 
       return {
         code: authorizationCode,
@@ -333,16 +333,15 @@ export class AuthorizationHandler {
   ): Promise<{ success: boolean; error?: string }> {
     const exchangeId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(
-      `AuthorizationHandler: Starting authorization code exchange [${exchangeId}]`,
-      {
-        exchangeId,
-        codePrefix: code.substring(0, 12) + '...',
-        clientId,
-        redirectUri,
-        hasCodeVerifier: !!codeVerifier,
-      },
-    );
+    // this.logger?.info(`AuthorizationHandler: Starting authorization code exchange [${exchangeId}]`,
+    //   {
+    //     exchangeId,
+    //     codePrefix: code.substring(0, 12) + '...',
+    //     clientId,
+    //     redirectUri,
+    //     hasCodeVerifier: !!codeVerifier,
+    //   },
+    // );
 
     try {
       // Get and validate authorization code
@@ -405,14 +404,13 @@ export class AuthorizationHandler {
       // 🔒 SECURITY-CRITICAL: Delete authorization code after successful validation (one-time use)
       await this.tokenManager.deleteAuthorizationCode(code);
 
-      this.logger?.info(
-        `AuthorizationHandler: Authorization code exchange successful [${exchangeId}]`,
-        {
-          exchangeId,
-          clientId: authCode.client_id,
-          userId: authCode.user_id,
-        },
-      );
+      // this.logger?.info(`AuthorizationHandler: Authorization code exchange successful [${exchangeId}]`,
+      //   {
+      //     exchangeId,
+      //     clientId: authCode.client_id,
+      //     userId: authCode.user_id,
+      //   },
+      // );
 
       return { success: true };
     } catch (error) {
@@ -436,13 +434,13 @@ export class AuthorizationHandler {
   ): Promise<void> {
     const storeId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`AuthorizationHandler: Storing MCP auth request [${storeId}]`, {
-      storeId,
-      externalState,
-      clientId: request.client_id,
-      userId: request.user_id,
-      expiresAt: new Date(request.expires_at).toISOString(),
-    });
+    // this.logger?.info(`AuthorizationHandler: Storing MCP auth request [${storeId}]`, {
+    //   storeId,
+    //   externalState,
+    //   clientId: request.client_id,
+    //   userId: request.user_id,
+    //   expiresAt: new Date(request.expires_at).toISOString(),
+    // });
 
     try {
       await this.kvManager.set(
@@ -478,10 +476,10 @@ export class AuthorizationHandler {
   async getMCPAuthRequest(externalState: string): Promise<MCPAuthorizationRequest | null> {
     const lookupId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`AuthorizationHandler: Looking up MCP auth request [${lookupId}]`, {
-      lookupId,
-      externalState,
-    });
+    // this.logger?.info(`AuthorizationHandler: Looking up MCP auth request [${lookupId}]`, {
+    //   lookupId,
+    //   externalState,
+    // });
 
     try {
       const result = await this.kvManager.get<MCPAuthorizationRequest>(
@@ -499,21 +497,21 @@ export class AuthorizationHandler {
       const request = result;
       const now = Date.now();
 
-      this.logger?.info(`AuthorizationHandler: MCP auth request found [${lookupId}]`, {
-        lookupId,
-        request: {
-          client_id: request.client_id,
-          redirect_uri: request.redirect_uri,
-          state: request.state,
-          user_id: request.user_id,
-          external_state: request.external_state,
-          created_at: new Date(request.created_at).toISOString(),
-          expires_at: new Date(request.expires_at).toISOString(),
-          hasCodeChallenge: !!request.code_challenge,
-          isExpired: request.expires_at < now,
-          timeToExpiry: request.expires_at - now,
-        },
-      });
+      // this.logger?.info(`AuthorizationHandler: MCP auth request found [${lookupId}]`, {
+      //   lookupId,
+      //   request: {
+      //     client_id: request.client_id,
+      //     redirect_uri: request.redirect_uri,
+      //     state: request.state,
+      //     user_id: request.user_id,
+      //     external_state: request.external_state,
+      //     created_at: new Date(request.created_at).toISOString(),
+      //     expires_at: new Date(request.expires_at).toISOString(),
+      //     hasCodeChallenge: !!request.code_challenge,
+      //     isExpired: request.expires_at < now,
+      //     timeToExpiry: request.expires_at - now,
+      //   },
+      // });
 
       // Check if request has expired
       if (request.expires_at < now) {

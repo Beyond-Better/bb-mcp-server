@@ -171,12 +171,12 @@ export class AuthenticationMiddleware {
     // Extract Bearer token from Authorization header
     const authHeader = request.headers.get('authorization');
 
-    this.logger?.info(`AuthenticationMiddleware: Authenticating request [${requestId}]`, {
-      requestId,
-      hasAuthHeader: !!authHeader,
-      authHeaderLength: authHeader?.length || 0,
-      startsWithBearer: authHeader?.startsWith('Bearer '),
-    });
+    // this.logger?.info(`AuthenticationMiddleware: Authenticating request [${requestId}]`, {
+    //   requestId,
+    //   hasAuthHeader: !!authHeader,
+    //   authHeaderLength: authHeader?.length || 0,
+    //   startsWithBearer: authHeader?.startsWith('Bearer '),
+    // });
 
     if (!authHeader) {
       // Provide OAuth challenge for flow initiation
@@ -234,10 +234,10 @@ export class AuthenticationMiddleware {
       };
     }
 
-    this.logger?.info(`AuthenticationMiddleware: Validating OAuth token [${requestId}]`, {
-      requestId,
-      tokenPrefix: token.substring(0, 12) + '...',
-    });
+    // this.logger?.info(`AuthenticationMiddleware: Validating OAuth token [${requestId}]`, {
+    //   requestId,
+    //   tokenPrefix: token.substring(0, 12) + '...',
+    // });
 
     // 🔒 SECURITY-CRITICAL: Use OAuth provider to validate token with session binding
     try {
@@ -269,10 +269,10 @@ export class AuthenticationMiddleware {
           actionTaken: validation.actionTaken,
         };
       }
-      this.logger?.info(
-        `AuthenticationMiddleware: Authenticating request [${requestId}] - authResult`,
-        authResult,
-      );
+      // this.logger?.info(
+      //   `AuthenticationMiddleware: Authenticating request [${requestId}] - authResult`,
+      //   authResult,
+      // );
 
       if (!authResult.authorized) {
         this.logger?.warn(`AuthenticationMiddleware: Token validation failed [${requestId}]`, {

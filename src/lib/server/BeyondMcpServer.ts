@@ -189,7 +189,7 @@ export class BeyondMcpServer {
       return this;
     }
 
-    this.logger.info('MCPServer: Initializing MCP server...');
+    this.logger.info('BeyondMcpServer: Initializing MCP server...');
 
     try {
       // Register core tools
@@ -240,7 +240,7 @@ export class BeyondMcpServer {
     context: BeyondMcpRequestContext,
     operation: () => Promise<T>,
   ): Promise<T> {
-    this.logger.info('MCPServer: Executing with auth context', {
+    this.logger.debug('BeyondMcpServer: Executing with auth context', {
       authenticatedUserId: context.authenticatedUserId,
       clientId: context.clientId,
       requestId: context.requestId,
@@ -410,7 +410,7 @@ export class BeyondMcpServer {
     }
 
     const workflowData = this.workflowRegistry.getWorkflowToolData();
-    this.logger.info('BeyondMcpServer: Registering workflow tools', { workflowData });
+    // this.logger.info('BeyondMcpServer: Registering workflow tools', { workflowData });
 
     if (!workflowData.hasWorkflows) {
       this.logger.debug('BeyondMcpServer: No workflows registered, skipping workflow tools');
@@ -419,6 +419,7 @@ export class BeyondMcpServer {
 
     // Register workflow tools with app name for namespaced mode
     const appName = this.config.server.name;
+
     this.workflowTools.registerWith(
       this.toolRegistry,
       this.toolRegistrationConfig,

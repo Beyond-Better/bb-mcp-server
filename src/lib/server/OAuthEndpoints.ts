@@ -94,15 +94,15 @@ export class OAuthEndpoints {
         code_challenge_method: url.searchParams.get('code_challenge_method'),
       };
 
-      this.logger.info(`OAuthEndpoints: Authorization request [${authId}]`, {
-        authId,
-        clientId: authRequest.client_id,
-        redirectUri: authRequest.redirect_uri,
-        responseType: authRequest.response_type,
-        state: authRequest.state,
-        scope: authRequest.scope,
-        hasPKCE: !!(authRequest.code_challenge && authRequest.code_challenge_method),
-      });
+      // this.logger.info(`OAuthEndpoints: Authorization request [${authId}]`, {
+      //   authId,
+      //   clientId: authRequest.client_id,
+      //   redirectUri: authRequest.redirect_uri,
+      //   responseType: authRequest.response_type,
+      //   state: authRequest.state,
+      //   scope: authRequest.scope,
+      //   hasPKCE: !!(authRequest.code_challenge && authRequest.code_challenge_method),
+      // });
 
       // Validate required parameters
       if (!authRequest.client_id) {
@@ -132,11 +132,11 @@ export class OAuthEndpoints {
         // PURE MCP OAUTH FLOW
         // MCP server IS the OAuth provider - generate code immediately
         // ============================================================
-        this.logger.info(`OAuthEndpoints: Pure MCP OAuth flow [${authId}]`, {
-          authId,
-          clientId: authRequest.client_id,
-          redirectUri: authRequest.redirect_uri,
-        });
+        // this.logger.info(`OAuthEndpoints: Pure MCP OAuth flow [${authId}]`, {
+        //   authId,
+        //   clientId: authRequest.client_id,
+        //   redirectUri: authRequest.redirect_uri,
+        // });
 
         const authRequest_clean: AuthorizeRequest = {
           response_type: authRequest.response_type!,
@@ -160,12 +160,12 @@ export class OAuthEndpoints {
           userId,
         );
 
-        this.logger.info(`OAuthEndpoints: Authorization successful [${authId}]`, {
-          authId,
-          clientId: authRequest.client_id,
-          userId,
-          redirectUrl: authResponse.redirectUrl,
-        });
+       // this.logger.info(`OAuthEndpoints: Authorization successful [${authId}]`, {
+       //   authId,
+       //   clientId: authRequest.client_id,
+       //   userId,
+       //   redirectUrl: authResponse.redirectUrl,
+       // });
 
         return new Response(null, {
           status: 302,
@@ -180,12 +180,12 @@ export class OAuthEndpoints {
         // PROXY OAUTH FLOW
         // MCP server bridges to third-party provider (e.g., ActionStep)
         // ============================================================
-        this.logger.info(`OAuthEndpoints: Proxy OAuth flow [${authId}]`, {
-          authId,
-          clientId: authRequest.client_id,
-          redirectUri: authRequest.redirect_uri,
-          thirdPartyProvider: 'configured',
-        });
+       // this.logger.info(`OAuthEndpoints: Proxy OAuth flow [${authId}]`, {
+       //   authId,
+       //   clientId: authRequest.client_id,
+       //   redirectUri: authRequest.redirect_uri,
+       //   thirdPartyProvider: 'configured',
+       // });
 
         // Start third-party OAuth flow
         const authFlow = await this.oauthConsumer!.startAuthorizationFlow(userId);
@@ -206,14 +206,14 @@ export class OAuthEndpoints {
 
         await this.oauthProvider.storeMCPAuthRequest(authFlow.state, mcpAuthRequest);
 
-        this.logger.info(`OAuthEndpoints: Redirecting to third-party OAuth [${authId}]`, {
-          authId,
-          clientId: authRequest.client_id,
-          userId,
-          mcpState: authRequest.state,
-          thirdPartyState: authFlow.state,
-          authorizationUrl: authFlow.authorizationUrl,
-        });
+       // this.logger.info(`OAuthEndpoints: Redirecting to third-party OAuth [${authId}]`, {
+       //   authId,
+       //   clientId: authRequest.client_id,
+       //   userId,
+       //   mcpState: authRequest.state,
+       //   thirdPartyState: authFlow.state,
+       //   authorizationUrl: authFlow.authorizationUrl,
+       // });
 
         // Redirect to third-party provider (e.g., ActionStep)
         return new Response(null, {
@@ -257,14 +257,14 @@ export class OAuthEndpoints {
         state: formData.get('state')?.toString(),
       };
 
-      this.logger.info(`OAuthEndpoints: Token request [${tokenId}]`, {
-        tokenId,
-        grantType: tokenRequest.grant_type,
-        clientId: tokenRequest.client_id,
-        hasCode: !!tokenRequest.code,
-        hasRefreshToken: !!tokenRequest.refresh_token,
-        hasCodeVerifier: !!tokenRequest.code_verifier,
-      });
+     // this.logger.info(`OAuthEndpoints: Token request [${tokenId}]`, {
+     //   tokenId,
+     //   grantType: tokenRequest.grant_type,
+     //   clientId: tokenRequest.client_id,
+     //   hasCode: !!tokenRequest.code,
+     //   hasRefreshToken: !!tokenRequest.refresh_token,
+     //   hasCodeVerifier: !!tokenRequest.code_verifier,
+     // });
 
       // Validate required parameters
       if (!tokenRequest.grant_type) {
@@ -312,13 +312,13 @@ export class OAuthEndpoints {
       // Delegate to OAuth Provider for token handling
       const tokenResponse = await this.oauthProvider.handleTokenRequest(tokenRequest_clean);
 
-      this.logger.info(`OAuthEndpoints: Token issued successfully [${tokenId}]`, {
-        tokenId,
-        clientId: tokenRequest.client_id,
-        grantType: tokenRequest.grant_type,
-        tokenType: tokenResponse.token_type,
-        hasRefreshToken: !!tokenResponse.refresh_token,
-      });
+     // this.logger.info(`OAuthEndpoints: Token issued successfully [${tokenId}]`, {
+     //   tokenId,
+     //   clientId: tokenRequest.client_id,
+     //   grantType: tokenRequest.grant_type,
+     //   tokenType: tokenResponse.token_type,
+     //   hasRefreshToken: !!tokenResponse.refresh_token,
+     // });
 
       return new Response(JSON.stringify(tokenResponse), {
         status: 200,
@@ -367,11 +367,11 @@ export class OAuthEndpoints {
         return this.generateOAuthError('invalid_request', 'Invalid JSON in request body');
       }
 
-      this.logger.info(`OAuthEndpoints: Client registration request [${registrationId}]`, {
-        registrationId,
-        clientName: requestBody.client_name,
-        redirectUris: requestBody.redirect_uris?.length || 0,
-      });
+     // this.logger.info(`OAuthEndpoints: Client registration request [${registrationId}]`, {
+     //   registrationId,
+     //   clientName: requestBody.client_name,
+     //   redirectUris: requestBody.redirect_uris?.length || 0,
+     // });
 
       // Extract client metadata from request headers
       const userAgent = request.headers.get('user-agent');
@@ -430,12 +430,12 @@ export class OAuthEndpoints {
       const error = url.searchParams.get('error');
       const errorDescription = url.searchParams.get('error_description');
 
-      this.logger.info(`OAuthEndpoints: OAuth callback [${callbackId}]`, {
-        callbackId,
-        hasCode: !!code,
-        hasState: !!state,
-        hasError: !!error,
-      });
+     // this.logger.info(`OAuthEndpoints: OAuth callback [${callbackId}]`, {
+     //   callbackId,
+     //   hasCode: !!code,
+     //   hasState: !!state,
+     //   hasError: !!error,
+     // });
 
       // Handle OAuth errors
       if (error) {
@@ -465,11 +465,11 @@ export class OAuthEndpoints {
 
       // CRITICAL: Exchange third-party authorization code for tokens and store credentials
       if (this.oauthConsumer) {
-        this.logger.info(`OAuthEndpoints: Exchanging third-party code for tokens [${callbackId}]`, {
-          callbackId,
-          userId: mcpAuthRequest.user_id,
-          state,
-        });
+       // this.logger.info(`OAuthEndpoints: Exchanging third-party code for tokens [${callbackId}]`, {
+       //   callbackId,
+       //   userId: mcpAuthRequest.user_id,
+       //   state,
+       // });
 
         try {
           // Exchange ActionStep code for tokens and store them
@@ -483,10 +483,10 @@ export class OAuthEndpoints {
             return this.generateErrorPage(errorMsg);
           }
 
-          this.logger.info(`OAuthEndpoints: Third-party tokens obtained and stored [${callbackId}]`, {
-            callbackId,
-            userId: mcpAuthRequest.user_id,
-          });
+         // this.logger.info(`OAuthEndpoints: Third-party tokens obtained and stored [${callbackId}]`, {
+         //   callbackId,
+         //   userId: mcpAuthRequest.user_id,
+         // });
         } catch (exchangeError) {
           const errorMsg = exchangeError instanceof Error ? exchangeError.message : 'Token exchange failed';
           this.logger.error(
@@ -510,12 +510,12 @@ export class OAuthEndpoints {
       redirectUrl.searchParams.set('code', mcpAuthCode);
       redirectUrl.searchParams.set('state', mcpAuthRequest.state);
 
-      this.logger.info(`OAuthEndpoints: Callback successful [${callbackId}]`, {
-        callbackId,
-        clientId: mcpAuthRequest.client_id,
-        userId: mcpAuthRequest.user_id,
-        redirectUrl: redirectUrl.toString(),
-      });
+     // this.logger.info(`OAuthEndpoints: Callback successful [${callbackId}]`, {
+     //   callbackId,
+     //   clientId: mcpAuthRequest.client_id,
+     //   userId: mcpAuthRequest.user_id,
+     //   redirectUrl: redirectUrl.toString(),
+     // });
 
       return new Response(null, {
         status: 302,

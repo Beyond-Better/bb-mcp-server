@@ -105,15 +105,15 @@ export class ClientRegistry {
   ): Promise<ClientRegistrationResponse> {
     const registrationId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`ClientRegistry: Client registration request received [${registrationId}]`, {
-      registrationId,
-      redirectUris: request.redirect_uris,
-      redirectUriCount: request.redirect_uris?.length || 0,
-      clientName: request.client_name,
-      responseTypes: request.response_types,
-      grantTypes: request.grant_types,
-      metadata,
-    });
+    // this.logger?.info(`ClientRegistry: Client registration request received [${registrationId}]`, {
+    //   registrationId,
+    //   redirectUris: request.redirect_uris,
+    //   redirectUriCount: request.redirect_uris?.length || 0,
+    //   clientName: request.client_name,
+    //   responseTypes: request.response_types,
+    //   grantTypes: request.grant_types,
+    //   metadata,
+    // });
 
     try {
       // Check if dynamic registration is enabled
@@ -577,11 +577,11 @@ export class ClientRegistry {
   private validateRedirectUris(redirectUris: string[]): void {
     const validationId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`ClientRegistry: Validating redirect URIs [${validationId}]`, {
-      validationId,
-      redirectUris,
-      count: redirectUris?.length || 0,
-    });
+    // this.logger?.info(`ClientRegistry: Validating redirect URIs [${validationId}]`, {
+    //   validationId,
+    //   redirectUris,
+    //   count: redirectUris?.length || 0,
+    // });
 
     if (!redirectUris || redirectUris.length === 0) {
       this.logger?.error(`ClientRegistry: No redirect URIs provided [${validationId}]`);
@@ -648,9 +648,9 @@ export class ClientRegistry {
       }
     }
 
-    this.logger?.info(`ClientRegistry: All redirect URIs validation passed [${validationId}]`, {
-      validationId,
-      count: redirectUris.length,
-    });
+    //this.logger?.info(`ClientRegistry: All redirect URIs validation passed [${validationId}]`, {
+    //  validationId,
+    //  count: redirectUris.length,
+    //});
   }
 }

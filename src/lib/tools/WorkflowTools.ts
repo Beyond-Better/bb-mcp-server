@@ -239,10 +239,10 @@ ${toolData.overviews}
     extra?: Record<string, unknown>,
   ): Promise<CallToolResult> {
     try {
-      this.logger.info('WorkflowTools: Executing workflow', {args, extra});
+     // this.logger.info('WorkflowTools: Executing workflow', {args, extra});
       const { workflow_name, parameters } = args;
 
-      this.logger.info('WorkflowTools: Executing workflow', { workflowNames: this.workflowRegistry.getWorkflowNames()});
+      //this.logger.info('WorkflowTools: Executing workflow', { workflowNames: this.workflowRegistry.getWorkflowNames()});
       // Get workflow from registry
       const workflow = this.workflowRegistry.getWorkflow(workflow_name);
       if (!workflow) {

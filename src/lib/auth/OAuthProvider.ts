@@ -199,13 +199,13 @@ export class OAuthProvider {
   ): Promise<AuthorizeResponse> {
     const authId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`OAuthProvider: Processing authorization request [${authId}]`, {
-      authId,
-      clientId: request.client_id,
-      responseType: request.response_type,
-      hasPKCE: !!(request.code_challenge && request.code_challenge_method),
-      userId,
-    });
+    // this.logger?.info(`OAuthProvider: Processing authorization request [${authId}]`, {
+    //   authId,
+    //   clientId: request.client_id,
+    //   responseType: request.response_type,
+    //   hasPKCE: !!(request.code_challenge && request.code_challenge_method),
+    //   userId,
+    // });
 
     try {
       return await this.authorizationHandler.handleAuthorizeRequest(request, userId);
@@ -227,12 +227,12 @@ export class OAuthProvider {
   async handleTokenRequest(request: TokenRequest): Promise<TokenResponse> {
     const tokenId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`OAuthProvider: Processing token request [${tokenId}]`, {
-      tokenId,
-      grantType: request.grant_type,
-      clientId: request.client_id,
-      hasCodeVerifier: !!request.code_verifier,
-    });
+    // this.logger?.info(`OAuthProvider: Processing token request [${tokenId}]`, {
+    //   tokenId,
+    //   grantType: request.grant_type,
+    //   clientId: request.client_id,
+    //   hasCodeVerifier: !!request.code_verifier,
+    // });
 
     try {
       if (request.grant_type === 'authorization_code') {
@@ -259,11 +259,11 @@ export class OAuthProvider {
   ): Promise<ClientRegistrationResponse> {
     const regId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`OAuthProvider: Processing client registration [${regId}]`, {
-      regId,
-      clientName: request.client_name,
-      redirectUriCount: request.redirect_uris?.length || 0,
-    });
+    // this.logger?.info(`OAuthProvider: Processing client registration [${regId}]`, {
+    //   regId,
+    //   clientName: request.client_name,
+    //   redirectUriCount: request.redirect_uris?.length || 0,
+    // });
 
     try {
       return await this.clientRegistry.registerClient(request, metadata);
@@ -410,10 +410,10 @@ export class OAuthProvider {
               );
             } else {
               this.authAttempts.set(userId, { count: 1, firstAttempt: now });
-              this.logger?.info(`OAuthProvider: First auth attempt [${validationId}]`, {
-                validationId,
-                userId,
-              });
+              //this.logger?.info(`OAuthProvider: First auth attempt [${validationId}]`, {
+              //  validationId,
+              //  userId,
+              //});
             }
 
             // Generate OAuth authorization URL
@@ -427,11 +427,11 @@ export class OAuthProvider {
                   tokenValidation.userId!,
                 );
                 authorizationUrl = authFlow.authorizationUrl;
-                this.logger?.info(`OAuthProvider: Generated authorization URL [${validationId}]`, {
-                  validationId,
-                  userId: tokenValidation.userId,
-                  authorizationUrl,
-                });
+                // this.logger?.info(`OAuthProvider: Generated authorization URL [${validationId}]`, {
+                //   validationId,
+                //   userId: tokenValidation.userId,
+                //   authorizationUrl,
+                // });
               }
             } catch (authError) {
               this.logger?.error(
@@ -478,13 +478,13 @@ export class OAuthProvider {
             effectiveApiClient && effectiveAuthService.updateUserCredentials &&
             credentials.tokens.refreshToken
           ) {
-            this.logger?.info(
-              `OAuthProvider: Attempting third-party token refresh [${validationId}]`,
-              {
-                validationId,
-                userId: tokenValidation.userId,
-              },
-            );
+            // this.logger?.info(
+            //   `OAuthProvider: Attempting third-party token refresh [${validationId}]`,
+            //   {
+            //     validationId,
+            //     userId: tokenValidation.userId,
+            //   },
+            // );
 
             try {
               // Attempt to refresh the third-party token
@@ -500,13 +500,13 @@ export class OAuthProvider {
                 );
 
                 if (updateSuccess) {
-                  this.logger?.info(
-                    `OAuthProvider: Successfully refreshed third-party token [${validationId}]`,
-                    {
-                      validationId,
-                      userId: tokenValidation.userId,
-                    },
-                  );
+                  // this.logger?.info(
+                  //   `OAuthProvider: Successfully refreshed third-party token [${validationId}]`,
+                  //   {
+                  //     validationId,
+                  //     userId: tokenValidation.userId,
+                  //   },
+                  // );
 
                   return {
                     valid: true,
@@ -547,11 +547,11 @@ export class OAuthProvider {
                 tokenValidation.userId!,
               );
               authorizationUrl = authFlow.authorizationUrl;
-              this.logger?.info(`OAuthProvider: Generated re-authorization URL [${validationId}]`, {
-                validationId,
-                userId: tokenValidation.userId,
-                authorizationUrl,
-              });
+              // this.logger?.info(`OAuthProvider: Generated re-authorization URL [${validationId}]`, {
+              //   validationId,
+              //   userId: tokenValidation.userId,
+              //   authorizationUrl,
+              // });
             }
           } catch (authError) {
             this.logger?.error(

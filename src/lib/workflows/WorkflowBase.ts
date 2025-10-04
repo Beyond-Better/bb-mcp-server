@@ -401,7 +401,7 @@ export abstract class WorkflowBase {
    * Enhanced logging helpers with integration
    */
   protected logInfo(message: string, data?: Record<string, unknown>): void {
-    this.context?.logger?.info(`[${this.name}] ${message}`, {
+    this.context?.logger?.info(`WorkflowBase: [${this.name}] ${message}`, {
       workflow: this.name,
       userId: this.context.userId,
       requestId: this.context.requestId,
@@ -410,7 +410,7 @@ export abstract class WorkflowBase {
   }
 
   protected logWarn(message: string, data?: Record<string, unknown>): void {
-    this.context?.logger?.warn(`[${this.name}] ${message}`, {
+    this.context?.logger?.warn(`WorkflowBase: [${this.name}] ${message}`, {
       workflow: this.name,
       userId: this.context.userId,
       requestId: this.context.requestId,
@@ -419,7 +419,7 @@ export abstract class WorkflowBase {
   }
 
   protected logError(message: string, error?: Error, data?: Record<string, unknown>): void {
-    this.context?.logger?.error(`[${this.name}] ${message}`, error, {
+    this.context?.logger?.error(`WorkflowBase: [${this.name}] ${message}`, error, {
       workflow: this.name,
       userId: this.context.userId,
       requestId: this.context.requestId,
@@ -428,7 +428,7 @@ export abstract class WorkflowBase {
   }
 
   protected logDebug(message: string, data?: Record<string, unknown>): void {
-    this.context?.logger?.debug(`[${this.name}] ${message}`, {
+    this.context?.logger?.debug(`WorkflowBase: [${this.name}] ${message}`, {
       workflow: this.name,
       userId: this.context.userId,
       requestId: this.context.requestId,
