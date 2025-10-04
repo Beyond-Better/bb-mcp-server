@@ -16,7 +16,7 @@ import type {
   HttpServerConfig,
   HttpServerDependencies,
 } from '../../../src/lib/server/HttpServer.ts';
-import { TestBeyondMcpServer, createTestBeyondMcpServer } from '../../utils/test-helpers.ts';
+import { createTestBeyondMcpServer, TestBeyondMcpServer } from '../../utils/test-helpers.ts';
 
 // Mock dependencies for testing
 class MockLogger {

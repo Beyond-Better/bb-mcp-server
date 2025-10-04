@@ -139,9 +139,9 @@ export class TransportEventStore implements EventStore {
    * Includes KV expiry as a fallback safety net (default: 30 days)
    */
   async storeEvent(
-    streamId: string, 
+    streamId: string,
     message: JSONRPCMessage,
-    expiryMs: number = 30 * 24 * 60 * 60 * 1000
+    expiryMs: number = 30 * 24 * 60 * 60 * 1000,
   ): Promise<string> {
     const eventId = this.generateEventId(streamId);
     const timestamp = Date.now();
@@ -157,9 +157,9 @@ export class TransportEventStore implements EventStore {
       // Use a transaction to store event with expiry as fallback
       const result = await this.kv.atomic()
         .set(
-          [...this.keyPrefix, 'stream', streamId, eventId], 
+          [...this.keyPrefix, 'stream', streamId, eventId],
           storedEvent,
-          { expireIn: expiryMs }
+          { expireIn: expiryMs },
         )
         .commit();
 

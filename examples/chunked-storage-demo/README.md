@@ -20,21 +20,25 @@ The `TransportEventStoreChunked` solves this by:
 ## Features Demonstrated
 
 ### 🔄 Automatic Chunking
+
 - Messages larger than 60KB are automatically split into chunks
 - Each chunk is stored separately in Deno KV
 - Original message is reconstructed seamlessly during retrieval
 
 ### 🗜️ Compression Support
+
 - Automatic gzip compression for messages > 1KB (configurable)
 - Only uses compression if it reduces size by at least 10%
 - Transparent compression/decompression
 
 ### 📊 Monitoring & Statistics
+
 - Real-time chunk statistics
 - Compression efficiency metrics
 - Storage usage monitoring
 
 ### 🛡️ Data Integrity
+
 - Checksums for each chunk to detect corruption
 - Atomic transactions ensure all chunks are stored together
 - Graceful error handling with detailed logging
@@ -107,17 +111,18 @@ The demo supports the following environment variables:
 
 ### Chunked Storage Settings
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TRANSPORT_STORAGE_TYPE` | `chunked` | Enable chunked storage |
-| `TRANSPORT_MAX_CHUNK_SIZE` | `61440` | Maximum size per chunk (60KB) |
-| `TRANSPORT_COMPRESSION_ENABLED` | `true` | Enable compression |
-| `TRANSPORT_COMPRESSION_THRESHOLD` | `1024` | Compress messages > 1KB |
-| `TRANSPORT_MAX_MESSAGE_SIZE` | `10485760` | Maximum total message size (10MB) |
+| Variable                          | Default    | Description                       |
+| --------------------------------- | ---------- | --------------------------------- |
+| `TRANSPORT_STORAGE_TYPE`          | `chunked`  | Enable chunked storage            |
+| `TRANSPORT_MAX_CHUNK_SIZE`        | `61440`    | Maximum size per chunk (60KB)     |
+| `TRANSPORT_COMPRESSION_ENABLED`   | `true`     | Enable compression                |
+| `TRANSPORT_COMPRESSION_THRESHOLD` | `1024`     | Compress messages > 1KB           |
+| `TRANSPORT_MAX_MESSAGE_SIZE`      | `10485760` | Maximum total message size (10MB) |
 
 ### Performance Tuning Examples
 
 #### High-throughput, small messages
+
 ```bash
 TRANSPORT_MAX_CHUNK_SIZE=51200          # 50KB chunks
 TRANSPORT_COMPRESSION_ENABLED=false       # Skip compression overhead
@@ -125,6 +130,7 @@ TRANSPORT_MAX_MESSAGE_SIZE=1048576       # 1MB max
 ```
 
 #### Large file transfers
+
 ```bash
 TRANSPORT_MAX_CHUNK_SIZE=46080           # 45KB chunks (more reliable)
 TRANSPORT_COMPRESSION_ENABLED=true        # Compress everything
@@ -135,13 +141,16 @@ TRANSPORT_MAX_MESSAGE_SIZE=52428800      # 50MB max
 ## Demo Tools
 
 ### `generate_large_message`
+
 Generate messages of various sizes to test chunked storage:
 
 **Parameters:**
+
 - `size` (number): Size in KB (1-5000)
 - `content` (string): Content type - "json", "text", or "mixed"
 
 **Examples:**
+
 ```json
 // Generate 100KB JSON data
 {"size": 100, "content": "json"}
@@ -151,12 +160,15 @@ Generate messages of various sizes to test chunked storage:
 ```
 
 ### `get_storage_stats`
+
 Get statistics about chunked storage usage:
 
 **Parameters:**
+
 - `streamId` (string, optional): Get stats for specific stream
 
 **Returns:**
+
 - `totalEvents`: Number of stored events
 - `totalChunks`: Total chunks across all events
 - `averageChunksPerEvent`: Average chunks per event
@@ -170,7 +182,7 @@ To use chunked storage in your own MCP server:
 ### Option 1: Direct Usage
 
 ```typescript
-import { TransportEventStoreChunked, KVManager, Logger } from '@beyondbetter/bb-mcp-server';
+import { KVManager, Logger, TransportEventStoreChunked } from '@beyondbetter/bb-mcp-server';
 
 const kvManager = new KVManager({ kvPath: './data/my-server.db' }, logger);
 const eventStore = new TransportEventStoreChunked(
@@ -178,11 +190,11 @@ const eventStore = new TransportEventStoreChunked(
   ['events'],
   logger,
   {
-    maxChunkSize: 60 * 1024,      // 60KB chunks
-    enableCompression: true,       // Enable compression
-    compressionThreshold: 1024,    // Compress messages > 1KB
-    maxMessageSize: 10 * 1024 * 1024 // 10MB max message size
-  }
+    maxChunkSize: 60 * 1024, // 60KB chunks
+    enableCompression: true, // Enable compression
+    compressionThreshold: 1024, // Compress messages > 1KB
+    maxMessageSize: 10 * 1024 * 1024, // 10MB max message size
+  },
 );
 ```
 
@@ -215,7 +227,7 @@ console.log('Storage stats:', {
   totalEvents: stats.totalEvents,
   totalChunks: stats.totalChunks,
   averageChunksPerEvent: stats.averageChunksPerEvent,
-  compressionRatio: stats.compressionStats.compressed / stats.totalEvents
+  compressionRatio: stats.compressionStats.compressed / stats.totalEvents,
 });
 ```
 
@@ -234,18 +246,22 @@ for (const streamId of streams) {
 ### Common Issues
 
 **Error: "Missing chunk X for event Y"**
+
 - Cause: Incomplete storage transaction or corruption
 - Solution: Check logs for storage errors, ensure atomic transactions completed
 
 **Error: "Checksum mismatch for chunk X"**
+
 - Cause: Data corruption during storage/retrieval
 - Solution: Check Deno KV integrity, consider data recovery from backups
 
 **Error: "Failed to decompress event X"**
+
 - Cause: Compression/decompression error
 - Solution: Check compression settings, may need to disable compression
 
 **Performance degradation**
+
 - Cause: Too many small chunks or inefficient chunk size
 - Solution: Adjust `TRANSPORT_MAX_CHUNK_SIZE` based on typical message sizes
 
@@ -261,11 +277,13 @@ TRANSPORT_CHUNKED_DEBUG_LOGGING=true
 ## Performance Characteristics
 
 ### Storage Overhead
+
 - **Metadata**: ~200 bytes per event (vs ~100 bytes original)
 - **Chunking**: ~50 bytes per chunk overhead
 - **Compression**: 20-80% size reduction for text-heavy messages
 
 ### Read/Write Performance
+
 - **Write**: Slightly slower due to chunking (typically < 10ms overhead)
 - **Read**: Comparable for small messages, slower for large chunked messages
 - **Replay**: Linear with chunk count, uses batch operations for efficiency

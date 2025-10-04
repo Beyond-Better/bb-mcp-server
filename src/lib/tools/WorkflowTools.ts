@@ -239,7 +239,7 @@ ${toolData.overviews}
     extra?: Record<string, unknown>,
   ): Promise<CallToolResult> {
     try {
-     // this.logger.info('WorkflowTools: Executing workflow', {args, extra});
+      // this.logger.info('WorkflowTools: Executing workflow', {args, extra});
       const { workflow_name, parameters } = args;
 
       //this.logger.info('WorkflowTools: Executing workflow', { workflowNames: this.workflowRegistry.getWorkflowNames()});
@@ -256,9 +256,9 @@ ${toolData.overviews}
 
       // Extract authentication context from AsyncLocalStorage or extra parameter
       const authContext = BeyondMcpServer.getCurrentAuthContext();
-      const userId = (parameters as any)?.userId || 
-                     authContext?.authenticatedUserId || 
-                     BeyondMcpServer.getCurrentAuthenticatedUserId();
+      const userId = (parameters as any)?.userId ||
+        authContext?.authenticatedUserId ||
+        BeyondMcpServer.getCurrentAuthenticatedUserId();
 
       this.logger.info('WorkflowTools: Executing workflow', {
         userId,

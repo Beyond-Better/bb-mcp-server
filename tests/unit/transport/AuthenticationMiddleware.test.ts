@@ -114,18 +114,40 @@ class MockOAuthProvider {
   }
 
   // Required methods from OAuthProvider (stubs)
-  async handleAuthorizeRequest() { throw new Error('Mock method'); }
-  async handleTokenRequest() { throw new Error('Mock method'); }
-  async handleClientRegistration() { throw new Error('Mock method'); }
-  getAuthorizationServerMetadata() { throw new Error('Mock method'); }
-  async validateMCPAccessToken() { throw new Error('Mock method'); }
-  async storeMCPAuthRequest() { throw new Error('Mock method'); }
-  async getMCPAuthRequest() { throw new Error('Mock method'); }
-  async introspectToken() { throw new Error('Mock method'); }
-  async generateMCPAuthorizationCode() { throw new Error('Mock method'); }
-  async exchangeMCPAuthorizationCode() { throw new Error('Mock method'); }
-  async getTokenMapping() { throw new Error('Mock method'); }
-  
+  async handleAuthorizeRequest() {
+    throw new Error('Mock method');
+  }
+  async handleTokenRequest() {
+    throw new Error('Mock method');
+  }
+  async handleClientRegistration() {
+    throw new Error('Mock method');
+  }
+  getAuthorizationServerMetadata() {
+    throw new Error('Mock method');
+  }
+  async validateMCPAccessToken() {
+    throw new Error('Mock method');
+  }
+  async storeMCPAuthRequest() {
+    throw new Error('Mock method');
+  }
+  async getMCPAuthRequest() {
+    throw new Error('Mock method');
+  }
+  async introspectToken() {
+    throw new Error('Mock method');
+  }
+  async generateMCPAuthorizationCode() {
+    throw new Error('Mock method');
+  }
+  async exchangeMCPAuthorizationCode() {
+    throw new Error('Mock method');
+  }
+  async getTokenMapping() {
+    throw new Error('Mock method');
+  }
+
   // Test helper methods
   setRefreshResult(
     token: string,
@@ -169,13 +191,23 @@ class MockOAuthConsumer {
 
   // Required methods from OAuthConsumer (stubs)
   async initialize() {}
-  async startAuthorizationFlow() { throw new Error('Mock method'); }
-  async handleAuthorizationCallback() { throw new Error('Mock method'); }
-  async getValidAccessToken() { throw new Error('Mock method'); }
-  async revokeUserCredentials() { throw new Error('Mock method'); }
-  async getAuthenticatedUsers() { throw new Error('Mock method'); }
+  async startAuthorizationFlow() {
+    throw new Error('Mock method');
+  }
+  async handleAuthorizationCallback() {
+    throw new Error('Mock method');
+  }
+  async getValidAccessToken() {
+    throw new Error('Mock method');
+  }
+  async revokeUserCredentials() {
+    throw new Error('Mock method');
+  }
+  async getAuthenticatedUsers() {
+    throw new Error('Mock method');
+  }
   async cleanup() {}
-  
+
   // Test helper methods
   setUserAuthStatus(userId: string, isAuth: boolean) {
     this.userAuthStatus.set(userId, isAuth);
@@ -703,19 +735,41 @@ Deno.test({
       async authorizeMCPRequest() {
         throw new Error('OAuth service unavailable');
       }
-      
+
       // Required methods (stubs that throw)
-      async handleAuthorizeRequest() { throw new Error('Mock method'); }
-      async handleTokenRequest() { throw new Error('Mock method'); }
-      async handleClientRegistration() { throw new Error('Mock method'); }
-      getAuthorizationServerMetadata() { throw new Error('Mock method'); }
-      async validateMCPAccessToken() { throw new Error('Mock method'); }
-      async storeMCPAuthRequest() { throw new Error('Mock method'); }
-      async getMCPAuthRequest() { throw new Error('Mock method'); }
-      async introspectToken() { throw new Error('Mock method'); }
-      async generateMCPAuthorizationCode() { throw new Error('Mock method'); }
-      async exchangeMCPAuthorizationCode() { throw new Error('Mock method'); }
-      async getTokenMapping() { throw new Error('Mock method'); }
+      async handleAuthorizeRequest() {
+        throw new Error('Mock method');
+      }
+      async handleTokenRequest() {
+        throw new Error('Mock method');
+      }
+      async handleClientRegistration() {
+        throw new Error('Mock method');
+      }
+      getAuthorizationServerMetadata() {
+        throw new Error('Mock method');
+      }
+      async validateMCPAccessToken() {
+        throw new Error('Mock method');
+      }
+      async storeMCPAuthRequest() {
+        throw new Error('Mock method');
+      }
+      async getMCPAuthRequest() {
+        throw new Error('Mock method');
+      }
+      async introspectToken() {
+        throw new Error('Mock method');
+      }
+      async generateMCPAuthorizationCode() {
+        throw new Error('Mock method');
+      }
+      async exchangeMCPAuthorizationCode() {
+        throw new Error('Mock method');
+      }
+      async getTokenMapping() {
+        throw new Error('Mock method');
+      }
     }
 
     const middleware = createTestMiddleware({}, {
@@ -739,11 +793,15 @@ Deno.test({
   name: 'AuthenticationMiddleware - Configuration Edge Cases',
   fn() {
     // Test with authentication disabled
-    const disabledMiddleware = createTestMiddleware({ enabled: false }, { oauthProvider: new MockOAuthProvider() as any });
+    const disabledMiddleware = createTestMiddleware({ enabled: false }, {
+      oauthProvider: new MockOAuthProvider() as any,
+    });
     assert(!disabledMiddleware.isAuthenticationRequired(new URL('http://localhost:3000/mcp')));
 
     // Test with skip authentication but enabled
-    const skipMiddleware = createTestMiddleware({ enabled: true, skipAuthentication: true }, { oauthProvider: new MockOAuthProvider() as any });
+    const skipMiddleware = createTestMiddleware({ enabled: true, skipAuthentication: true }, {
+      oauthProvider: new MockOAuthProvider() as any,
+    });
     assert(!skipMiddleware.isAuthenticationRequired(new URL('http://localhost:3000/mcp')));
 
     // Test require authentication false

@@ -17,7 +17,7 @@ import {
   type OAuthConsumerDependencies,
   type OAuthCredentials,
   type TokenResult,
-} from "@beyondbetter/bb-mcp-server";
+} from '@beyondbetter/bb-mcp-server';
 
 export interface ExampleOAuthConfig extends OAuthConsumerConfig {
   // ExampleCorp-specific configuration
@@ -37,7 +37,7 @@ export interface ExampleOAuthConfig extends OAuthConsumerConfig {
  * 🎯 Consumer handles: ExampleCorp-specific OAuth flow, custom token processing
  */
 export class ExampleOAuthConsumer extends OAuthConsumer {
-  private exampleConfig: ExampleOAuthConfig["exampleCorp"];
+  private exampleConfig: ExampleOAuthConfig['exampleCorp'];
 
   constructor(
     config: ExampleOAuthConfig,
@@ -55,7 +55,7 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
         scopes: config.exampleCorp.scopes,
 
         // ExampleCorp OAuth configuration
-        providerId: "examplecorp",
+        providerId: 'examplecorp',
         tokenRefreshBufferMinutes: 5,
         maxTokenRefreshRetries: 3,
       },
@@ -82,12 +82,12 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
 
     // 🎯 Add ExampleCorp-specific parameters
     const url = new URL(baseUrl);
-    url.searchParams.set("api_version", this.exampleConfig.apiVersion);
+    url.searchParams.set('api_version', this.exampleConfig.apiVersion);
 
     // ExampleCorp requires a 'prompt' parameter for certain flows
-    url.searchParams.set("prompt", "consent");
+    url.searchParams.set('prompt', 'consent');
 
-    this.logger?.debug("ExampleCorp authorization URL built", {
+    this.logger?.debug('ExampleCorp authorization URL built', {
       baseUrl,
       finalUrl: url.toString(),
       apiVersion: this.exampleConfig.apiVersion,
@@ -106,18 +106,18 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
   ): Promise<TokenResult> {
     try {
       // 🎯 Use httpbin /anything/oauth/token for demo OAuth flow
-      const response = await fetch("https://httpbin.org/anything/oauth/token", {
-        method: "POST",
+      const response = await fetch('https://httpbin.org/anything/oauth/token', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: new URLSearchParams({
-          grant_type: "authorization_code",
+          grant_type: 'authorization_code',
           code: code,
           client_id: this.config.clientId,
           client_secret: this.config.clientSecret,
           redirect_uri: this.config.redirectUri,
-          code_verifier: codeVerifier || "",
+          code_verifier: codeVerifier || '',
         }).toString(),
       });
 
@@ -127,13 +127,13 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
       const tokens: OAuthCredentials & Record<string, any> = {
         accessToken: `demo-access-token-${Date.now()}`,
         refreshToken: `demo-refresh-token-${Date.now()}`,
-        tokenType: "Bearer",
+        tokenType: 'Bearer',
         expiresAt: Date.now() + 3600000, // 1 hour from now (timestamp)
         scopes: this.config.scopes,
         // Mock ExampleCorp-specific fields
-        organization_id: "demo-org-123",
-        user_permissions: ["read", "write"],
-        rate_limit_tier: "premium",
+        organization_id: 'demo-org-123',
+        user_permissions: ['read', 'write'],
+        rate_limit_tier: 'premium',
       };
 
       const result: TokenResult = {
@@ -143,10 +143,10 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
 
       // 🎯 ExampleCorp-specific token processing
       const exampleCorpMetadata = this.extractExampleCorpMetadata(tokens);
-      const userId = codeVerifier || "demo-user";
+      const userId = codeVerifier || 'demo-user';
       await this.storeExampleCorpMetadata(userId, exampleCorpMetadata);
 
-      this.logger?.info("ExampleCorp token exchange successful (demo)", {
+      this.logger?.info('ExampleCorp token exchange successful (demo)', {
         scopes: tokens.scopes || [],
         expiresAt: tokens.expiresAt,
         hasRefreshToken: !!tokens.refreshToken,
@@ -156,12 +156,12 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
       return result;
     } catch (error) {
       this.logger?.error(
-        "ExampleCorp token exchange failed",
+        'ExampleCorp token exchange failed',
         error instanceof Error ? error : new Error(String(error)),
       );
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Token exchange failed",
+        error: error instanceof Error ? error.message : 'Token exchange failed',
       };
     }
   }
@@ -190,7 +190,7 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
           ); // Use refresh token as identifier
         }
 
-        this.logger?.debug("ExampleCorp token refresh successful", {
+        this.logger?.debug('ExampleCorp token refresh successful', {
           expiresAt: result.tokens.expiresAt,
           metadata: exampleCorpMetadata,
         });
@@ -199,12 +199,12 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
       return result;
     } catch (error) {
       this.logger?.error(
-        "ExampleCorp token refresh failed",
+        'ExampleCorp token refresh failed',
         error instanceof Error ? error : new Error(String(error)),
       );
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Token refresh failed",
+        error: error instanceof Error ? error.message : 'Token refresh failed',
       };
     }
   }
@@ -228,11 +228,11 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
       return accessToken;
     } catch (error) {
       this.logger?.error(
-        "ExampleCorp access token retrieval failed",
+        'ExampleCorp access token retrieval failed',
         error instanceof Error ? error : new Error(String(error)),
         {
           userId,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: error instanceof Error ? error.message : 'Unknown error',
         },
       );
       throw error;
@@ -247,7 +247,7 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
       // Verify ExampleCorp API connectivity
       await this.verifyExampleCorpEndpoints();
 
-      this.logger?.info("ExampleCorp OAuth consumer initialized", {
+      this.logger?.info('ExampleCorp OAuth consumer initialized', {
         authUrl: this.config.authUrl,
         tokenUrl: this.config.tokenUrl,
         apiVersion: this.exampleConfig.apiVersion,
@@ -255,7 +255,7 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
       });
     } catch (error) {
       this.logger?.error(
-        "ExampleCorp OAuth consumer initialization failed",
+        'ExampleCorp OAuth consumer initialization failed',
         error instanceof Error ? error : new Error(String(error)),
       );
       throw error;
@@ -267,7 +267,7 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
    */
   async cleanup(): Promise<void> {
     // Any ExampleCorp-specific cleanup
-    this.logger?.info("ExampleCorp OAuth consumer cleanup complete");
+    this.logger?.info('ExampleCorp OAuth consumer cleanup complete');
   }
 
   // =============================================================================
@@ -283,13 +283,13 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
     const metadata: Record<string, any> = {};
 
     // ExampleCorp includes custom fields in token response
-    if ("organization_id" in tokens) {
+    if ('organization_id' in tokens) {
       metadata.organizationId = tokens.organization_id;
     }
-    if ("user_permissions" in tokens) {
+    if ('user_permissions' in tokens) {
       metadata.userPermissions = tokens.user_permissions;
     }
-    if ("rate_limit_tier" in tokens) {
+    if ('rate_limit_tier' in tokens) {
       metadata.rateLimitTier = tokens.rate_limit_tier;
     }
 
@@ -307,12 +307,12 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
 
     // 🎯 Use library KV storage
     await this.kvManager.set(
-      ["oauth", "examplecorp", "metadata", userId],
+      ['oauth', 'examplecorp', 'metadata', userId],
       metadata,
       { expireIn: 24 * 60 * 60 * 1000 }, // 24 hours
     );
 
-    this.logger?.debug("ExampleCorp metadata stored", { userId, metadata });
+    this.logger?.debug('ExampleCorp metadata stored', { userId, metadata });
   }
 
   /**
@@ -324,21 +324,21 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
   ): Promise<void> {
     // Demo token format validation (allow demo tokens)
     if (
-      !accessToken.startsWith("demo-access-token-") &&
-      !accessToken.startsWith("exc_")
+      !accessToken.startsWith('demo-access-token-') &&
+      !accessToken.startsWith('exc_')
     ) {
-      throw new Error("Invalid ExampleCorp access token format");
+      throw new Error('Invalid ExampleCorp access token format');
     }
 
     // Check ExampleCorp-specific metadata
     const metadata = await this.kvManager.get([
-      "oauth",
-      "examplecorp",
-      "metadata",
+      'oauth',
+      'examplecorp',
+      'metadata',
       userId,
     ]);
     if (!metadata) {
-      this.logger?.warn("No ExampleCorp metadata found for user", { userId });
+      this.logger?.warn('No ExampleCorp metadata found for user', { userId });
     }
   }
 
@@ -349,35 +349,35 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
     try {
       // Verify httpbin OAuth endpoints are accessible
       const authResponse = await fetch(
-        "https://httpbin.org/anything/oauth/authorize",
+        'https://httpbin.org/anything/oauth/authorize',
       );
       const tokenResponse = await fetch(
-        "https://httpbin.org/anything/oauth/token",
+        'https://httpbin.org/anything/oauth/token',
         {
-          method: "POST",
+          method: 'POST',
         },
       );
 
       if (!authResponse.ok || !tokenResponse.ok) {
-        throw new Error("httpbin OAuth endpoints not accessible");
+        throw new Error('httpbin OAuth endpoints not accessible');
       }
 
       // Mock discovery response for demo purposes
       const discovery = {
-        authorization_endpoint: "https://httpbin.org/anything/oauth/authorize",
-        token_endpoint: "https://httpbin.org/anything/oauth/token",
-        scopes_supported: ["read", "write", "admin"],
-        grant_types_supported: ["authorization_code", "refresh_token"],
-        response_types_supported: ["code"],
+        authorization_endpoint: 'https://httpbin.org/anything/oauth/authorize',
+        token_endpoint: 'https://httpbin.org/anything/oauth/token',
+        scopes_supported: ['read', 'write', 'admin'],
+        grant_types_supported: ['authorization_code', 'refresh_token'],
+        response_types_supported: ['code'],
       };
 
-      this.logger?.debug("ExampleCorp OAuth endpoints verified (demo)", {
+      this.logger?.debug('ExampleCorp OAuth endpoints verified (demo)', {
         authEndpoint: discovery.authorization_endpoint,
         tokenEndpoint: discovery.token_endpoint,
         supportedScopes: discovery.scopes_supported,
       });
     } catch (error) {
-      this.logger?.warn("ExampleCorp OAuth endpoint verification failed", {});
+      this.logger?.warn('ExampleCorp OAuth endpoint verification failed', {});
       // Don't fail initialization - endpoints might still work
     }
   }

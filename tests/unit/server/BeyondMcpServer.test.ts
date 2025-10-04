@@ -181,8 +181,8 @@ describe('BeyondMcpServer', () => {
       await beyondMcpServer.initialize();
 
       // Verify logging
-      //console.log('logSpy', logSpy);
-      assertSpyCalls(logSpy, 4); // Initial log + 2 register workflow + success log
+      // console.log('logSpy', logSpy);
+      assertSpyCalls(logSpy, 3); // Initial log + register workflow + success log
       assertSpyCalls(auditSpy, 1); // System startup event
 
       logSpy.restore();

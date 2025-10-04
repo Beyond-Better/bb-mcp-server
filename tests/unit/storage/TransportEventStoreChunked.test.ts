@@ -49,10 +49,10 @@ function createLargeMessage(sizeKB: number): JSONRPCMessage {
       tags: ['large', 'test', 'chunked'],
     },
   };
-  
+
   const itemJson = JSON.stringify(baseItem);
   const itemCount = Math.ceil(targetSize / itemJson.length);
-  
+
   const data = [];
   for (let i = 0; i < itemCount; i++) {
     data.push({
@@ -61,7 +61,7 @@ function createLargeMessage(sizeKB: number): JSONRPCMessage {
       content: baseItem.content.repeat(Math.max(1, Math.floor(100 / itemCount))),
     });
   }
-  
+
   return {
     jsonrpc: '2.0',
     id: 1,
@@ -81,12 +81,12 @@ Deno.test({
   name: 'TransportEventStoreChunked - Initialize with Default Configuration',
   async fn() {
     const kv = await createTestKV();
-    
+
     const eventStore = new TransportEventStoreChunked(kv, undefined, mockLogger, getTestConfig());
-    
+
     // Verify store is initialized
     assertExists(eventStore);
-    
+
     kv.close();
   },
   sanitizeOps: false,
@@ -97,18 +97,18 @@ Deno.test({
   name: 'TransportEventStoreChunked - Initialize with Custom Configuration',
   async fn() {
     const kv = await createTestKV();
-    
+
     const config = {
       maxChunkSize: 50 * 1024, // 50KB
       enableCompression: false,
       compressionThreshold: 2048,
       maxMessageSize: 5 * 1024 * 1024, // 5MB
     };
-    
+
     const eventStore = new TransportEventStoreChunked(kv, ['test_events'], mockLogger, config);
-    
+
     assertExists(eventStore);
-    
+
     kv.close();
   },
 });
@@ -118,19 +118,19 @@ Deno.test({
   async fn() {
     const kv = await createTestKV();
     const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger, getTestConfig());
-    
+
     const message: JSONRPCMessage = {
       jsonrpc: '2.0',
       id: 1,
       method: 'test/small_message',
       params: { content: 'Small test message' },
     };
-    
+
     const eventId = await eventStore.storeEvent('test-stream-1', message);
-    
+
     assertExists(eventId);
     assert(eventId.startsWith('test-stream-1|'));
-    
+
     kv.close();
   },
 });
@@ -140,21 +140,21 @@ Deno.test({
   async fn() {
     const kv = await createTestKV();
     let eventStore: TransportEventStoreChunked | undefined;
-    
+
     try {
       // Disable compression for this test to avoid stream cleanup issues
       eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger, {
         enableCompression: false,
       });
-      
+
       // Create a 100KB message
       const largeMessage = createLargeMessage(100);
-      
+
       const eventId = await eventStore.storeEvent('test-stream-large', largeMessage);
-      
+
       assertExists(eventId);
       assert(eventId.startsWith('test-stream-large|'));
-      
+
       // Verify chunk statistics
       const stats = await eventStore.getChunkStatistics('test-stream-large');
       assertEquals(stats.totalEvents, 1);
@@ -169,20 +169,20 @@ Deno.test({
   name: 'TransportEventStoreChunked - Store Very Large Message (500KB)',
   async fn() {
     const kv = await createTestKV();
-    
+
     try {
       // Disable compression to avoid stream cleanup issues
       const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger, {
         enableCompression: false,
       });
-      
+
       // Create a 500KB message
       const veryLargeMessage = createLargeMessage(500);
-      
+
       const eventId = await eventStore.storeEvent('test-stream-xl', veryLargeMessage);
-      
+
       assertExists(eventId);
-      
+
       // Verify chunk statistics
       const stats = await eventStore.getChunkStatistics('test-stream-xl');
       assertEquals(stats.totalEvents, 1);
@@ -201,18 +201,18 @@ Deno.test({
     const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger, {
       maxMessageSize: 100 * 1024, // 100KB limit
     });
-    
+
     // Try to store a 200KB message (should fail)
     const oversizedMessage = createLargeMessage(200);
-    
+
     await assertRejects(
       async () => {
         await eventStore.storeEvent('test-stream-oversized', oversizedMessage);
       },
       Error,
-      'exceeds maximum allowed size'
+      'exceeds maximum allowed size',
     );
-    
+
     kv.close();
   },
 });
@@ -222,36 +222,36 @@ Deno.test({
   async fn() {
     const kv = await createTestKV();
     const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger);
-    
+
     const streamId = 'test-stream-replay';
-    
+
     // Store multiple messages
     const message1 = createLargeMessage(50);
     const message2 = createLargeMessage(75);
     const message3 = createLargeMessage(100);
-    
+
     const eventId1 = await eventStore.storeEvent(streamId, message1);
     const eventId2 = await eventStore.storeEvent(streamId, message2);
     const eventId3 = await eventStore.storeEvent(streamId, message3);
-    
+
     // Test replay from first event
     const replayedMessages: Array<{ eventId: string; message: JSONRPCMessage }> = [];
-    
+
     await eventStore.replayEventsAfter(eventId1, {
       send: async (eventId: string, message: JSONRPCMessage) => {
         replayedMessages.push({ eventId, message });
       },
     });
-    
+
     // Should replay 2 messages (after eventId1)
     assertEquals(replayedMessages.length, 2);
     assertEquals(replayedMessages[0]?.eventId, eventId2);
     assertEquals(replayedMessages[1]?.eventId, eventId3);
-    
+
     // Verify message content integrity
     assertEquals((replayedMessages[0]?.message as any)?.params?.size, '75KB');
     assertEquals((replayedMessages[1]?.message as any)?.params?.size, '100KB');
-    
+
     kv.close();
   },
 });
@@ -260,13 +260,13 @@ Deno.test({
   name: 'TransportEventStoreChunked - Compression Functionality',
   async fn() {
     const kv = await createTestKV();
-    
+
     try {
       const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger, {
         enableCompression: true,
         compressionThreshold: 1024, // 1KB
       });
-      
+
       // Create a message with highly compressible content
       const compressibleContent = 'This is highly repetitive content. '.repeat(1000);
       const compressibleMessage: JSONRPCMessage = {
@@ -278,16 +278,16 @@ Deno.test({
           content: compressibleContent,
         },
       };
-      
+
       const eventId = await eventStore.storeEvent('test-stream-compress', compressibleMessage);
-      
+
       assertExists(eventId);
-      
+
       // Get statistics to verify compression was used
       const stats = await eventStore.getChunkStatistics('test-stream-compress');
       assertEquals(stats.totalEvents, 1);
       assert(stats.compressionStats.compressed >= 1); // At least one compressed event
-      
+
       // Verify replay works correctly with compressed data
       const replayedMessages: JSONRPCMessage[] = [];
       await eventStore.replayEventsAfter('', {
@@ -295,7 +295,7 @@ Deno.test({
           replayedMessages.push(message);
         },
       });
-      
+
       assertEquals(replayedMessages.length, 1);
       assertEquals((replayedMessages[0] as any)?.params?.content, compressibleContent);
     } finally {
@@ -308,30 +308,30 @@ Deno.test({
   name: 'TransportEventStoreChunked - Global Statistics',
   async fn() {
     const kv = await createTestKV();
-    
+
     try {
       // Disable compression to avoid hanging promises
       const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger, {
         enableCompression: false,
       });
-      
+
       // Store messages in multiple streams
       await eventStore.storeEvent('stream-1', createLargeMessage(50));
       await eventStore.storeEvent('stream-1', createLargeMessage(75));
       await eventStore.storeEvent('stream-2', createLargeMessage(100));
-      
+
       // Get global statistics
       const stats = await eventStore.getChunkStatistics();
-      
+
       assertEquals(stats.totalEvents, 3);
       assert(stats.totalChunks >= 3); // Should have multiple chunks
       assert(stats.averageChunksPerEvent >= 1);
       assertExists(stats.largestEvent);
-      
+
       // Get stream-specific statistics
       const stream1Stats = await eventStore.getChunkStatistics('stream-1');
       assertEquals(stream1Stats.totalEvents, 2);
-      
+
       const stream2Stats = await eventStore.getChunkStatistics('stream-2');
       assertEquals(stream2Stats.totalEvents, 1);
     } finally {
@@ -345,22 +345,22 @@ Deno.test({
   async fn() {
     const kv = await createTestKV();
     const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger);
-    
+
     const streams = ['stream-a', 'stream-b', 'stream-c'];
-    
+
     // Store events in different streams
     for (const streamId of streams) {
       await eventStore.storeEvent(streamId, createLargeMessage(25));
     }
-    
+
     // List all streams
     const listedStreams = await eventStore.listStreams();
-    
+
     // Should contain all our test streams
     for (const streamId of streams) {
       assert(listedStreams.includes(streamId), `Stream ${streamId} should be listed`);
     }
-    
+
     // Get metadata for each stream
     for (const streamId of streams) {
       const metadata = await eventStore.getStreamMetadata(streamId);
@@ -369,7 +369,7 @@ Deno.test({
       assertEquals(metadata.eventCount, 1);
       assertExists(metadata.lastEventId);
     }
-    
+
     kv.close();
   },
 });
@@ -379,9 +379,9 @@ Deno.test({
   async fn() {
     const kv = await createTestKV();
     const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger);
-    
+
     const streamId = 'test-stream-cleanup';
-    
+
     // Store 5 events - timestamps will naturally be different due to async processing
     const events = [];
     for (let i = 0; i < 5; i++) {
@@ -390,19 +390,19 @@ Deno.test({
       const eventId = await eventStore.storeEvent(streamId, message);
       events.push(eventId);
     }
-    
+
     // Verify all events are stored
     let stats = await eventStore.getChunkStatistics(streamId);
     assertEquals(stats.totalEvents, 5);
-    
+
     // Cleanup keeping only 3 events
     const deletedCount = await eventStore.cleanupOldEvents(streamId, 3);
     assertEquals(deletedCount, 2);
-    
+
     // Verify only 3 events remain
     stats = await eventStore.getChunkStatistics(streamId);
     assertEquals(stats.totalEvents, 3);
-    
+
     kv.close();
   },
 });
@@ -412,7 +412,7 @@ Deno.test({
   async fn() {
     const kv = await createTestKV();
     const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger);
-    
+
     // Log various transport events
     await eventStore.logEvent({
       type: 'request',
@@ -423,7 +423,7 @@ Deno.test({
       sessionId: 'session-456',
       data: { method: 'tools/list' },
     });
-    
+
     await eventStore.logEvent({
       type: 'response',
       transport: 'http',
@@ -433,7 +433,7 @@ Deno.test({
       sessionId: 'session-456',
       data: { toolCount: 5 },
     });
-    
+
     await eventStore.logEvent({
       type: 'error',
       transport: 'http',
@@ -444,10 +444,10 @@ Deno.test({
       error: new Error('Test error'),
       data: { method: 'tools/call' },
     });
-    
+
     // Events should be logged without throwing errors
     // (Verification of log content would require more complex KV inspection)
-    
+
     kv.close();
   },
 });
@@ -457,11 +457,11 @@ Deno.test({
   async fn() {
     const kv = await createTestKV();
     const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger);
-    
+
     // Store a valid message
     const message = createLargeMessage(50);
     const eventId = await eventStore.storeEvent('test-stream-corrupt', message);
-    
+
     // Manually corrupt a chunk by writing invalid data
     const corruptChunkKey = ['test', 'stream', 'test-stream-corrupt', 'chunks', eventId, 0];
     await kv.set(corruptChunkKey, {
@@ -469,20 +469,20 @@ Deno.test({
       data: 'invalid-base64-data',
       checksum: 'invalid-checksum',
     });
-    
+
     // Replay should handle corrupted data gracefully
     const replayedMessages: JSONRPCMessage[] = [];
-    
+
     // This should not throw, but should log warnings about corruption
     await eventStore.replayEventsAfter('', {
       send: async (eventId: string, message: JSONRPCMessage) => {
         replayedMessages.push(message);
       },
     });
-    
+
     // Should not replay the corrupted message
     assertEquals(replayedMessages.length, 0);
-    
+
     kv.close();
   },
 });

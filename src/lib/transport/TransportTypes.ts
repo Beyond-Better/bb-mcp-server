@@ -50,7 +50,7 @@ export interface HttpTransportConfig {
 
   // 🔒 Authentication configuration
   enableAuthentication?: boolean; // Auto-enabled if oauthProvider available
-  skipAuthentication?: boolean; // Skip auth even if OAuth components available  
+  skipAuthentication?: boolean; // Skip auth even if OAuth components available
   requireAuthentication?: boolean; // Require auth for all endpoints (except open endpoints)
 }
 
@@ -58,7 +58,7 @@ export interface StdioTransportConfig {
   enableLogging: boolean; // default: true
   bufferSize: number; // default: 8192
   encoding: string; // default: 'utf8'
-  
+
   // 🔒 Authentication configuration (discouraged by MCP spec)
   enableAuthentication?: boolean; // STDIO SHOULD NOT use OAuth per MCP spec
   skipAuthentication?: boolean; // Skip auth even if OAuth components available

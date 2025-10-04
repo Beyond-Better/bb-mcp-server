@@ -123,7 +123,7 @@ export class CredentialStore {
       // Return credentials without internal metadata
       const { storedAt, lastUsedAt, ...publicCredentials } = credentials;
       // this.logger?.info('CredentialStore: Returning credentials', { userId, provider, publicCredentials });
-     return publicCredentials;
+      return publicCredentials;
     } catch (error) {
       this.logger?.error('CredentialStore: Failed to get credentials', toError(error), {
         userId,

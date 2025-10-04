@@ -20,7 +20,7 @@ import type {
   TransportDependencies,
 } from '../../../src/lib/transport/TransportTypes.ts';
 import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
-import { TestBeyondMcpServer, createTestBeyondMcpServer } from '../../utils/test-helpers.ts';
+import { createTestBeyondMcpServer, TestBeyondMcpServer } from '../../utils/test-helpers.ts';
 
 // Simple test MCP Server that provides the interface HttpTransport expects
 class TestSdkMcpServer {

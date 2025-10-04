@@ -537,12 +537,15 @@ export function createTestTimeout(ms: number, message?: string): Promise<never> 
  * This replaces the incomplete TestBeyondMcpServer from HttpTransport.test.ts
  */
 export class TestBeyondMcpServer extends BeyondMcpServer {
-  constructor(config?: Partial<BeyondMcpServerConfig>, dependencies?: Partial<BeyondMcpServerDependencies>) {
+  constructor(
+    config?: Partial<BeyondMcpServerConfig>,
+    dependencies?: Partial<BeyondMcpServerDependencies>,
+  ) {
     const fullConfig = {
       ...createTestBeyondMcpServerConfig(),
       ...config,
     };
-    
+
     const fullDependencies = {
       ...createMockBeyondMcpServerDependencies(),
       ...dependencies,
@@ -575,7 +578,7 @@ export class TestBeyondMcpServer extends BeyondMcpServer {
  */
 export async function createTestBeyondMcpServer(
   config?: Partial<BeyondMcpServerConfig>,
-  dependencies?: Partial<BeyondMcpServerDependencies>
+  dependencies?: Partial<BeyondMcpServerDependencies>,
 ): Promise<TestBeyondMcpServer> {
   const server = new TestBeyondMcpServer(config, dependencies);
   await server.initialize();

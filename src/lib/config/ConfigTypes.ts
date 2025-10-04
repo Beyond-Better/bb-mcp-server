@@ -71,8 +71,16 @@ export interface ThirdPartyApiConfig {
  * Transport Event Store configuration (event store for MCP Server)
  * @see ../storage/StorageTypes.ts for full type definition
  */
-import type { TransportEventStoreConfig, TransportEventStoreChunkedConfig, TransportEventStoreType } from '../storage/StorageTypes.ts';
-export type { TransportEventStoreConfig, TransportEventStoreChunkedConfig, TransportEventStoreType };
+import type {
+  TransportEventStoreChunkedConfig,
+  TransportEventStoreConfig,
+  TransportEventStoreType,
+} from '../storage/StorageTypes.ts';
+export type {
+  TransportEventStoreChunkedConfig,
+  TransportEventStoreConfig,
+  TransportEventStoreType,
+};
 
 /**
  * OAuth Provider configuration (when MCP server acts as OAuth provider)
