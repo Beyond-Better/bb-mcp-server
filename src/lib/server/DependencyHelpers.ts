@@ -188,8 +188,9 @@ export function getToolRegistry(logger: Logger, errorHandler: ErrorHandler): Too
 }
 
 /**
- * Plugin discovery
- * Register with WorkflowRegistry and ToolRegistry
+ * Plugin discovery and static plugin registration
+ * Registers both static plugins (from dependencies) and discovered plugins
+ * This enables hybrid mode: static plugins for compiled binaries + discovery for development
  */
 export async function registerPluginsInRegistries(
   toolRegistry: ToolRegistry,
@@ -198,23 +199,56 @@ export async function registerPluginsInRegistries(
 ): Promise<void> {
   const logger = pluginDependencies.logger;
 
-  // Create plugin manager with discovery options
+  // Create plugin manager for both static and discovered plugins
   const pluginConfig = pluginDependencies.configManager.loadPluginsConfig();
+  const pluginManager = new PluginManager(
+    toolRegistry,
+    workflowRegistry,
+    pluginConfig,
+    pluginDependencies,
+  );
 
-  // Discover and load plugins if autoload is enabled
+  // =============================================================================
+  // STEP 1: Register static plugins (for compiled binaries or explicit registration)
+  // =============================================================================
+  
+  if (pluginDependencies.staticPlugins && pluginDependencies.staticPlugins.length > 0) {
+    logger.info('Registering static plugins...', {
+      count: pluginDependencies.staticPlugins.length,
+      plugins: pluginDependencies.staticPlugins.map((p) => p.name),
+    });
+
+    for (const plugin of pluginDependencies.staticPlugins) {
+      try {
+        await pluginManager.registerPlugin(plugin);
+        logger.info('Static plugin registered successfully', {
+          plugin: plugin.name,
+          version: plugin.version,
+          workflows: plugin.workflows.length,
+          tools: plugin.tools.length,
+        });
+      } catch (error) {
+        logger.error('Failed to register static plugin', error as Error, {
+          plugin: plugin.name,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  } else {
+    logger.debug('No static plugins to register');
+  }
+
+  // =============================================================================
+  // STEP 2: Discover and load plugins if autoload is enabled
+  // =============================================================================
+  
   if (pluginConfig.autoload) {
     try {
-      const pluginManager = new PluginManager(
-        toolRegistry,
-        workflowRegistry,
-        pluginConfig,
-        pluginDependencies,
-      );
-
       logger.info('Discovering plugins...', {
         paths: pluginConfig.paths,
         autoload: pluginConfig.autoload,
         hasDependencies: !!pluginDependencies,
+        hasStaticPlugins: !!pluginDependencies.staticPlugins,
       });
 
       const discoveredPlugins = await pluginManager.discoverPlugins();
@@ -222,6 +256,7 @@ export async function registerPluginsInRegistries(
       logger.info('Plugin discovery completed', {
         discovered: discoveredPlugins.length,
         totalWorkflows: discoveredPlugins.reduce((sum, p) => sum + p.workflows.length, 0),
+        totalPlugins: pluginManager.getLoadedPlugins().length,
       });
     } catch (error) {
       logger.warn('Plugin discovery failed', {
@@ -232,6 +267,19 @@ export async function registerPluginsInRegistries(
   } else {
     logger.debug('Plugin autoload disabled, skipping discovery');
   }
+
+  // =============================================================================
+  // SUMMARY: Log final plugin registration state
+  // =============================================================================
+  
+  const stats = pluginManager.getStats();
+  logger.info('Plugin registration complete', {
+    totalPlugins: stats.totalPlugins,
+    activePlugins: stats.activePlugins,
+    totalWorkflows: stats.totalWorkflows,
+    staticPlugins: pluginDependencies.staticPlugins?.length || 0,
+    discoveredPlugins: stats.totalPlugins - (pluginDependencies.staticPlugins?.length || 0),
+  });
 }
 
 /**

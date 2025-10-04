@@ -20,6 +20,7 @@ import type { HttpServerConfig } from '../server/ServerTypes.ts';
 import type { WorkflowBase } from '../workflows/WorkflowBase.ts';
 import type { ToolRegistration } from '../types/BeyondMcpTypes.ts';
 import type { TransportConfig } from '../transport/TransportTypes.ts';
+import type { AppPlugin } from './PluginTypes.ts';
 
 /**
  * Configuration interface for AppServer
@@ -79,6 +80,10 @@ export interface AppServerDependencies {
   // Custom workflows and tools
   customWorkflows?: WorkflowBase[];
   customTools?: ToolRegistration[];
+
+  // Static plugins (for compiled binaries or explicit registration)
+  // If provided, these plugins are registered before discovery runs
+  staticPlugins?: AppPlugin[];
 }
 type AppOnlyKeys = 'sessionStore' | 'eventStore' | 'credentialStore' | 'beyondMcpServer';
 
