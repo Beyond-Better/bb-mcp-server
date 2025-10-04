@@ -18,7 +18,7 @@ Deno.test('InstructionsLoader', async (t) => {
 
     const result = await loadInstructions({
       logger,
-      instructionsConfig: configInstructions,
+      instructionsContent: configInstructions,
       instructionsFilePath: './non-existent-file.md', // Should be ignored
     });
 
@@ -103,7 +103,7 @@ Deno.test('InstructionsLoader', async (t) => {
 
     const result = await loadInstructions({
       logger,
-      instructionsConfig: configWithWhitespace,
+      instructionsContent: configWithWhitespace,
     });
 
     assertEquals(result, 'MCP Server instructions');
@@ -112,7 +112,7 @@ Deno.test('InstructionsLoader', async (t) => {
   await t.step('should handle empty config gracefully', async () => {
     const result = await loadInstructions({
       logger,
-      instructionsConfig: '   ', // Only whitespace
+      instructionsContent: '   ', // Only whitespace
     });
 
     // Should fall back to embedded instructions
@@ -169,7 +169,7 @@ Deno.test('getInstructionsLoadingSummary', async (t) => {
   await t.step('should return correct summary information', () => {
     const summary = getInstructionsLoadingSummary({
       logger,
-      instructionsConfig: 'Test config',
+      instructionsContent: 'Test config',
       instructionsFilePath: './custom/path.md',
       defaultFileName: 'custom_instructions.md',
       basePath: '/custom/base',
@@ -200,7 +200,7 @@ Deno.test('getInstructionsLoadingSummary', async (t) => {
   await t.step('should handle whitespace-only config', () => {
     const summary = getInstructionsLoadingSummary({
       logger,
-      instructionsConfig: '   ', // Only whitespace
+      instructionsContent: '   ', // Only whitespace
     });
 
     assertEquals(summary.hasConfigString, false);

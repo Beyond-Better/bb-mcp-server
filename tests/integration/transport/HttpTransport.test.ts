@@ -47,9 +47,14 @@ function createTestHttpTransportConfig(): HttpTransportConfig {
     sessionCleanupInterval: 5 * 60 * 1000,
     requestTimeout: 30 * 1000,
     maxRequestSize: 1024 * 1024,
-    enableCORS: true,
-    corsOrigins: ['*'],
+    cors: {
+      enabled: true,
+      origins: ['*'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE'],
+      headers: [],
+    },
     preserveCompatibilityMode: true, // 🚨 CRITICAL
+    allowInsecure: false,
   };
 }
 

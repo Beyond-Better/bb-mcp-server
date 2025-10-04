@@ -42,7 +42,7 @@ export interface HttpServerConfig {
   environment?: string;
   /** CORS configuration */
   cors: {
-    allowOrigin: string;
+    allowOrigins: string[];
   };
   /** API configuration */
   api: {

@@ -147,7 +147,7 @@ async function createTestDependencies(): Promise<HttpServerDependencies> {
     version: '1.0.0',
     environment: 'test',
     cors: {
-      allowOrigin: '*',
+      allowOrigins: ['*'],
     },
     api: {
       version: 'v1',

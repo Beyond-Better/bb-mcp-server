@@ -47,6 +47,13 @@ const mockSdkMcpServer = {
   listTools: async () => ({ tools: [] }),
 } as any;
 
+const corsConfig = {
+  enabled: true,
+  origins: ['*'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  headers: [],
+};
+
 // Helper function to create test dependencies
 async function createTestDependencies(): Promise<
   TransportDependencies & {
@@ -143,9 +150,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['http://localhost:3000'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -190,8 +197,7 @@ Deno.test({
       http: {
         hostname: 'localhost',
         port: 3001,
-        corsOrigins: ['*'],
-        enableCORS: true,
+        cors: corsConfig,
         sessionTimeout: 30 * 60 * 1000,
         maxConcurrentSessions: 1000,
         enableSessionPersistence: true,
@@ -199,6 +205,7 @@ Deno.test({
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -232,9 +239,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -268,9 +275,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
         port: 3003,
       },
     };
@@ -367,9 +374,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -410,9 +417,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -447,9 +454,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -483,9 +490,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -583,9 +590,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -670,9 +677,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -713,9 +720,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -749,9 +756,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -786,9 +793,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 

@@ -97,7 +97,7 @@ PLUGINS_DISCOVERY_PATHS=./src/plugins
 PLUGINS_AUTOLOAD=true
 
 # Storage
-DENO_KV_PATH=./data/app.db
+STORAGE_DENO_KV_PATH=./data/app.db
 
 # Logging
 LOG_LEVEL=info                 # debug|info|warn|error

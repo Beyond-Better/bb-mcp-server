@@ -10,6 +10,7 @@ import type { SessionStore } from '../storage/SessionStore.ts';
 import type { TransportEventStore } from '../storage/TransportEventStore.ts';
 import type { TransportEventStoreChunked } from '../storage/TransportEventStoreChunked.ts';
 //import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
+import type { RateLimitConfig } from '../types/RateLimitTypes.ts';
 
 // Core transport interfaces
 export interface Transport {
@@ -32,22 +33,30 @@ export interface TransportConfig {
 }
 
 export interface HttpTransportConfig {
-  hostname: string;
+  hostname: string; // Changed from 'host' to 'hostname'
   port: number;
-  sessionTimeout: number; // default: 30 minutes
-  maxConcurrentSessions: number; // default: 1000
-  enableSessionPersistence: boolean; // default: true
+  // Session management configuration (production critical)
+  sessionTimeout: number; // Session timeout in milliseconds
+  sessionCleanupInterval: number; // Cleanup interval in milliseconds
+  maxConcurrentSessions: number;
+  enableSessionPersistence: boolean;
   enableSessionRestore?: boolean;
-  sessionCleanupInterval: number; // default: 5 minutes
-  requestTimeout: number; // default: 30 seconds
-  maxRequestSize: number; // default: 1MB
-  enableCORS: boolean; // default: true
-  corsOrigins: string[]; // default: ['*']
-
+  requestTimeout: number;
+  maxRequestSize: number;
   // 🚨 Compatibility configuration - DO NOT DISABLE
-  preserveCompatibilityMode: boolean; // default: true - CRITICAL FOR MCP SDK
+  preserveCompatibilityMode: boolean;
+  // Optional transport persistence settings
   enableTransportPersistence?: boolean;
-
+  allowInsecure: boolean; // Allow HTTP transport without OAuth provider (development only)
+  cors?: {
+    enabled: boolean;
+    origins: string[];
+    methods: string[];
+    headers: string[];
+  };
+  rateLimit?: RateLimitConfig;
+  enableDnsRebindingProtection?: boolean;
+  allowedHosts?: string[];
   // 🔒 Authentication configuration
   enableAuthentication?: boolean; // Auto-enabled if oauthProvider available
   skipAuthentication?: boolean; // Skip auth even if OAuth components available

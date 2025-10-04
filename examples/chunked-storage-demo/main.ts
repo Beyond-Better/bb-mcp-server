@@ -214,7 +214,7 @@ async function main() {
 
   // Set up KV storage
   const kvManager = new KVManager({
-    kvPath: configManager.get('DENO_KV_PATH', './data/chunked-demo.db'),
+    kvPath: configManager.get('STORAGE_DENO_KV_PATH', './data/chunked-demo.db'),
   }, logger);
   await kvManager.initialize();
 

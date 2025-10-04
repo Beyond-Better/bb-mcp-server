@@ -20,7 +20,7 @@ export interface InstructionsLoaderOptions {
    * Direct instructions string from configuration
    * Corresponds to MCP_SERVER_INSTRUCTIONS environment variable
    */
-  instructionsConfig?: string;
+  instructionsContent?: string;
 
   /**
    * File path to load instructions from
@@ -47,16 +47,16 @@ export interface InstructionsLoaderOptions {
 export async function loadInstructions(options: InstructionsLoaderOptions): Promise<string> {
   const {
     logger,
-    instructionsConfig,
+    instructionsContent,
     instructionsFilePath,
     defaultFileName = 'mcp_server_instructions.md',
     basePath = Deno.cwd(),
   } = options;
 
   // Strategy 1: Use direct config string (highest priority)
-  if (instructionsConfig && instructionsConfig.trim()) {
+  if (instructionsContent && instructionsContent.trim()) {
     logger.debug('InstructionsLoader: Using instructions from configuration variable');
-    return instructionsConfig.trim();
+    return instructionsContent.trim();
   }
 
   // Strategy 2: Load from configured file path
@@ -185,7 +185,7 @@ export function getInstructionsLoadingSummary(
   options: InstructionsLoaderOptions,
 ): InstructionsLoadingSummary {
   return {
-    hasConfigString: !!(options.instructionsConfig && options.instructionsConfig.trim()),
+    hasConfigString: !!(options.instructionsContent && options.instructionsContent.trim()),
     hasFilePath: !!options.instructionsFilePath,
     defaultFileName: options.defaultFileName || 'mcp_server_instructions.md',
     basePath: options.basePath || Deno.cwd(),

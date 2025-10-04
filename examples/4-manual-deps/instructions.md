@@ -50,7 +50,7 @@ AUDIT_RETENTION_DAYS=90
 AUDIT_LOG_FILE=./logs/audit.log
 
 # Storage Management (manual configuration)
-DENO_KV_PATH=./examples/4-manual-deps/data/manual-mcp-server.db
+STORAGE_DENO_KV_PATH=./examples/4-manual-deps/data/manual-mcp-server.db
 
 # OAuth Provider (manual setup)
 OAUTH_PROVIDER_ISSUER=http://localhost:3000
@@ -130,7 +130,7 @@ const auditLogger = new AuditLogger({
 
 // 3. Manual KV Manager Initialization
 const kvManager = new KVManager({
-  kvPath: configManager.get('DENO_KV_PATH', './data/manual-deps.db'),
+  kvPath: configManager.get('STORAGE_DENO_KV_PATH', './data/manual-deps.db'),
 }, logger);
 await kvManager.initialize(); // Manual initialization
 

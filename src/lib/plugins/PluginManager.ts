@@ -22,19 +22,19 @@ export class PluginManager {
   private logger: Logger | undefined;
   private discoveryOptions: PluginDiscoveryOptions;
   private watchedPaths: string[] = [];
-  private pluginDependencies: AppServerDependencies;
+  private dependencies: AppServerDependencies;
   private plugins = new Map<string, LoadedPlugin>();
 
   constructor(
     toolRegistry: ToolRegistry,
     workflowRegistry: WorkflowRegistry,
     options: Partial<PluginDiscoveryOptions> = {},
-    pluginDependencies: AppServerDependencies,
+    dependencies: AppServerDependencies,
   ) {
     this.toolRegistry = toolRegistry;
     this.workflowRegistry = workflowRegistry;
-    this.logger = pluginDependencies.logger;
-    this.pluginDependencies = pluginDependencies;
+    this.logger = dependencies.logger;
+    this.dependencies = dependencies;
     this.discoveryOptions = {
       paths: ['./plugins'],
       autoload: false,
@@ -70,13 +70,13 @@ export class PluginManager {
 
       if (pluginModule.default && typeof pluginModule.default === 'function') {
         // 1a. Try default export as function
-        plugin = pluginModule.default(this.pluginDependencies);
+        plugin = pluginModule.default(this.dependencies);
       } else if (pluginModule.default && typeof pluginModule.default === 'object') {
         // 1b. Try default export as object
         plugin = pluginModule.default;
       } else if (pluginModule.plugin && typeof pluginModule.plugin === 'function') {
         // 2a. Try named 'plugin' export as function
-        plugin = pluginModule.plugin(this.pluginDependencies);
+        plugin = pluginModule.plugin(this.dependencies);
       } else if (pluginModule.plugin && typeof pluginModule.plugin === 'object') {
         // 2b. Try named 'plugin' export as object
         plugin = pluginModule.plugin;
@@ -94,7 +94,7 @@ export class PluginManager {
           // Call factory function with dependencies
           try {
             const factoryFunction = pluginModule[factoryNames[0]!]; // Safe: already checked length > 0
-            plugin = factoryFunction(this.pluginDependencies);
+            plugin = factoryFunction(this.dependencies);
 
             this.logger?.debug('Successfully created plugin using factory function', {
               path: pluginPath,
@@ -121,7 +121,7 @@ export class PluginManager {
 
       // Call optional initialize method for async setup
       if (plugin.initialize && typeof plugin.initialize === 'function') {
-        await plugin.initialize(this.pluginDependencies, this.toolRegistry, this.workflowRegistry);
+        await plugin.initialize(this.dependencies, this.toolRegistry, this.workflowRegistry);
       }
 
       // Validate plugin structure
