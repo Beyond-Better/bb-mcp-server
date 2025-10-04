@@ -56,32 +56,45 @@ export interface RateLimitConfig {
 }
 
 /**
- * OAuth Provider configuration (when MCP server acts as OAuth provider)
+ * Rate limiting configuration
  */
-export interface OAuthProviderConfig {
-  clientId: string;
-  clientSecret: string;
-  redirectUri: string;
-  issuer?: string;
-  enablePKCE?: boolean;
-  enableDynamicRegistration?: boolean;
-  tokenExpirationMs?: number;
-  refreshTokenExpirationMs?: number;
+export interface ThirdPartyApiConfig {
+  providerId: string;
+  version: string;
+  baseUrl: string;
+  timeout?: number;
+  retryAttempts?: number;
+  retryDelayMs?: number;
 }
 
 /**
- * OAuth Consumer configuration (for third-party API integration)
+ * Transport Event Store configuration (event store for MCP Server)
+ * @see ../storage/StorageTypes.ts for full type definition
  */
-export interface OAuthConsumerConfig {
-  provider: string;
-  clientId: string;
-  clientSecret: string;
-  authUrl: string;
-  tokenUrl: string;
-  redirectUri: string;
-  scopes?: string[];
-  additionalParams?: Record<string, string>;
-}
+import type {
+  TransportEventStoreChunkedConfig,
+  TransportEventStoreConfig,
+  TransportEventStoreType,
+} from '../storage/StorageTypes.ts';
+export type {
+  TransportEventStoreChunkedConfig,
+  TransportEventStoreConfig,
+  TransportEventStoreType,
+};
+
+/**
+ * OAuth Provider configuration (when MCP server acts as OAuth provider)
+ * @see ../auth/OAuthTypes.ts for full type definition
+ */
+import type { OAuthProviderConfig } from '../auth/OAuthTypes.ts';
+export type { OAuthProviderConfig };
+
+/**
+ * OAuth Consumer configuration (for third-party API integration)
+ * @see ../auth/OAuthTypes.ts for full type definition
+ */
+import type { OAuthConsumerConfig } from '../auth/OAuthTypes.ts';
+export type { OAuthConsumerConfig };
 
 /**
  * Session configuration
@@ -106,6 +119,7 @@ export interface TransportConfig {
     sessionCleanupInterval: number; // Cleanup interval in milliseconds
     maxConcurrentSessions: number;
     enableSessionPersistence: boolean;
+    enableSessionRestore?: boolean;
     requestTimeout: number;
     maxRequestSize: number;
     enableCORS: boolean;
@@ -114,7 +128,6 @@ export interface TransportConfig {
     allowInsecure: boolean; // Allow HTTP transport without OAuth provider (development only)
     // Optional transport persistence settings
     enableTransportPersistence?: boolean;
-    sessionRestoreEnabled?: boolean;
     cors?: {
       enabled: boolean;
       origins: string[];
@@ -217,6 +230,7 @@ export interface EnvironmentMapping {
  * Configuration loader options
  */
 export interface ConfigLoaderOptions {
+  environment?: string;
   envFile?: string;
   envPrefix?: string;
   validateRequired?: boolean;

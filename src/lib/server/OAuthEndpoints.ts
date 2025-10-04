@@ -14,6 +14,8 @@
 
 import type { Logger } from '../../types/library.types.ts';
 import type { OAuthProvider } from '../auth/OAuthProvider.ts';
+import type { OAuthConsumer } from '../auth/OAuthConsumer.ts';
+import type { HttpServerDependencies } from './HttpServer.ts';
 import type { AuthorizeRequest, TokenRequest } from '../auth/OAuthTypes.ts';
 import { toError } from '../utils/Error.ts';
 import { reconstructOriginalUrl } from '../utils/UrlUtils.ts';
@@ -27,11 +29,13 @@ import { reconstructOriginalUrl } from '../utils/UrlUtils.ts';
  */
 export class OAuthEndpoints {
   private oauthProvider: OAuthProvider;
+  private oauthConsumer: OAuthConsumer | undefined;
   private logger: Logger;
 
-  constructor(oauthProvider: OAuthProvider, logger: Logger) {
-    this.oauthProvider = oauthProvider;
-    this.logger = logger;
+  constructor(dependencies: HttpServerDependencies) {
+    this.oauthProvider = dependencies.oauthProvider;
+    this.oauthConsumer = dependencies.oauthConsumer;
+    this.logger = dependencies.logger;
 
     this.logger.info('OAuthEndpoints: Initialized with OAuth provider');
   }
@@ -58,6 +62,8 @@ export class OAuthEndpoints {
       case '/callback':
       case '/oauth/callback':
       case '/auth/callback':
+      case '/api/v1/auth/callback':
+      case '/api/v1/oauth/callback':
         if (method === 'GET') return await this.handleCallback(request);
         break;
     }
@@ -69,7 +75,7 @@ export class OAuthEndpoints {
   }
 
   /**
-   * OAuth authorization endpoint - delegates to OAuthProvider
+   * OAuth authorization endpoint - supports both pure MCP OAuth and proxy OAuth flows
    */
   private async handleAuthorize(request: Request): Promise<Response> {
     const authId = Math.random().toString(36).substring(2, 15);
@@ -88,14 +94,15 @@ export class OAuthEndpoints {
         code_challenge_method: url.searchParams.get('code_challenge_method'),
       };
 
-      this.logger.info(`OAuthEndpoints: Authorization request [${authId}]`, {
-        authId,
-        clientId: authRequest.client_id,
-        redirectUri: authRequest.redirect_uri,
-        responseType: authRequest.response_type,
-        scope: authRequest.scope,
-        hasPKCE: !!(authRequest.code_challenge && authRequest.code_challenge_method),
-      });
+      // this.logger.info(`OAuthEndpoints: Authorization request [${authId}]`, {
+      //   authId,
+      //   clientId: authRequest.client_id,
+      //   redirectUri: authRequest.redirect_uri,
+      //   responseType: authRequest.response_type,
+      //   state: authRequest.state,
+      //   scope: authRequest.scope,
+      //   hasPKCE: !!(authRequest.code_challenge && authRequest.code_challenge_method),
+      // });
 
       // Validate required parameters
       if (!authRequest.client_id) {
@@ -114,47 +121,111 @@ export class OAuthEndpoints {
         return this.generateOAuthError('invalid_request', 'response_type parameter is required');
       }
 
-      // Create user ID based on client ID (for this OAuth provider)
+      // Create user ID based on client ID
       const userId = `client_${authRequest.client_id}`;
 
-      // Delegate to OAuth Provider for authorization handling
-      const authRequest_clean: AuthorizeRequest = {
-        response_type: authRequest.response_type!,
-        client_id: authRequest.client_id!,
-        redirect_uri: authRequest.redirect_uri!,
-        scope: authRequest.scope || 'read',
-        state: authRequest.state!,
-      };
+      // Check if this is a pure MCP OAuth flow or proxy OAuth flow
+      const hasOAuthConsumer = !!this.oauthConsumer;
 
-      // Add optional PKCE parameters only if they exist
-      if (authRequest.code_challenge) {
-        authRequest_clean.code_challenge = authRequest.code_challenge;
+      if (!hasOAuthConsumer) {
+        // ============================================================
+        // PURE MCP OAUTH FLOW
+        // MCP server IS the OAuth provider - generate code immediately
+        // ============================================================
+        // this.logger.info(`OAuthEndpoints: Pure MCP OAuth flow [${authId}]`, {
+        //   authId,
+        //   clientId: authRequest.client_id,
+        //   redirectUri: authRequest.redirect_uri,
+        // });
+
+        const authRequest_clean: AuthorizeRequest = {
+          response_type: authRequest.response_type!,
+          client_id: authRequest.client_id!,
+          redirect_uri: authRequest.redirect_uri!,
+          scope: authRequest.scope || 'read',
+          state: authRequest.state!,
+        };
+
+        // Add optional PKCE parameters only if they exist
+        if (authRequest.code_challenge) {
+          authRequest_clean.code_challenge = authRequest.code_challenge;
+        }
+        if (authRequest.code_challenge_method) {
+          authRequest_clean.code_challenge_method = authRequest.code_challenge_method;
+        }
+
+        // Generate MCP authorization code and redirect to MCP client
+        const authResponse = await this.oauthProvider.handleAuthorizeRequest(
+          authRequest_clean,
+          userId,
+        );
+
+        // this.logger.info(`OAuthEndpoints: Authorization successful [${authId}]`, {
+        //   authId,
+        //   clientId: authRequest.client_id,
+        //   userId,
+        //   redirectUrl: authResponse.redirectUrl,
+        // });
+
+        return new Response(null, {
+          status: 302,
+          headers: {
+            'Location': authResponse.redirectUrl,
+            'Cache-Control': 'no-store',
+            'Pragma': 'no-cache',
+          },
+        });
+      } else {
+        // ============================================================
+        // PROXY OAUTH FLOW
+        // MCP server bridges to third-party provider (e.g., ActionStep)
+        // ============================================================
+        // this.logger.info(`OAuthEndpoints: Proxy OAuth flow [${authId}]`, {
+        //   authId,
+        //   clientId: authRequest.client_id,
+        //   redirectUri: authRequest.redirect_uri,
+        //   thirdPartyProvider: 'configured',
+        // });
+
+        // Start third-party OAuth flow
+        const authFlow = await this.oauthConsumer!.startAuthorizationFlow(userId);
+
+        // Store MCP authorization request linked to third-party state
+        const now = Date.now();
+        const mcpAuthRequest = {
+          client_id: authRequest.client_id,
+          redirect_uri: authRequest.redirect_uri,
+          state: authRequest.state, // MCP client's state
+          external_state: authFlow.state, // Third-party provider's state
+          user_id: userId,
+          created_at: now,
+          expires_at: now + (10 * 60 * 1000), // 10 minutes
+          ...(authRequest.code_challenge && { code_challenge: authRequest.code_challenge }),
+          ...(authRequest.code_challenge_method &&
+            { code_challenge_method: authRequest.code_challenge_method }),
+        };
+
+        await this.oauthProvider.storeMCPAuthRequest(authFlow.state, mcpAuthRequest);
+
+        // this.logger.info(`OAuthEndpoints: Redirecting to third-party OAuth [${authId}]`, {
+        //   authId,
+        //   clientId: authRequest.client_id,
+        //   userId,
+        //   mcpState: authRequest.state,
+        //   thirdPartyState: authFlow.state,
+        //   authorizationUrl: authFlow.authorizationUrl,
+        // });
+
+        // Redirect to third-party provider (e.g., ActionStep)
+        return new Response(null, {
+          status: 302,
+          headers: {
+            'Location': authFlow.authorizationUrl,
+            'Cache-Control': 'no-store',
+            'Pragma': 'no-cache',
+          },
+        });
       }
-      if (authRequest.code_challenge_method) {
-        authRequest_clean.code_challenge_method = authRequest.code_challenge_method;
-      }
-
-      const authResponse = await this.oauthProvider.handleAuthorizeRequest(
-        authRequest_clean,
-        userId,
-      );
-
-      this.logger.info(`OAuthEndpoints: Authorization successful [${authId}]`, {
-        authId,
-        clientId: authRequest.client_id,
-        userId,
-        redirectUrl: authResponse.redirectUrl,
-      });
-
-      // Return redirect response
-      return new Response(null, {
-        status: 302,
-        headers: {
-          'Location': authResponse.redirectUrl,
-          'Cache-Control': 'no-store',
-          'Pragma': 'no-cache',
-        },
-      });
     } catch (error) {
       this.logger.error(`OAuthEndpoints: Authorization error [${authId}]:`, toError(error));
       return this.generateOAuthError('server_error', 'Authorization request failed');
@@ -187,14 +258,14 @@ export class OAuthEndpoints {
         state: formData.get('state')?.toString(),
       };
 
-      this.logger.info(`OAuthEndpoints: Token request [${tokenId}]`, {
-        tokenId,
-        grantType: tokenRequest.grant_type,
-        clientId: tokenRequest.client_id,
-        hasCode: !!tokenRequest.code,
-        hasRefreshToken: !!tokenRequest.refresh_token,
-        hasCodeVerifier: !!tokenRequest.code_verifier,
-      });
+      // this.logger.info(`OAuthEndpoints: Token request [${tokenId}]`, {
+      //   tokenId,
+      //   grantType: tokenRequest.grant_type,
+      //   clientId: tokenRequest.client_id,
+      //   hasCode: !!tokenRequest.code,
+      //   hasRefreshToken: !!tokenRequest.refresh_token,
+      //   hasCodeVerifier: !!tokenRequest.code_verifier,
+      // });
 
       // Validate required parameters
       if (!tokenRequest.grant_type) {
@@ -242,13 +313,13 @@ export class OAuthEndpoints {
       // Delegate to OAuth Provider for token handling
       const tokenResponse = await this.oauthProvider.handleTokenRequest(tokenRequest_clean);
 
-      this.logger.info(`OAuthEndpoints: Token issued successfully [${tokenId}]`, {
-        tokenId,
-        clientId: tokenRequest.client_id,
-        grantType: tokenRequest.grant_type,
-        tokenType: tokenResponse.token_type,
-        hasRefreshToken: !!tokenResponse.refresh_token,
-      });
+      // this.logger.info(`OAuthEndpoints: Token issued successfully [${tokenId}]`, {
+      //   tokenId,
+      //   clientId: tokenRequest.client_id,
+      //   grantType: tokenRequest.grant_type,
+      //   tokenType: tokenResponse.token_type,
+      //   hasRefreshToken: !!tokenResponse.refresh_token,
+      // });
 
       return new Response(JSON.stringify(tokenResponse), {
         status: 200,
@@ -260,7 +331,23 @@ export class OAuthEndpoints {
       });
     } catch (error) {
       this.logger.error(`OAuthEndpoints: Token error [${tokenId}]:`, toError(error));
-      return this.generateOAuthError('invalid_request', 'Token request failed');
+
+      // Extract specific error message from the error
+      const errorMessage = error instanceof Error ? error.message : 'Token request failed';
+
+      // Map specific error messages to proper OAuth error codes (RFC 6749)
+      let oauthError = 'invalid_request';
+      if (errorMessage.includes('refresh token') || errorMessage.includes('Invalid or expired')) {
+        oauthError = 'invalid_grant';
+      } else if (errorMessage.includes('client') || errorMessage.includes('Client')) {
+        oauthError = 'invalid_client';
+      } else if (
+        errorMessage.includes('authorization code') || errorMessage.includes('Authorization code')
+      ) {
+        oauthError = 'invalid_grant';
+      }
+
+      return this.generateOAuthError(oauthError, errorMessage);
     }
   }
 
@@ -283,11 +370,11 @@ export class OAuthEndpoints {
         return this.generateOAuthError('invalid_request', 'Invalid JSON in request body');
       }
 
-      this.logger.info(`OAuthEndpoints: Client registration request [${registrationId}]`, {
-        registrationId,
-        clientName: requestBody.client_name,
-        redirectUris: requestBody.redirect_uris?.length || 0,
-      });
+      // this.logger.info(`OAuthEndpoints: Client registration request [${registrationId}]`, {
+      //   registrationId,
+      //   clientName: requestBody.client_name,
+      //   redirectUris: requestBody.redirect_uris?.length || 0,
+      // });
 
       // Extract client metadata from request headers
       const userAgent = request.headers.get('user-agent');
@@ -346,12 +433,12 @@ export class OAuthEndpoints {
       const error = url.searchParams.get('error');
       const errorDescription = url.searchParams.get('error_description');
 
-      this.logger.info(`OAuthEndpoints: OAuth callback [${callbackId}]`, {
-        callbackId,
-        hasCode: !!code,
-        hasState: !!state,
-        hasError: !!error,
-      });
+      // this.logger.info(`OAuthEndpoints: OAuth callback [${callbackId}]`, {
+      //   callbackId,
+      //   hasCode: !!code,
+      //   hasState: !!state,
+      //   hasError: !!error,
+      // });
 
       // Handle OAuth errors
       if (error) {
@@ -370,13 +457,53 @@ export class OAuthEndpoints {
         return this.generateErrorPage(errorMsg);
       }
 
-      // Handle OAuth callback by looking up MCP auth request
+      // Look up MCP auth request
       const mcpAuthRequest = await this.oauthProvider.getMCPAuthRequest(state);
 
       if (!mcpAuthRequest) {
         const errorMsg = 'Invalid or expired authorization request';
         this.logger.error(`OAuthEndpoints: ${errorMsg} [${callbackId}]`);
         return this.generateErrorPage(errorMsg);
+      }
+
+      // CRITICAL: Exchange third-party authorization code for tokens and store credentials
+      if (this.oauthConsumer) {
+        // this.logger.info(`OAuthEndpoints: Exchanging third-party code for tokens [${callbackId}]`, {
+        //   callbackId,
+        //   userId: mcpAuthRequest.user_id,
+        //   state,
+        // });
+
+        try {
+          // Exchange ActionStep code for tokens and store them
+          const exchangeResult = await this.oauthConsumer.handleAuthorizationCallback(code, state);
+
+          if (!exchangeResult.success) {
+            const errorMsg = exchangeResult.error || 'Failed to exchange authorization code';
+            this.logger.error(
+              `OAuthEndpoints: Token exchange failed [${callbackId}]`,
+              toError(errorMsg),
+              {
+                callbackId,
+              },
+            );
+            return this.generateErrorPage(errorMsg);
+          }
+
+          // this.logger.info(`OAuthEndpoints: Third-party tokens obtained and stored [${callbackId}]`, {
+          //   callbackId,
+          //   userId: mcpAuthRequest.user_id,
+          // });
+        } catch (exchangeError) {
+          const errorMsg = exchangeError instanceof Error
+            ? exchangeError.message
+            : 'Token exchange failed';
+          this.logger.error(
+            `OAuthEndpoints: Token exchange error [${callbackId}]:`,
+            exchangeError instanceof Error ? exchangeError : new Error(errorMsg),
+          );
+          return this.generateErrorPage(errorMsg);
+        }
       }
 
       // Generate MCP authorization code
@@ -392,11 +519,12 @@ export class OAuthEndpoints {
       redirectUrl.searchParams.set('code', mcpAuthCode);
       redirectUrl.searchParams.set('state', mcpAuthRequest.state);
 
-      this.logger.info(`OAuthEndpoints: Callback successful [${callbackId}]`, {
-        callbackId,
-        clientId: mcpAuthRequest.client_id,
-        redirectUrl: redirectUrl.toString(),
-      });
+      // this.logger.info(`OAuthEndpoints: Callback successful [${callbackId}]`, {
+      //   callbackId,
+      //   clientId: mcpAuthRequest.client_id,
+      //   userId: mcpAuthRequest.user_id,
+      //   redirectUrl: redirectUrl.toString(),
+      // });
 
       return new Response(null, {
         status: 302,
@@ -415,12 +543,42 @@ export class OAuthEndpoints {
 
   /**
    * Well-known endpoints (OAuth metadata)
+   * Supports both oauth-authorization-server (RFC 8414) and oauth-protected-resource (RFC 9068)
    */
   async handleWellKnown(request: Request, path: string, method: string): Promise<Response> {
-    if (path === 'oauth-authorization-server' && method === 'GET') {
+    // Support both RFC 8414 and RFC 9068 endpoints
+    // RFC 9728: Resource-specific metadata paths like oauth-protected-resource/mcp are also supported
+    const isAuthServerMetadata = path === 'oauth-authorization-server' ||
+      path === 'oauth-authorization-server/mcp';
+    const isMcpSpecificMetadata = path === 'oauth-authorization-server/mcp';
+    const isProtectedResourceMetadata = path === 'oauth-protected-resource' ||
+      path.startsWith('oauth-protected-resource/');
+
+    if ((isAuthServerMetadata || isProtectedResourceMetadata) && method === 'GET') {
       try {
         // Delegate to OAuth Provider for metadata generation
         const metadata = await this.oauthProvider.getAuthorizationServerMetadata();
+
+        // MCP-specific metadata endpoint: oauth-authorization-server/mcp
+        // Returns the same metadata but signals this is an MCP-enabled OAuth server
+        if (isMcpSpecificMetadata) {
+          this.logger.debug('OAuthEndpoints: Serving MCP-specific OAuth metadata', {
+            endpoint: '/.well-known/oauth-authorization-server/mcp',
+            hasMcpExtensions: !!metadata.mcp_extensions,
+          });
+          // No modifications needed - the metadata already includes mcp_extensions
+          // This endpoint serves as an MCP-specific discovery mechanism
+        }
+
+        // RFC 9728: If this is a resource-specific metadata request, add the resource field
+        if (isProtectedResourceMetadata && path.startsWith('oauth-protected-resource/')) {
+          const resourcePath = '/' + path.substring('oauth-protected-resource/'.length);
+          const url = new URL(request.url);
+          const resourceUrl = `${url.protocol}//${url.host}${resourcePath}`;
+
+          // Add resource field to metadata for RFC 9728 compliance
+          (metadata as any).resource = resourceUrl;
+        }
 
         return new Response(JSON.stringify(metadata, null, 2), {
           status: 200,

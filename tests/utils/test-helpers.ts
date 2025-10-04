@@ -10,6 +10,7 @@ import { ErrorHandler } from '../../src/lib/utils/ErrorHandler.ts';
 import { WorkflowRegistry } from '../../src/lib/workflows/WorkflowRegistry.ts';
 import { TransportManager } from '../../src/lib/transport/TransportManager.ts';
 import { OAuthProvider } from '../../src/lib/auth/OAuthProvider.ts';
+import { BeyondMcpServer } from '../../src/lib/server/BeyondMcpServer.ts';
 
 // Import types
 import type {
@@ -529,6 +530,59 @@ export function createTestTimeout(ms: number, message?: string): Promise<never> 
       reject(new Error(message || `Test timed out after ${ms}ms`));
     }, ms);
   });
+}
+
+/**
+ * Test BeyondMcpServer that extends the real class for comprehensive testing
+ * This replaces the incomplete TestBeyondMcpServer from HttpTransport.test.ts
+ */
+export class TestBeyondMcpServer extends BeyondMcpServer {
+  constructor(
+    config?: Partial<BeyondMcpServerConfig>,
+    dependencies?: Partial<BeyondMcpServerDependencies>,
+  ) {
+    const fullConfig = {
+      ...createTestBeyondMcpServerConfig(),
+      ...config,
+    };
+
+    const fullDependencies = {
+      ...createMockBeyondMcpServerDependencies(),
+      ...dependencies,
+    };
+
+    super(fullConfig, fullDependencies);
+  }
+
+  override async initialize(): Promise<TestBeyondMcpServer> {
+    await super.initialize();
+    return this;
+  }
+
+  // Helper methods for testing
+  getToolRegistry(): ToolRegistry {
+    return this['toolRegistry'];
+  }
+
+  getWorkflowRegistry(): WorkflowRegistry {
+    return this['workflowRegistry'];
+  }
+
+  getCurrentAuthContext(): BeyondMcpRequestContext | null {
+    return this['getAuthContext']();
+  }
+}
+
+/**
+ * Create a test BeyondMcpServer instance ready for testing
+ */
+export async function createTestBeyondMcpServer(
+  config?: Partial<BeyondMcpServerConfig>,
+  dependencies?: Partial<BeyondMcpServerDependencies>,
+): Promise<TestBeyondMcpServer> {
+  const server = new TestBeyondMcpServer(config, dependencies);
+  await server.initialize();
+  return server;
 }
 
 /**

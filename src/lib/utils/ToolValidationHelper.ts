@@ -8,7 +8,11 @@
  * - Workflow parameter schemas
  */
 
-import { z, type ZodObject, type ZodSchema } from 'zod';
+import {
+  z,
+  type ZodObject,
+  //type ZodSchema
+} from 'zod';
 import type { CallToolResult } from 'mcp/types.js';
 import type { WorkflowRegistration } from '../types/WorkflowTypes.ts';
 import type { Logger } from './Logger.ts';

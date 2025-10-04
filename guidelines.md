@@ -294,12 +294,14 @@ class OAuthConsumer {
 ```typescript
 // Consumer can override OAuth consumer for specific provider behavior
 export class ExampleOAuthConsumer extends OAuthConsumer {
-  constructor() {
+  constructor(config: OAuthConsumerConfig, : OAuthConsumerDependencies) {
     super({
-      authUrl: 'https://api.example.com/oauth/authorize',
-      tokenUrl: 'https://api.example.com/oauth/token',
-      // ... other Example-specific config
-    });
+		authUrl: 'https://api.example.com/oauth/authorize',
+		tokenUrl: 'https://api.example.com/oauth/token',
+		// ... other Example-specific config
+	  },
+	  dependencies
+    );
   }
   
   // Override for Example-specific token handling
@@ -376,10 +378,14 @@ class TransportManager {
 ### Beyond MCP Server
 ```typescript
 class BeyondMcpServer {
-  constructor(config: BeyondMcpConfig) {
+  constructor(
+    config: BeyondMcpServerConfig & { toolRegistration?: ToolRegistrationConfig },
+    dependencies: BeyondMcpServerDependencies,
+    sdkMcpServer?: SdkMcpServer,
+  ) {
     this.transport = new TransportManager(config.transport);
     this.oauthProvider = new OAuthProvider(config.oauth.provider);
-    this.oauthConsumer = config.oauth.consumer || new OAuthConsumer(config.oauth.consumer);
+    this.oauthConsumer = config.oauth.consumer || new OAuthConsumer(config.oauth.consumer, dependencies);
     this.workflows = new WorkflowRegistry();
     this.storage = new KVManager(config.storage);
   }

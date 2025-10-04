@@ -10,9 +10,12 @@ import { format } from '@std/datetime';
 const logLevels = ['debug', 'info', 'warn', 'error'] as const;
 export type LogLevel = typeof logLevels[number];
 
+const logFormats = ['text', 'json'] as const;
+export type LogFormat = typeof logFormats[number];
+
 export interface LoggerConfig {
   level?: LogLevel;
-  format?: 'text' | 'json';
+  format?: LogFormat;
   includeTimestamp?: boolean;
   includeSource?: boolean;
   colorize?: boolean;
@@ -25,7 +28,7 @@ export class Logger {
   private currentLogLevel: LogLevel;
   private config: Required<Omit<LoggerConfig, 'outputStream'>> & {
     level: LogLevel;
-    format: 'text' | 'json';
+    format: LogFormat;
     includeTimestamp: boolean;
     includeSource: boolean;
     colorize: boolean;
@@ -239,7 +242,7 @@ export class Logger {
         return cyan(message);
       case 'info':
       default:
-        return message;
+        return green(message);
     }
   }
 

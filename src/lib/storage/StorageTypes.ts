@@ -146,3 +146,59 @@ export interface KVManagerConfig {
   kvPath?: string;
   prefixes?: Partial<KVPrefixes>;
 }
+
+export type TransportEventStoreType = 'simple' | 'chunked';
+/**
+ * Configuration for base TransportEventStore
+ */
+export interface TransportEventStoreConfig {
+  // /* Enable chunked storage for large messages */
+  // useChunkedStorage: boolean;
+  /** Enable chunked storage for large messages */
+  storageType: TransportEventStoreType;
+
+  /** Monitoring and debugging */
+  monitoring: {
+    /** Enable detailed logging for storage operations */
+    enableDebugLogging: boolean;
+  };
+
+  /** Maintenance and cleanup */
+  maintenance: {
+    /** Enable automatic cleanup of old events */
+    enableAutoCleanup: boolean;
+    /** Number of events to keep per stream */
+    keepEventCount: number;
+    /** Cleanup interval in milliseconds */
+    cleanupIntervalMs: number;
+  };
+}
+
+/**
+ * Configuration for TransportEventStoreChunked (extends base config)
+ */
+export interface TransportEventStoreChunkedConfig extends TransportEventStoreConfig {
+  /** Core chunking settings */
+  chunking: {
+    /** Maximum size per chunk in bytes (should be < 64KB) */
+    maxChunkSize: number;
+    /** Maximum total message size in bytes */
+    maxMessageSize: number;
+  };
+
+  /** Compression configuration */
+  compression: {
+    /** Enable compression for large messages */
+    enable: boolean;
+    /** Compression threshold in bytes - messages smaller won't be compressed */
+    threshold: number;
+  };
+
+  /** Extended monitoring for chunked operations */
+  monitoring: {
+    /** Enable detailed logging for storage operations */
+    enableDebugLogging: boolean;
+    /** Log compression statistics (chunked store only) */
+    logCompressionStats: boolean;
+  };
+}

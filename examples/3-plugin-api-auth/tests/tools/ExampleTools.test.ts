@@ -76,7 +76,7 @@ describe('ExampleTools - OAuth Integration', () => {
     // Create plugin with mocked dependencies
     plugin = createPlugin({
       thirdpartyApiClient: mockApiClient,
-      oAuthConsumer: mockOAuth,
+      oauthConsumer: mockOAuth,
       logger: mockLogger,
       auditLogger: mockLogger,
     } as any);

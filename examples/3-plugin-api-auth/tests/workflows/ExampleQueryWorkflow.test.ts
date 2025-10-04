@@ -74,7 +74,7 @@ describe('ExampleQueryWorkflow - OAuth Integration', () => {
     // Create plugin and extract workflow
     plugin = createPlugin({
       thirdpartyApiClient: mockApiClient,
-      oAuthConsumer: mockOAuth,
+      oauthConsumer: mockOAuth,
       logger: mockLogger,
       auditLogger: mockLogger,
     } as any);

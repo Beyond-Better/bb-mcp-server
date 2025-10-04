@@ -83,7 +83,7 @@ This example demonstrates the **OAuth Consumer** pattern:
 
 ```typescript
 // This example: MCP Server consumes external OAuth API
-const oAuthConsumer = new ExampleOAuthConsumer({
+const oauthConsumer = new ExampleOAuthConsumer({
   // Configuration for ExampleCorp's OAuth provider
   authUrl: 'https://api.examplecorp.com/oauth/authorize',
   tokenUrl: 'https://api.examplecorp.com/oauth/token',
@@ -225,7 +225,7 @@ export async function createExampleDependencies(
   { configManager, logger, kvManager }: CreateCustomAppServerDependencies,
 ): Promise<Partial<AppServerDependencies>> {
   // 1. Create OAuth consumer with environment configuration
-  const oAuthConsumer = new ExampleOAuthConsumer(
+  const oauthConsumer = new ExampleOAuthConsumer(
     {
       provider: 'examplecorp',
       authUrl: configManager.get('OAUTH_CONSUMER_AUTH_URL'),
@@ -246,7 +246,7 @@ export async function createExampleDependencies(
       retryAttempts: configManager.get('THIRDPARTY_API_RETRY_ATTEMPTS', 3),
       // ... other API config
     },
-    oAuthConsumer,
+    oauthConsumer,
     logger,
   );
 
@@ -258,7 +258,7 @@ export async function createExampleDependencies(
 
     // Custom dependencies (ExampleCorp-specific)
     thirdpartyApiClient,
-    oAuthConsumer,
+    oauthConsumer,
   };
 }
 ```
@@ -352,7 +352,7 @@ For development without real OAuth credentials:
 // Create mock dependencies for testing
 const mockDependencies = {
   thirdpartyApiClient: new MockExampleApiClient(),
-  oAuthConsumer: new MockExampleOAuthConsumer({
+  oauthConsumer: new MockExampleOAuthConsumer({
     mockTokens: {
       accessToken: 'mock-access-token',
       refreshToken: 'mock-refresh-token',
@@ -457,7 +457,7 @@ Error: ExamplePlugin not found
 2. **Check Token Storage**:
    ```typescript
    // Inspect stored tokens
-   const tokens = await oAuthConsumer.getStoredTokens('user-123');
+   const tokens = await oauthConsumer.getStoredTokens('user-123');
    console.log('Stored OAuth tokens:', tokens);
    ```
 

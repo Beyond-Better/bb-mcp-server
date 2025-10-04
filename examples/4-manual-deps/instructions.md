@@ -181,7 +181,7 @@ toolRegistry.sdkMcpServer = new SdkMcpServer({
 // Create tools with explicit dependency injection
 const exampleTools = new ExampleTools({
   apiClient: thirdpartyApiClient,
-  oauthConsumer: oAuthConsumer,
+  oauthConsumer: oauthConsumer,
   logger: logger,
   auditLogger: auditLogger,
 });
@@ -623,7 +623,7 @@ logger.debug('Memory usage after manual dependency creation:', {
      configManager,
      logger,
      thirdpartyApiClient,
-     oAuthConsumer,
+     oauthConsumer,
    };
 
    // ADD: Complete manual infrastructure

@@ -4,7 +4,9 @@
  * Comprehensive type definitions with integration and plugin support
  */
 
-import { z, type ZodSchema } from 'zod';
+import { //z,
+  type ZodSchema,
+} from 'zod';
 import type { Logger } from '../utils/Logger.ts';
 import type { AuditLogger } from '../utils/AuditLogger.ts';
 import type { KVManager } from '../storage/KVManager.ts';

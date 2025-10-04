@@ -7,25 +7,33 @@
 
 import { randomUUID } from 'node:crypto';
 import { isInitializeRequest } from 'mcp/types.js';
-import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
+import type { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
 import { StreamableHTTPServerTransport } from 'mcp/server/streamableHttp.js';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { toError } from '../utils/Error.ts';
 import type {
-  AuthenticationResult,
-  BeyondMcpAuthContext,
+  //AuthenticationResult,
+  //BeyondMcpAuthContext,
   HttpTransportConfig,
   HttpTransportMetrics,
-  MCPRequest,
-  MCPResponse,
+  //MCPRequest,
+  //MCPResponse,
   SSEStreamCapture,
   Transport,
   TransportDependencies,
-  TransportMetrics,
+  //TransportMetrics,
   TransportType,
 } from './TransportTypes.ts';
+import type { BeyondMcpServer } from '../server/BeyondMcpServer.ts';
+import type { BeyondMcpRequestContext } from '../types/BeyondMcpTypes.ts';
 import type { Logger } from '../utils/Logger.ts';
 import { reconstructOriginalUrl } from '../utils/UrlUtils.ts';
+import {
+  type AuthenticationConfig,
+  //type AuthenticationContext,
+  type AuthenticationDependencies,
+  AuthenticationMiddleware,
+} from './AuthenticationMiddleware.ts';
 
 /**
  * HTTP transport implementation for MCP
@@ -40,6 +48,7 @@ export class HttpTransport implements Transport {
   private config: HttpTransportConfig;
   private dependencies: TransportDependencies;
   private logger: Logger;
+  private authenticationMiddleware: AuthenticationMiddleware;
 
   // MCP Transport Management (from MCPRequestHandler)
   private mcpTransports = new Map<string, StreamableHTTPServerTransport>();
@@ -48,6 +57,11 @@ export class HttpTransport implements Transport {
   // SSE Keepalive mechanism to prevent network timeout disconnections
   private sseKeepaliveIntervals = new Map<string, number>();
   private readonly KEEPALIVE_INTERVAL_MS = 25000; // 25 seconds - safe margin before 60s timeout
+
+  // Event store cleanup mechanism
+  private cleanupIntervalId?: number | undefined;
+  private readonly CLEANUP_INTERVAL_MS = 60 * 60 * 6000; // 6 hours
+  private readonly EVENTS_TO_KEEP = 1000; // Keep last 1000 events per stream
 
   // Metrics tracking
   private startTime = performance.now();
@@ -61,25 +75,53 @@ export class HttpTransport implements Transport {
       ...config,
       preserveCompatibilityMode: config.preserveCompatibilityMode ?? true, // 🚨 CRITICAL - DO NOT DISABLE
       enableTransportPersistence: config.enableTransportPersistence ?? false,
-      sessionRestoreEnabled: config.sessionRestoreEnabled ?? false,
+      enableSessionRestore: config.enableSessionRestore ?? false,
     };
     this.dependencies = dependencies;
     this.logger = dependencies.logger;
+
+    // Initialize authentication middleware
+    const authConfig: AuthenticationConfig = {
+      enabled: config.enableAuthentication ?? (!!dependencies.oauthProvider),
+      skipAuthentication: config.skipAuthentication ?? false,
+      requireAuthentication: config.requireAuthentication ?? true,
+    };
+
+    const authDependencies: AuthenticationDependencies = {
+      oauthProvider: dependencies.oauthProvider,
+      oauthConsumer: dependencies.oauthConsumer,
+      thirdPartyApiClient: dependencies.thirdPartyApiClient,
+      logger: dependencies.logger,
+    };
+
+    this.authenticationMiddleware = new AuthenticationMiddleware(authConfig, authDependencies);
   }
 
+  // deno-lint-ignore require-await
   async start(): Promise<void> {
     this.logger.info('HttpTransport: Starting HTTP transport', {
       hostname: this.config.hostname,
       port: this.config.port,
       compatibilityMode: this.config.preserveCompatibilityMode,
     });
+
+    // Start periodic event cleanup if event store is available
+    if (this.dependencies.eventStore) {
+      this.startPeriodicCleanup();
+    }
   }
 
+  // deno-lint-ignore require-await
   async stop(): Promise<void> {
     this.logger.info('HttpTransport: Stopping HTTP transport');
+
+    // Stop periodic cleanup
+    this.stopPeriodicCleanup();
+
     await this.cleanup();
   }
 
+  // deno-lint-ignore require-await
   async cleanup(): Promise<void> {
     this.logger.info('HttpTransport: Cleaning up HTTP transport');
 
@@ -125,16 +167,19 @@ export class HttpTransport implements Transport {
 
   /**
    * Main HTTP request handling entry point
-   * Delegates to method-specific handlers with preserved compatibility
+   * Delegates to method-specific handlers with preserved compatibility and authentication
+   *
+   * 🔒 SECURITY-CRITICAL: Integrates authentication middleware with MCP request execution
    */
   async handleHttpRequest(
     request: Request,
     sdkMcpServer: SdkMcpServer,
-    authContext?: BeyondMcpAuthContext,
+    beyondMcpServer: BeyondMcpServer, // BeyondMcpServer instance for auth context execution
   ): Promise<Response> {
     const requestId = Math.random().toString(36).substring(2, 15);
     const startTime = performance.now();
     const method = request.method;
+    const url = new URL(request.url);
 
     this.requestCount++;
 
@@ -144,28 +189,128 @@ export class HttpTransport implements Transport {
 
     try {
       let response: Response;
+      let authenticatedRequest = request;
+      let mcpAuthContext: BeyondMcpRequestContext | undefined;
 
-      switch (method) {
-        case 'POST':
-          response = await this.handleMCPPost(request, method, sdkMcpServer, authContext);
-          break;
-        case 'GET':
-          response = await this.handleMCPGet(request, method, sdkMcpServer, authContext);
-          break;
-        case 'DELETE':
-          response = await this.handleMCPDelete(request, method, sdkMcpServer, authContext);
-          break;
-        default:
-          this.logger.warn(`HttpTransport: Method not allowed [${requestId}]`, {
+      // 🔒 SECURITY-CRITICAL: Check if authentication is required
+      if (this.authenticationMiddleware.isAuthenticationRequired(url)) {
+        this.logger.debug(`HttpTransport: Authentication required [${requestId}]`, {
+          requestId,
+          pathname: url.pathname,
+        });
+
+        // Authenticate the request
+        const authResult = await this.authenticationMiddleware.authenticateRequest(
+          request,
+          requestId,
+        );
+
+        if (!authResult.authenticated) {
+          // Create enhanced error response with proper status code and guidance
+          const errorStatus = this.authenticationMiddleware.getAuthErrorStatus(authResult);
+          const guidance = this.authenticationMiddleware.getClientGuidance(authResult.errorCode);
+
+          this.logger.warn(`HttpTransport: Authentication failed [${requestId}]`, {
             requestId,
-            method,
+            error: authResult.error,
+            errorCode: authResult.errorCode,
+            actionTaken: authResult.actionTaken,
+            clientId: authResult.clientId,
+            userId: authResult.userId,
+            responseStatus: errorStatus,
+            duration: performance.now() - startTime,
+            hasOAuthChallenge: !!authResult.oauthChallenge,
           });
-          response = this.createErrorResponse(
-            'Method Not Allowed',
-            405,
-            `Method ${method} not allowed for MCP endpoint`,
+
+          return this.createEnhancedErrorResponse(
+            errorStatus === 403 ? 'Forbidden' : 'Unauthorized',
+            errorStatus,
+            authResult.error || 'Authentication required',
+            authResult.errorCode,
+            authResult.actionTaken,
+            guidance,
+            authResult.oauthChallenge,
           );
-          break;
+        }
+
+        // Create authentication context for request execution
+        mcpAuthContext = {
+          ...this.authenticationMiddleware.createAuthContext(authResult, requestId),
+          startTime: performance.now(),
+          metadata: {},
+        } as BeyondMcpRequestContext;
+
+        // Add authentication context to request headers
+        authenticatedRequest = this.authenticationMiddleware.addAuthContextToRequest(
+          request,
+          authResult,
+        );
+
+        // this.logger.info(`HttpTransport: Authentication successful [${requestId}]`, {
+        //   requestId,
+        //   clientId: authResult.clientId,
+        //   userId: authResult.userId,
+        //   scopes: authResult.scope?.length || 0,
+        //   actionTaken: authResult.actionTaken,
+        // });
+      } else {
+        this.logger.debug(`HttpTransport: Authentication not required [${requestId}]`, {
+          requestId,
+          pathname: url.pathname,
+        });
+      }
+
+      // 🔒 SECURITY-CRITICAL: Execute request within authentication context
+      if (mcpAuthContext) {
+        // this.logger.info(`HttpTransport: Handling request with auth context [${requestId}]`, {
+        //   mcpAuthContext,
+        // });
+        // Execute MCP operations within authenticated context using BeyondMcpServer's AsyncLocalStorage
+        response = await beyondMcpServer.executeWithAuthContext(mcpAuthContext, async () => {
+          switch (method) {
+            case 'POST':
+              return await this.handleMCPPost(authenticatedRequest, method, sdkMcpServer);
+            case 'GET':
+              return await this.handleMCPGet(authenticatedRequest, method, sdkMcpServer);
+            case 'DELETE':
+              return await this.handleMCPDelete(authenticatedRequest, method, sdkMcpServer);
+            default:
+              this.logger.warn(`HttpTransport: Method not allowed [${requestId}]`, {
+                requestId,
+                method,
+              });
+              return this.createErrorResponse(
+                'Method Not Allowed',
+                405,
+                `Method ${method} not allowed for MCP endpoint`,
+              );
+          }
+        });
+      } else {
+        // this.logger.info(`HttpTransport: Handling request WITHOUT auth context [${requestId}]`);
+        // Execute without authentication context for open endpoints
+        switch (method) {
+          case 'POST':
+            response = await this.handleMCPPost(authenticatedRequest, method, sdkMcpServer);
+            break;
+          case 'GET':
+            response = await this.handleMCPGet(authenticatedRequest, method, sdkMcpServer);
+            break;
+          case 'DELETE':
+            response = await this.handleMCPDelete(authenticatedRequest, method, sdkMcpServer);
+            break;
+          default:
+            this.logger.warn(`HttpTransport: Method not allowed [${requestId}]`, {
+              requestId,
+              method,
+            });
+            response = this.createErrorResponse(
+              'Method Not Allowed',
+              405,
+              `Method ${method} not allowed for MCP endpoint`,
+            );
+            break;
+        }
       }
 
       // Update metrics
@@ -173,7 +318,7 @@ export class HttpTransport implements Transport {
       this.totalResponseTime += performance.now() - startTime;
 
       this.logger.info(
-        `HttpTransport: HTTP request completed successfully [${requestId}] ${method} ${response.status}`,
+        `HttpTransport: HTTP request completed successfully [${requestId}] ${method} ${response.status} ${authenticatedRequest.url}`,
       );
       return response;
     } catch (error) {
@@ -197,15 +342,14 @@ export class HttpTransport implements Transport {
   }
 
   /**
-   * 🚨 CRITICAL COMPATIBILITY CODE - PRESERVED FROM MCPRequestHandler.ts
+   * 🚨 CRITICAL COMPATIBILITY CODE
    * Handle POST requests with session persistence
-   * Lines ~187-337 from original MCPRequestHandler.ts
+   * Creates the MCP session
    */
   private async handleMCPPost(
     request: Request,
     method: string,
     sdkMcpServer: SdkMcpServer,
-    authContext?: BeyondMcpAuthContext,
   ): Promise<Response> {
     // Parse request body first
     let requestBody: any;
@@ -222,29 +366,28 @@ export class HttpTransport implements Transport {
     if (sessionId && this.mcpTransports.has(sessionId)) {
       // Reuse existing transport
       transport = this.mcpTransports.get(sessionId)!;
-      this.logger.debug('HttpTransport: Using existing MCP session', { sessionId });
+      // this.logger.info('HttpTransport: Using existing MCP session', { sessionId });
 
       // Update session activity if persistence is enabled
       if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
-        this.updateSessionActivityAsync(sessionId);
+        this.updateSessionActivity(sessionId);
       }
     } else {
       if (!sessionId && isInitializeRequest(requestBody)) {
         // New initialization request
         const newSessionId = randomUUID();
+        // this.logger.info('HttpTransport: Creating new MCP session', { sessionId });
 
         // 🚨 PRESERVED MCP SDK INTEGRATION - DO NOT MODIFY
         transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => newSessionId,
           onsessioninitialized: (initializedSessionId) => {
             this.mcpTransports.set(initializedSessionId, transport);
-            this.logger.info('HttpTransport: New MCP session initialized', {
-              sessionId: initializedSessionId,
-            });
+            this.logger.info(`HttpTransport: New MCP session initialized: ${initializedSessionId}`);
 
             // Persist the new session if enabled
             if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
-              this.persistSessionAsync(initializedSessionId, transport, request);
+              this.persistSession(initializedSessionId, transport, request);
             }
           },
           eventStore: this.dependencies.eventStore,
@@ -264,12 +407,10 @@ export class HttpTransport implements Transport {
 
             // Mark session as inactive in persistence if enabled
             if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
-              this.markSessionInactiveAsync(sessionIdToCleanup);
+              this.markSessionInactive(sessionIdToCleanup);
             }
 
-            this.logger.info('HttpTransport: MCP session closed', {
-              sessionId: sessionIdToCleanup,
-            });
+            this.logger.info(`HttpTransport: MCP session closed ${sessionIdToCleanup}`);
           }
         };
 
@@ -293,6 +434,11 @@ export class HttpTransport implements Transport {
       const responseCapture = new SimpleResponseCapture();
       const nodeRes = responseCapture.createNodeResponse();
 
+      // this.logger.info('HttpTransport: About to call transport.handleRequest for POST', {
+      //   sessionId: transport.sessionId,
+      //   requestBody: JSON.stringify(requestBody).substring(0, 100) + '...'
+      // });
+
       // 🚨 PRESERVED TRANSPORT HANDLING - DO NOT MODIFY TYPE CASTING
       await transport.handleRequest(
         nodeReq,
@@ -302,9 +448,9 @@ export class HttpTransport implements Transport {
 
       // POST requests ALWAYS return JSON and complete immediately
       // Use SimpleResponseCapture - no SSE handling
-      this.logger.debug('HttpTransport: POST request - waiting for normal completion', {
-        sessionId: transport.sessionId,
-      });
+      // this.logger.debug('HttpTransport: POST request - waiting for normal completion', {
+      //   sessionId: transport.sessionId,
+      // });
 
       // Wait for completion (always completes normally)
       await responseCapture.waitForCompletion();
@@ -317,6 +463,19 @@ export class HttpTransport implements Transport {
         'Access-Control-Expose-Headers': 'Mcp-Session-Id',
         ...responseCapture.getHeaders(),
       };
+
+      // logger.info('MCPRequestHandler: MCP handled request', {
+      //   resBody: (() => {
+      //     try {
+      //       return JSON.parse(resBody);
+      //     } catch {
+      //       return resBody;
+      //     }
+      //   })(),
+      //   resStatus,
+      //   resHeaders,
+      //   isNewSession,
+      // });
 
       // Return the captured response (non-SSE)
       return new Response(resBody, {
@@ -334,15 +493,14 @@ export class HttpTransport implements Transport {
   }
 
   /**
-   * 🚨 CRITICAL COMPATIBILITY CODE - PRESERVED FROM MCPRequestHandler.ts
+   * 🚨 CRITICAL COMPATIBILITY CODE
    * Handle GET requests (SSE) with session activity tracking
-   * Lines ~345-426 from original MCPRequestHandler.ts
+   * Processes JSONP messages for session stream
    */
   private async handleMCPGet(
     request: Request,
     method: string,
-    sdkMcpServer: SdkMcpServer,
-    authContext?: BeyondMcpAuthContext,
+    _sdkMcpServer: SdkMcpServer,
   ): Promise<Response> {
     const sessionId = request.headers.get('mcp-session-id') as string | undefined;
 
@@ -383,7 +541,7 @@ export class HttpTransport implements Transport {
 
     // Update session activity
     if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
-      this.updateSessionActivityAsync(sessionId);
+      this.updateSessionActivity(sessionId);
     }
 
     try {
@@ -417,19 +575,19 @@ export class HttpTransport implements Transport {
       // Start SSE keepalive to prevent network timeout disconnections
       this.startSSEKeepalive(sessionId, serverResponse);
 
-      this.logger.debug(
-        'HttpTransport: Awaiting transport setup, then returning streaming response',
-        { sessionId },
-      );
+      // this.logger.debug(
+      //   'HttpTransport: Awaiting transport setup, then returning streaming response',
+      //   { sessionId },
+      // );
 
       try {
         // 🚨 CRITICAL: Await transport to let it set up SSE first
         await transport.handleRequest(nodeReq, nodeRes as any);
 
-        this.logger.debug(
-          'HttpTransport: Transport SSE setup completed, returning streaming response',
-          { sessionId },
-        );
+        // this.logger.debug(
+        //   'HttpTransport: Transport SSE setup completed, returning streaming response',
+        //   { sessionId },
+        // );
 
         // Now return streaming response - connection should stay open via ReadableStream
         return new Response(sseStream, {
@@ -458,15 +616,14 @@ export class HttpTransport implements Transport {
   }
 
   /**
-   * 🚨 CRITICAL COMPATIBILITY CODE - PRESERVED FROM MCPRequestHandler.ts
+   * 🚨 CRITICAL COMPATIBILITY CODE
    * Handle DELETE requests (session termination) with persistence cleanup
-   * Lines ~432-508 from original MCPRequestHandler.ts
+   * Tears down session stream
    */
   private async handleMCPDelete(
     request: Request,
     method: string,
-    sdkMcpServer: SdkMcpServer,
-    authContext?: BeyondMcpAuthContext,
+    _sdkMcpServer: SdkMcpServer,
   ): Promise<Response> {
     const sessionId = request.headers.get('mcp-session-id') as string | undefined;
 
@@ -524,13 +681,14 @@ export class HttpTransport implements Transport {
       this.activeSSEStreams.delete(sessionId);
 
       if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
-        this.markSessionInactiveAsync(sessionId);
+        this.markSessionInactive(sessionId);
       }
 
-      this.logger.info('HttpTransport: MCP session terminated cleanly', {
-        sessionId,
-        hadActiveSSE: this.activeSSEStreams.has(sessionId),
-      });
+      this.logger.info(
+        `HttpTransport: MCP session terminated cleanly ${sessionId} - ${
+          this.activeSSEStreams.has(sessionId) ? 'was active stream' : 'was not active stream'
+        }`,
+      );
 
       return new Response(responseCapture.getBody(), {
         status: responseCapture.getStatusCode(),
@@ -566,7 +724,6 @@ export class HttpTransport implements Transport {
   /**
    * 🚨 PRESERVED COMPATIBILITY METHOD - DO NOT MODIFY
    * Create Node.js-style request object from Deno Request
-   * Line ~629 from original MCPRequestHandler.ts
    */
   private createNodeStyleRequest(request: Request, method: string, body?: any): any {
     const url = reconstructOriginalUrl(request);
@@ -623,10 +780,9 @@ export class HttpTransport implements Transport {
     // Store interval for cleanup
     this.sseKeepaliveIntervals.set(sessionId, keepaliveInterval);
 
-    this.logger.info('HttpTransport: SSE keepalive started', {
-      sessionId,
-      intervalMs: this.KEEPALIVE_INTERVAL_MS,
-    });
+    this.logger.info(
+      `HttpTransport: SSE keepalive started - runs every ${this.KEEPALIVE_INTERVAL_MS}ms [${sessionId}]`,
+    );
   }
 
   /**
@@ -642,8 +798,82 @@ export class HttpTransport implements Transport {
   }
 
   /**
+   * Start periodic event store cleanup
+   * Runs cleanup every hour to maintain storage efficiency
+   */
+  private startPeriodicCleanup(): void {
+    this.logger.info('HttpTransport: Starting periodic event cleanup', {
+      intervalMs: this.CLEANUP_INTERVAL_MS,
+      eventsToKeep: this.EVENTS_TO_KEEP,
+    });
+
+    // Run cleanup immediately on startup
+    this.runEventCleanup().catch((error) => {
+      this.logger.error('HttpTransport: Initial event cleanup failed', toError(error));
+    });
+
+    // Schedule periodic cleanup
+    this.cleanupIntervalId = setInterval(async () => {
+      try {
+        await this.runEventCleanup();
+      } catch (error) {
+        this.logger.error('HttpTransport: Scheduled event cleanup failed', toError(error));
+      }
+    }, this.CLEANUP_INTERVAL_MS);
+
+    this.logger.info('HttpTransport: Periodic event cleanup started');
+  }
+
+  /**
+   * Stop periodic event store cleanup
+   */
+  private stopPeriodicCleanup(): void {
+    if (this.cleanupIntervalId !== undefined) {
+      clearInterval(this.cleanupIntervalId);
+      this.cleanupIntervalId = undefined;
+      this.logger.info('HttpTransport: Periodic event cleanup stopped');
+    }
+  }
+
+  /**
+   * Run event cleanup for all active streams
+   */
+  private async runEventCleanup(): Promise<void> {
+    if (!this.dependencies.eventStore) {
+      return;
+    }
+
+    try {
+      const streams = await this.dependencies.eventStore.listStreams();
+      let totalDeleted = 0;
+
+      for (const streamId of streams) {
+        try {
+          const deletedCount = await this.dependencies.eventStore.cleanupOldEvents(
+            streamId,
+            this.EVENTS_TO_KEEP,
+          );
+          totalDeleted += deletedCount;
+        } catch (error) {
+          this.logger.warn('HttpTransport: Failed to cleanup stream', {
+            streamId,
+            error: toError(error).message,
+          });
+        }
+      }
+
+      this.logger.info('HttpTransport: Event cleanup completed', {
+        streamsProcessed: streams.length,
+        eventsDeleted: totalDeleted,
+      });
+    } catch (error) {
+      this.logger.error('HttpTransport: Event cleanup failed', toError(error));
+      throw error;
+    }
+  }
+
+  /**
    * Force close any active SSE stream for a session
-   * Preserved from MCPRequestHandler.ts lines ~784-808
    */
   private async forceCloseActiveSSEStream(sessionId: string): Promise<void> {
     const activeSSEStream = this.activeSSEStreams.get(sessionId);
@@ -653,7 +883,7 @@ export class HttpTransport implements Transport {
       return;
     }
 
-    this.logger.info('HttpTransport: Force closing active SSE stream', { sessionId });
+    this.logger.info(`HttpTransport: Force closing active SSE stream ${sessionId}`);
 
     try {
       // Stop SSE keepalive first
@@ -673,7 +903,7 @@ export class HttpTransport implements Transport {
   }
 
   // Session management helpers (async)
-  private persistSessionAsync(
+  private persistSession(
     sessionId: string,
     transport: StreamableHTTPServerTransport,
     request: Request,
@@ -682,19 +912,18 @@ export class HttpTransport implements Transport {
     // Placeholder for future integration
   }
 
-  private updateSessionActivityAsync(sessionId: string): void {
+  private updateSessionActivity(sessionId: string): void {
     // Implementation depends on TransportPersistenceService availability
     // Placeholder for future integration
   }
 
-  private markSessionInactiveAsync(sessionId: string): void {
+  private markSessionInactive(sessionId: string): void {
     // Implementation depends on TransportPersistenceService availability
     // Placeholder for future integration
   }
 
   /**
    * Create standardized error response
-   * Preserved from MCPRequestHandler.ts
    */
   private createErrorResponse(message: string, status: number, details?: string): Response {
     const error = {
@@ -720,6 +949,90 @@ export class HttpTransport implements Transport {
       {
         status,
         headers: { 'Content-Type': 'application/json' },
+      },
+    );
+  }
+
+  /**
+   * Create enhanced error response with error codes and action context
+   * Preserves legacy error handling patterns from MCPRequestHandler.ts
+   * Enhanced with OAuth challenge support for auth flow initiation
+   */
+  private createEnhancedErrorResponse(
+    message: string,
+    status: number,
+    details?: string,
+    errorCode?: string,
+    actionTaken?: string,
+    guidance?: string,
+    oauthChallenge?: {
+      realm: string;
+      authorizationUri: string;
+      registrationUri?: string;
+      error?: string;
+      errorDescription?: string;
+    },
+  ): Response {
+    const error = {
+      error: {
+        code: -32000,
+        message,
+        status,
+        details,
+        errorCode,
+        actionTaken,
+        timestamp: new Date().toISOString(),
+        // Provide guidance to MCP clients (follows legacy pattern)
+        guidance,
+        // Include OAuth challenge for flow initiation
+        ...(oauthChallenge && {
+          oauth: {
+            authorizationUri: oauthChallenge.authorizationUri,
+            registrationUri: oauthChallenge.registrationUri,
+            realm: oauthChallenge.realm,
+          },
+        }),
+      },
+    };
+
+    // Build response headers
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      // Add custom headers to help clients understand the error (legacy pattern)
+      ...(errorCode && { 'X-MCP-Error-Code': errorCode }),
+      ...(actionTaken && { 'X-MCP-Action-Taken': actionTaken }),
+    };
+
+    // Add WWW-Authenticate header for OAuth challenge (RFC 6750)
+    if (oauthChallenge) {
+      const wwwAuthenticateValue = this.authenticationMiddleware.buildWWWAuthenticateHeader(
+        oauthChallenge,
+      );
+      headers['WWW-Authenticate'] = wwwAuthenticateValue;
+
+      // Log OAuth challenge for debugging
+      this.logger.debug('HttpTransport: Added OAuth challenge to response', {
+        authorizationUri: oauthChallenge.authorizationUri,
+        registrationUri: oauthChallenge.registrationUri,
+        realm: oauthChallenge.realm,
+        wwwAuthenticate: wwwAuthenticateValue,
+      });
+    }
+
+    return new Response(
+      JSON.stringify(
+        {
+          jsonrpc: '2.0',
+          error,
+          id: null,
+        },
+        null,
+        2,
+      ),
+      {
+        status,
+        headers,
       },
     );
   }
@@ -768,7 +1081,6 @@ export class HttpTransport implements Transport {
 /**
  * Simple response capture for POST/DELETE requests
  * Always completes normally, never handles SSE
- * Preserved from MCPRequestHandler.ts lines ~806-948
  */
 class SimpleResponseCapture implements SSEStreamCapture {
   private statusCode = 200;
@@ -895,7 +1207,6 @@ class SimpleResponseCapture implements SSEStreamCapture {
 /**
  * ReadableStream adapter that implements Node.js ServerResponse interface
  * Bridges MCP SDK transport with Deno's ReadableStream for SSE
- * Preserved from MCPRequestHandler.ts lines ~956-1175
  */
 class ReadableStreamServerResponse {
   private streamController: ReadableStreamDefaultController<Uint8Array>;

@@ -19,6 +19,7 @@ import {
   CreateCustomAppServerDependencies,
   CredentialStore,
   ErrorHandler,
+  getCredentialStore,
   getKvManager,
   getLogger,
   KVManager,
@@ -27,6 +28,8 @@ import {
   performHealthChecks,
   SessionStore,
   TransportEventStore,
+  TransportEventStoreChunked,
+  TransportEventStoreChunkedConfig,
   TransportManager,
   validateConfiguration,
   WorkflowRegistry,
@@ -106,12 +109,33 @@ export async function createManualDependencies(
     logger,
   );
 
-  // 🎯 Initialize library event store (required by TransportManager)
-  const eventStore = new TransportEventStore(
-    kvManager.getKV(),
-    ['events'],
-    logger,
+  const transportEventStoreConfig = configManager?.get<
+    TransportEventStoreChunkedConfig
+  >(
+    'transportEventStore',
   );
+
+  // 🎯 Initialize library event store (required by TransportManager)
+  // Use chunked storage for handling large messages (recommended)
+  const useChunkedStorage = transportEventStoreConfig.storageType === 'chunked';
+
+  const eventStore = useChunkedStorage
+    ? new TransportEventStoreChunked(
+      kvManager.getKV(),
+      ['events'],
+      logger,
+      {
+        maxChunkSize: transportEventStoreConfig.chunking.maxChunkSize,
+        enableCompression: transportEventStoreConfig.compression.enable,
+        compressionThreshold: transportEventStoreConfig.compression.threshold,
+        maxMessageSize: transportEventStoreConfig.chunking.maxMessageSize,
+      },
+    )
+    : new TransportEventStore(
+      kvManager.getKV(),
+      ['events'],
+      logger,
+    );
 
   // 🎯 Initialize library error handler
   const errorHandler = new ErrorHandler();
@@ -130,23 +154,29 @@ export async function createManualDependencies(
     ),
     tokens: {
       accessTokenExpiryMs: parseInt(
-        configManager.get('OAUTH_TOKEN_EXPIRATION', '3600000'),
+        configManager.get('OAUTH_PROVIDER_TOKEN_EXPIRATION', '3600000'),
         10,
       ),
       refreshTokenExpiryMs: parseInt(
-        configManager.get('OAUTH_REFRESH_TOKEN_EXPIRATION', '2592000000'),
+        configManager.get(
+          'OAUTH_PROVIDER_REFRESH_TOKEN_EXPIRATION',
+          '2592000000',
+        ),
         10,
       ),
       authorizationCodeExpiryMs: parseInt(
-        configManager.get('OAUTH_CODE_EXPIRATION', '600000'),
+        configManager.get('OAUTH_PROVIDER_CODE_EXPIRATION', '600000'),
         10,
       ),
     },
     clients: {
-      enableDynamicRegistration: configManager.get('OAUTH_ENABLE_DYNAMIC_CLIENT_REG') === 'true',
-      requireHTTPS: configManager.get('OAUTH_REQUIRE_HTTPS') === 'true',
+      enableDynamicRegistration: configManager.get('OAUTH_PROVIDER_DYNAMIC_CLIENT_REG') === 'true',
+      requireHTTPS: configManager.get('OAUTH_PROVIDER_REQUIRE_HTTPS') === 'true',
       allowedRedirectHosts: (() => {
-        const hosts = configManager.get('OAUTH_ALLOWED_HOSTS', 'localhost');
+        const hosts = configManager.get(
+          'OAUTH_PROVIDER_ALLOWED_HOSTS',
+          'localhost',
+        );
         return typeof hosts === 'string' ? hosts.split(',') : hosts;
       })(),
     },
@@ -175,7 +205,7 @@ export async function createManualDependencies(
   );
   const exampleOAuthConfig: ExampleOAuthConfig = {
     // Standard OAuth 2.0 configuration (using standard config keys)
-    provider: 'examplecorp',
+    providerId: 'examplecorp',
     authUrl: configManager.get(
       'OAUTH_CONSUMER_AUTH_URL',
       'https://httpbin.org/anything/oauth/authorize',
@@ -195,6 +225,9 @@ export async function createManualDependencies(
     ),
     scopes: configManager.get('OAUTH_CONSUMER_SCOPES', ['read', 'write']),
 
+    tokenRefreshBufferMinutes: 5,
+    maxTokenRefreshRetries: 3,
+
     // ExampleCorp-specific configuration
     exampleCorp: {
       apiBaseUrl,
@@ -209,10 +242,9 @@ export async function createManualDependencies(
   };
 
   // 🎯 Create ExampleCorp OAuth consumer (extends library OAuthConsumer)
-  const oAuthConsumer = new ExampleOAuthConsumer(
+  const oauthConsumer = new ExampleOAuthConsumer(
     exampleOAuthConfig,
-    logger,
-    kvManager,
+    { logger, kvManager, credentialStore },
   );
 
   // 🎯 Create ExampleCorp API client configuration using standard config keys
@@ -231,7 +263,7 @@ export async function createManualDependencies(
   // 🎯 Create ExampleCorp API client
   const thirdpartyApiClient = new ExampleApiClient(
     apiClientConfig,
-    oAuthConsumer,
+    oauthConsumer,
     logger,
   );
 
@@ -270,7 +302,7 @@ export async function createManualDependencies(
 
   const exampleTools = new ExampleTools({
     apiClient: thirdpartyApiClient,
-    oauthConsumer: oAuthConsumer,
+    oauthConsumer: oauthConsumer,
     logger: logger,
     auditLogger: auditLogger,
   });
@@ -340,13 +372,13 @@ export async function createManualDependencies(
   // =============================================================================
 
   // Validate required configuration (OAuth consumer is required for this example)
-  await validateConfiguration(configManager, logger, { oAuthConsumer });
+  await validateConfiguration(configManager, logger, { oauthConsumer });
 
   // Perform health checks on external dependencies
   await performHealthChecks(
     {
       thirdpartyApiClient,
-      oAuthConsumer,
+      oauthConsumer,
       oauthProvider,
       kvManager,
     },
@@ -410,7 +442,7 @@ export async function createManualDependencies(
 
     // 🎯 Consumer dependencies (ExampleCorp-specific)
     thirdpartyApiClient,
-    oAuthConsumer,
+    oauthConsumer,
   };
 }
 
@@ -424,6 +456,7 @@ export async function createTestExampleDependencies(): Promise<
   const testConfigManager = new ConfigManager();
   const testLogger = getLogger(testConfigManager);
   const testKvManager = await getKvManager(testConfigManager, testLogger);
+  const testCredentialStore = getCredentialStore(testKvManager, testLogger);
   testConfigManager.set('EXAMPLECORP_CLIENT_ID', 'test-client-id');
   testConfigManager.set('EXAMPLECORP_CLIENT_SECRET', 'test-client-secret');
   testConfigManager.set(
@@ -438,6 +471,7 @@ export async function createTestExampleDependencies(): Promise<
     configManager: testConfigManager,
     logger: testLogger,
     kvManager: testKvManager,
+    credentialStore: testCredentialStore,
   });
 }
 

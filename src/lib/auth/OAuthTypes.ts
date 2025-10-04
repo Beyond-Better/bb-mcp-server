@@ -90,7 +90,7 @@ export interface OAuthConsumerConfig {
   /** Maximum token refresh retries */
   maxTokenRefreshRetries: number;
   /** Custom headers for requests */
-  customHeaders?: Record<string, string>;
+  customHeaders?: Record<string, string> | undefined;
 }
 
 // ============================================================================
@@ -339,11 +339,43 @@ export interface AuthorizationServerMetadata {
   token_endpoint_auth_methods_supported: string[];
   /** Supported PKCE code challenge methods */
   code_challenge_methods_supported: string[];
+
+  // High Priority Optional Fields
+  /** URL to human-readable API documentation (RFC 8414 optional) */
+  service_documentation?: string;
+  /** Supported UI locales for internationalization (RFC 8414 optional) */
+  ui_locales_supported?: string[];
+  /** Supported revocation endpoint authentication methods (RFC 7009) */
+  revocation_endpoint_auth_methods_supported?: string[];
+
+  // Future Enhancement: JWT/OpenID Connect Support
+  // When implementing JWT tokens or OpenID Connect, add:
+  // /** Supported claims in JWT tokens or from UserInfo endpoint */
+  // claims_supported?: string[];
+  // /** UserInfo endpoint URL (OpenID Connect) */
+  // userinfo_endpoint?: string;
+  // /** Supported ID token signing algorithms (OpenID Connect) */
+  // id_token_signing_alg_values_supported?: string[];
+  // /** JWKS URI for token validation */
+  // jwks_uri?: string;
+
+  // Future Enhancement: Token Introspection Support (RFC 7662)
+  // When implementing token introspection for resource servers, add:
+  // /** Token introspection endpoint URL */
+  // introspection_endpoint?: string;
+  // /** Supported introspection endpoint authentication methods */
+  // introspection_endpoint_auth_methods_supported?: string[];
+
   /** MCP-specific extensions */
   mcp_extensions?: {
     server_name: string;
     server_version: string;
     supported_workflows: string[];
+    mcp_endpoint?: string;
+    callback_url?: string;
+    upstream_provider?: string;
+    description?: string;
+    documentation_url?: string;
   };
 }
 

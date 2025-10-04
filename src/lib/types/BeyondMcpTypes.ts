@@ -21,7 +21,7 @@ import type { ConfigManager } from '../config/ConfigManager.ts';
 import type { ErrorHandler } from '../utils/ErrorHandler.ts';
 import type { ToolRegistry } from '../tools/ToolRegistry.ts';
 import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
-import type { WorkflowRegistryConfig } from '../types/WorkflowTypes.ts';
+//import type { WorkflowRegistryConfig } from '../types/WorkflowTypes.ts';
 import type { TransportManager } from '../transport/TransportManager.ts';
 import type { KVManager } from '../storage/KVManager.ts';
 import type { OAuthProvider } from '../auth/OAuthProvider.ts';

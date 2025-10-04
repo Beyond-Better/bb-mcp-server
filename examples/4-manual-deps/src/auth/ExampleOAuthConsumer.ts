@@ -14,6 +14,7 @@ import {
   Logger,
   OAuthConsumer,
   type OAuthConsumerConfig,
+  type OAuthConsumerDependencies,
   type OAuthCredentials,
   type TokenResult,
 } from '@beyondbetter/bb-mcp-server';
@@ -38,7 +39,10 @@ export interface ExampleOAuthConfig extends OAuthConsumerConfig {
 export class ExampleOAuthConsumer extends OAuthConsumer {
   private exampleConfig: ExampleOAuthConfig['exampleCorp'];
 
-  constructor(config: ExampleOAuthConfig, logger: Logger, kvManager: KVManager) {
+  constructor(
+    config: ExampleOAuthConfig,
+    dependencies: OAuthConsumerDependencies,
+  ) {
     // 🎯 Call parent with ExampleCorp OAuth configuration
     super(
       {
@@ -55,8 +59,11 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
         tokenRefreshBufferMinutes: 5,
         maxTokenRefreshRetries: 3,
       },
-      logger,
-      kvManager,
+      {
+        logger: dependencies.logger,
+        kvManager: dependencies.kvManager,
+        credentialStore: dependencies.credentialStore,
+      },
     );
 
     this.exampleConfig = config.exampleCorp;
@@ -66,7 +73,10 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
    * 🎯 Override: ExampleCorp-specific authorization URL building
    * Library handles: PKCE challenge generation, state management, base URL construction
    */
-  protected override buildAuthUrl(state: string, codeChallenge?: string): string {
+  protected override buildAuthUrl(
+    state: string,
+    codeChallenge?: string,
+  ): string {
     // 🎯 Call parent to build base OAuth URL (library handles PKCE, scopes, etc.)
     const baseUrl = super.buildAuthUrl(state, codeChallenge);
 
@@ -160,7 +170,9 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
    * 🎯 Override: ExampleCorp-specific token refresh
    * Library handles: HTTP request, credential storage, error handling
    */
-  protected override async refreshTokens(refreshToken: string): Promise<TokenResult> {
+  protected override async refreshTokens(
+    refreshToken: string,
+  ): Promise<TokenResult> {
     try {
       // 🎯 Call parent for standard token refresh (library handles HTTP, storage)
       const result = await super.refreshTokens(refreshToken);
@@ -168,9 +180,14 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
       // 🎯 ExampleCorp-specific refresh processing
       if (result.success && result.tokens) {
         // ExampleCorp may include updated metadata on refresh
-        const exampleCorpMetadata = this.extractExampleCorpMetadata(result.tokens);
+        const exampleCorpMetadata = this.extractExampleCorpMetadata(
+          result.tokens,
+        );
         if (Object.keys(exampleCorpMetadata).length > 0) {
-          await this.storeExampleCorpMetadata(refreshToken, exampleCorpMetadata); // Use refresh token as identifier
+          await this.storeExampleCorpMetadata(
+            refreshToken,
+            exampleCorpMetadata,
+          ); // Use refresh token as identifier
         }
 
         this.logger?.debug('ExampleCorp token refresh successful', {
@@ -260,7 +277,9 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
   /**
    * Extract ExampleCorp-specific metadata from token response
    */
-  private extractExampleCorpMetadata(tokens: OAuthCredentials): Record<string, any> {
+  private extractExampleCorpMetadata(
+    tokens: OAuthCredentials,
+  ): Record<string, any> {
     const metadata: Record<string, any> = {};
 
     // ExampleCorp includes custom fields in token response
@@ -299,14 +318,25 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
   /**
    * Validate ExampleCorp-specific token requirements (demo mode)
    */
-  private async validateExampleCorpToken(accessToken: string, userId: string): Promise<void> {
+  private async validateExampleCorpToken(
+    accessToken: string,
+    userId: string,
+  ): Promise<void> {
     // Demo token format validation (allow demo tokens)
-    if (!accessToken.startsWith('demo-access-token-') && !accessToken.startsWith('exc_')) {
+    if (
+      !accessToken.startsWith('demo-access-token-') &&
+      !accessToken.startsWith('exc_')
+    ) {
       throw new Error('Invalid ExampleCorp access token format');
     }
 
     // Check ExampleCorp-specific metadata
-    const metadata = await this.kvManager.get(['oauth', 'examplecorp', 'metadata', userId]);
+    const metadata = await this.kvManager.get([
+      'oauth',
+      'examplecorp',
+      'metadata',
+      userId,
+    ]);
     if (!metadata) {
       this.logger?.warn('No ExampleCorp metadata found for user', { userId });
     }
@@ -318,10 +348,15 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
   private async verifyExampleCorpEndpoints(): Promise<void> {
     try {
       // Verify httpbin OAuth endpoints are accessible
-      const authResponse = await fetch('https://httpbin.org/anything/oauth/authorize');
-      const tokenResponse = await fetch('https://httpbin.org/anything/oauth/token', {
-        method: 'POST',
-      });
+      const authResponse = await fetch(
+        'https://httpbin.org/anything/oauth/authorize',
+      );
+      const tokenResponse = await fetch(
+        'https://httpbin.org/anything/oauth/token',
+        {
+          method: 'POST',
+        },
+      );
 
       if (!authResponse.ok || !tokenResponse.ok) {
         throw new Error('httpbin OAuth endpoints not accessible');

@@ -276,6 +276,7 @@ export class StdioTransport implements Transport {
         messagesSent: this.messagesSent,
         bytesReceived: this.bytesReceived,
         bytesSent: this.bytesSent,
+        averageMessageSize,
       },
     };
   }

@@ -24,6 +24,7 @@ import type {
   TransportConfig,
   TransportDependencies,
 } from '../../../src/lib/transport/TransportTypes.ts';
+import { createTestBeyondMcpServer, TestBeyondMcpServer } from '../../utils/test-helpers.ts';
 
 // Mock logger for testing
 const mockLogger: Logger = {
@@ -48,7 +49,11 @@ const mockSdkMcpServer = {
 
 // Helper function to create test dependencies
 async function createTestDependencies(): Promise<
-  TransportDependencies & { eventStoreKv: Deno.Kv; sessionManager: SessionManager }
+  TransportDependencies & {
+    eventStoreKv: Deno.Kv;
+    sessionManager: SessionManager;
+    beyondMcpServer: TestBeyondMcpServer;
+  }
 > {
   const kvManager = new KVManager({ kvPath: ':memory:' });
   await kvManager.initialize();
@@ -70,6 +75,8 @@ async function createTestDependencies(): Promise<
 
   const sessionManager = new SessionManager(sessionConfig, sessionStore, mockLogger);
 
+  const beyondMcpServer = await createTestBeyondMcpServer();
+
   return {
     kvManager,
     eventStore,
@@ -77,6 +84,7 @@ async function createTestDependencies(): Promise<
     logger: mockLogger,
     eventStoreKv,
     sessionManager,
+    beyondMcpServer,
   };
 }
 
@@ -291,9 +299,11 @@ Deno.test({
       requestId: 'test_request_123',
     };
 
+    const beyondMcpServer = await createTestBeyondMcpServer();
+
     // Handle HTTP request with OAuth context
     try {
-      const response = await transportManager.handleHttpRequest(testRequest, authContext);
+      const response = await transportManager.handleHttpRequest(testRequest, beyondMcpServer);
       assertExists(response);
       assert(response instanceof Response);
     } catch (error) {
@@ -326,9 +336,10 @@ Deno.test({
     const testRequest = new Request('http://localhost:3000/mcp', {
       method: 'POST',
     });
+    const beyondMcpServer = await createTestBeyondMcpServer();
 
     try {
-      await transportManager.handleHttpRequest(testRequest);
+      await transportManager.handleHttpRequest(testRequest, beyondMcpServer);
       assert(false, 'Should have thrown error for HTTP request on STDIO transport');
     } catch (error) {
       assert(error instanceof Error);
@@ -369,8 +380,10 @@ Deno.test({
       method: 'POST',
     });
 
+    const beyondMcpServer = await createTestBeyondMcpServer();
+
     try {
-      await transportManager.handleHttpRequest(testRequest);
+      await transportManager.handleHttpRequest(testRequest, beyondMcpServer);
       assert(false, 'Should have thrown error for uninitialized transport manager');
     } catch (error) {
       assert(error instanceof Error);
@@ -605,31 +618,24 @@ Deno.test({
   async fn() {
     const dependencies = await createTestDependencies();
 
-    const httpConfig: TransportConfig = {
-      type: 'http',
-      http: {
-        hostname: 'localhost',
-        port: 3009,
-        sessionTimeout: 30 * 60 * 1000,
-        maxConcurrentSessions: 1000,
-        enableSessionPersistence: true,
-        sessionCleanupInterval: 5 * 60 * 1000,
-        requestTimeout: 30 * 1000,
-        maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
-        preserveCompatibilityMode: true,
+    // Use STDIO transport for health check test (doesn't require OAuth per MCP spec)
+    const stdioConfig: TransportConfig = {
+      type: 'stdio',
+      stdio: {
+        enableLogging: true,
+        bufferSize: 8192,
+        encoding: 'utf8',
       },
     };
 
-    const transportManager = new TransportManager(httpConfig, dependencies);
+    const transportManager = new TransportManager(stdioConfig, dependencies);
 
     // Health check before initialization
     const unhealthyStatus = transportManager.getHealthStatus();
     assertEquals(unhealthyStatus.healthy, false);
     assertEquals(unhealthyStatus.initialized, false);
     assertEquals(unhealthyStatus.connected, false);
-    assertEquals(unhealthyStatus.transportType, 'http');
+    assertEquals(unhealthyStatus.transportType, 'stdio');
     assert(unhealthyStatus.issues.length > 0);
     assert(unhealthyStatus.issues.includes('Transport manager not initialized'));
 
@@ -640,6 +646,8 @@ Deno.test({
     assertEquals(healthyStatus.initialized, true);
     assertEquals(healthyStatus.connected, true);
     assertEquals(healthyStatus.issues.length, 0);
+    // Check authentication status
+    assertEquals(healthyStatus.authentication.enabled, false); // No OAuth provider in test
 
     await transportManager.cleanup();
     await cleanupTestDependencies(dependencies);

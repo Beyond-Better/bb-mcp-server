@@ -28,7 +28,7 @@ import { ExampleApiClient, type ExampleApiClientConfig } from '../api/ExampleApi
  * 🎯 Consumer provides: API client, custom OAuth consumer, business config
  */
 export async function createExampleDependencies(
-  { configManager, logger, kvManager }: CreateCustomAppServerDependencies,
+  { configManager, logger, kvManager, credentialStore }: CreateCustomAppServerDependencies,
 ): Promise<Partial<AppServerDependencies>> {
   // =============================================================================
   // LIBRARY COMPONENT INITIALIZATION
@@ -49,7 +49,7 @@ export async function createExampleDependencies(
   );
   const exampleOAuthConfig: ExampleOAuthConfig = {
     // Standard OAuth 2.0 configuration (using standard config keys)
-    provider: 'examplecorp',
+    providerId: 'examplecorp',
     authUrl: configManager.get(
       'OAUTH_CONSUMER_AUTH_URL',
       'https://httpbin.org/anything/oauth/authorize',
@@ -59,12 +59,18 @@ export async function createExampleDependencies(
       'https://httpbin.org/anything/oauth/token',
     ),
     clientId: configManager.get('OAUTH_CONSUMER_CLIENT_ID', 'demo-client-id'),
-    clientSecret: configManager.get('OAUTH_CONSUMER_CLIENT_SECRET', 'demo-client-secret'),
+    clientSecret: configManager.get(
+      'OAUTH_CONSUMER_CLIENT_SECRET',
+      'demo-client-secret',
+    ),
     redirectUri: configManager.get(
       'OAUTH_CONSUMER_REDIRECT_URI',
       'http://localhost:3000/oauth/consumer/callback',
     ),
     scopes: configManager.get('OAUTH_CONSUMER_SCOPES', ['read', 'write']),
+
+    tokenRefreshBufferMinutes: 5,
+    maxTokenRefreshRetries: 3,
 
     // ExampleCorp-specific configuration
     exampleCorp: {
@@ -80,11 +86,18 @@ export async function createExampleDependencies(
   };
 
   // 🎯 Create ExampleCorp OAuth consumer (extends library OAuthConsumer)
-  const oAuthConsumer = new ExampleOAuthConsumer(exampleOAuthConfig, logger, kvManager);
+  const oauthConsumer = new ExampleOAuthConsumer(exampleOAuthConfig, {
+    logger,
+    kvManager,
+    credentialStore,
+  });
 
   // 🎯 Create ExampleCorp API client configuration using standard config keys
   const apiClientConfig: ExampleApiClientConfig = {
-    baseUrl: configManager.get('THIRDPARTY_API_BASE_URL', 'https://jsonplaceholder.typicode.com'),
+    baseUrl: configManager.get(
+      'THIRDPARTY_API_BASE_URL',
+      'https://jsonplaceholder.typicode.com',
+    ),
     apiVersion: configManager.get('THIRDPARTY_API_VERSION', 'v1'),
     timeout: configManager.get('THIRDPARTY_API_TIMEOUT', 30000),
     retryAttempts: configManager.get('THIRDPARTY_API_RETRY_ATTEMPTS', 3),
@@ -93,7 +106,11 @@ export async function createExampleDependencies(
   };
 
   // 🎯 Create ExampleCorp API client
-  const thirdpartyApiClient = new ExampleApiClient(apiClientConfig, oAuthConsumer, logger);
+  const thirdpartyApiClient = new ExampleApiClient(
+    apiClientConfig,
+    oauthConsumer,
+    logger,
+  );
 
   // =============================================================================
   // RETURN COMBINED DEPENDENCIES
@@ -107,7 +124,7 @@ export async function createExampleDependencies(
 
     // 🎯 Consumer dependencies (ExampleCorp-specific)
     thirdpartyApiClient,
-    oAuthConsumer,
+    oauthConsumer,
 
     // 🎯 Server configuration for SDK MCP server creation
     serverConfig: {

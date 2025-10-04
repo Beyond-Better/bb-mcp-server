@@ -143,13 +143,11 @@ export class KVManager {
     }
 
     try {
-      const kvOptions: Deno.AtomicCheck[] = [];
-      if (options?.expireIn) {
-        // Note: Deno KV doesn't have built-in expiration, this is a placeholder
-        // for future implementation or manual cleanup
-      }
+      // const kvOptions: Deno.AtomicCheck[] = [];
+      const result = options?.expireIn // `expireIn` expects milliseconds, not seconds
+        ? await this.kv.set(key, value, { expireIn: options.expireIn })
+        : await this.kv.set(key, value);
 
-      const result = await this.kv.set(key, value);
       if (!result.ok) {
         throw new Error('Failed to set KV value');
       }

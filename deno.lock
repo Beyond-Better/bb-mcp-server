@@ -12,7 +12,7 @@
     "jsr:@std/internal@^1.0.9": "1.0.10",
     "jsr:@std/path@^1.0.8": "1.1.1",
     "jsr:@std/testing@^1.0.11": "1.0.14",
-    "npm:@modelcontextprotocol/sdk@1.17.5": "1.17.5_express@5.1.0_zod@3.25.76",
+    "npm:@modelcontextprotocol/sdk@1.18.2": "1.18.2_express@5.1.0_zod@3.25.76",
     "npm:@types/node@*": "24.2.0",
     "npm:zod-to-json-schema@^3.24.6": "3.24.6_zod@3.25.76",
     "npm:zod@^3.22.4": "3.25.76"
@@ -51,8 +51,8 @@
     }
   },
   "npm": {
-    "@modelcontextprotocol/sdk@1.17.5_express@5.1.0_zod@3.25.76": {
-      "integrity": "sha512-QakrKIGniGuRVfWBdMsDea/dx1PNE739QJ7gCM41s9q+qaCYTHCdsIBXQVVXry3mfWAiaM9kT22Hyz53Uw8mfg==",
+    "@modelcontextprotocol/sdk@1.18.2_express@5.1.0_zod@3.25.76": {
+      "integrity": "sha512-beedclIvFcCnPrYgHsylqiYJVJ/CI47Vyc4tY8no1/Li/O8U4BTlJfy6ZwxkYwx+Mx10nrgwSVrA7VBbhh4slg==",
       "dependencies": [
         "ajv",
         "content-type",
@@ -151,8 +151,8 @@
         "which"
       ]
     },
-    "debug@4.4.1": {
-      "integrity": "sha512-KcKCqiftBJcZr++7ykoDIEwSa3XWowTfNPo92BYxjXiyYEVrUQh2aLyhxBCwww+heortUFxEJYcRzosstTEBYQ==",
+    "debug@4.4.3": {
+      "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",
       "dependencies": [
         "ms"
       ]
@@ -623,7 +623,7 @@
       "jsr:@std/ulid@1",
       "jsr:@std/uuid@^1.0.6",
       "jsr:@std/yaml@^1.0.5",
-      "npm:@modelcontextprotocol/sdk@1.17.5",
+      "npm:@modelcontextprotocol/sdk@1.18.2",
       "npm:zod-to-json-schema@^3.24.6",
       "npm:zod@^3.22.4"
     ]

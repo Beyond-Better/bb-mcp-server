@@ -188,12 +188,12 @@ export class TokenManager {
   ): Promise<MCPAccessToken> {
     const tokenGenId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`TokenManager: Generating access token [${tokenGenId}]`, {
-      tokenGenId,
-      clientId,
-      userId,
-      includeRefreshToken,
-    });
+    // this.logger?.info(`TokenManager: Generating access token [${tokenGenId}]`, {
+    //   tokenGenId,
+    //   clientId,
+    //   userId,
+    //   includeRefreshToken,
+    // });
 
     try {
       // 🔒 SECURITY-CRITICAL: Exact token format preservation from OAuthClientService.ts
@@ -247,14 +247,14 @@ export class TokenManager {
         { expireIn: this.config.accessTokenExpiryMs },
       );
 
-      this.logger?.info(`TokenManager: Generated access token successfully [${tokenGenId}]`, {
-        tokenGenId,
-        clientId,
-        userId,
-        tokenLength: accessToken.length,
-        expiresAt: new Date(tokenData.expires_at).toISOString(),
-        hasRefreshToken: !!tokenData.refresh_token,
-      });
+      // this.logger?.info(`TokenManager: Generated access token successfully [${tokenGenId}]`, {
+      //   tokenGenId,
+      //   clientId,
+      //   userId,
+      //   tokenLength: accessToken.length,
+      //   expiresAt: new Date(tokenData.expires_at).toISOString(),
+      //   hasRefreshToken: !!tokenData.refresh_token,
+      // });
 
       return tokenData;
     } catch (error) {
@@ -289,14 +289,14 @@ export class TokenManager {
   ): Promise<string> {
     const codeGenId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`TokenManager: Generating authorization code [${codeGenId}]`, {
-      codeGenId,
-      clientId,
-      userId,
-      redirectUri,
-      hasCodeChallenge: !!codeChallenge,
-      challengePrefix: codeChallenge ? codeChallenge.substring(0, 12) + '...' : undefined,
-    });
+    // this.logger?.info(`TokenManager: Generating authorization code [${codeGenId}]`, {
+    //   codeGenId,
+    //   clientId,
+    //   userId,
+    //   redirectUri,
+    //   hasCodeChallenge: !!codeChallenge,
+    //   challengePrefix: codeChallenge ? codeChallenge.substring(0, 12) + '...' : undefined,
+    // });
 
     try {
       // 🔒 SECURITY-CRITICAL: Exact code format preservation from OAuthClientService.ts
@@ -347,15 +347,15 @@ export class TokenManager {
         throw new Error('Failed to store authorization code');
       }
 
-      this.logger?.info(`TokenManager: Generated authorization code successfully [${codeGenId}]`, {
-        codeGenId,
-        clientId,
-        userId,
-        codePrefix: code.substring(0, 12) + '...',
-        codeLength: code.length,
-        expiresIn: '10 minutes',
-        verified: true,
-      });
+      // this.logger?.info(`TokenManager: Generated authorization code successfully [${codeGenId}]`, {
+      //   codeGenId,
+      //   clientId,
+      //   userId,
+      //   codePrefix: code.substring(0, 12) + '...',
+      //   codeLength: code.length,
+      //   expiresIn: '10 minutes',
+      //   verified: true,
+      // });
 
       return code;
     } catch (error) {
@@ -549,11 +549,11 @@ export class TokenManager {
   async refreshAccessToken(refreshToken: string, clientId: string): Promise<TokenRefreshResult> {
     const exchangeId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`TokenManager: Starting refresh token exchange [${exchangeId}]`, {
-      exchangeId,
-      refreshTokenPrefix: refreshToken.substring(0, 12) + '...',
-      clientId,
-    });
+    // this.logger?.info(`TokenManager: Starting refresh token exchange [${exchangeId}]`, {
+    //   exchangeId,
+    //   refreshTokenPrefix: refreshToken.substring(0, 12) + '...',
+    //   clientId,
+    // });
 
     try {
       // Get and validate refresh token
@@ -609,13 +609,13 @@ export class TokenManager {
       // 🔒 SECURITY-CRITICAL: Revoke old refresh token (token rotation security)
       await this.kvManager.delete([...this.MCP_REFRESH_TOKENS_PREFIX, refreshToken]);
 
-      this.logger?.info(`TokenManager: Successfully exchanged refresh token [${exchangeId}]`, {
-        exchangeId,
-        clientId: refreshTokenData.client_id,
-        userId: refreshTokenData.user_id,
-        newTokenPrefix: newAccessToken.access_token.substring(0, 12) + '...',
-        hasNewRefreshToken: !!newAccessToken.refresh_token,
-      });
+      // this.logger?.info(`TokenManager: Successfully exchanged refresh token [${exchangeId}]`, {
+      //   exchangeId,
+      //   clientId: refreshTokenData.client_id,
+      //   userId: refreshTokenData.user_id,
+      //   newTokenPrefix: newAccessToken.access_token.substring(0, 12) + '...',
+      //   hasNewRefreshToken: !!newAccessToken.refresh_token,
+      // });
 
       return { success: true, accessToken: newAccessToken };
     } catch (error) {

@@ -76,6 +76,14 @@ const minimalOAuthConfig: OAuthProviderConfig = {
   },
 };
 
+const endpointConfig = {
+  authorizationEndpoint: '/authorize',
+  tokenEndpoint: '/token',
+  registrationEndpoint: '/register',
+  revocationEndpoint: '/revoke',
+  metadataEndpoint: '/.well-known/oauth-authorization-server',
+};
+
 Deno.test({
   name: 'OAuthMetadata - Initialize with Full Configuration',
   async fn() {
@@ -99,6 +107,8 @@ Deno.test({
   async fn() {
     const metadataConfig: OAuthMetadataConfig = {
       issuer: fullOAuthConfig.issuer,
+      ...endpointConfig,
+
       supportedGrantTypes: fullOAuthConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: fullOAuthConfig.authorization.supportedResponseTypes,
       supportedScopes: fullOAuthConfig.authorization.supportedScopes,
@@ -106,8 +116,10 @@ Deno.test({
       enableDynamicRegistration: fullOAuthConfig.clients.enableDynamicRegistration,
     };
     const oauthMetadata = new OAuthMetadata(metadataConfig, mockLogger);
+    console.log('oauthMetadata', oauthMetadata);
 
     const metadata = oauthMetadata.generateMetadata();
+    console.log('metadata', metadata);
 
     // RFC 8414 Required Fields
     assertEquals(metadata.issuer, 'https://oauth-server.example.com');
@@ -148,6 +160,7 @@ Deno.test({
   async fn() {
     const metadataConfig: OAuthMetadataConfig = {
       issuer: minimalOAuthConfig.issuer,
+      ...endpointConfig,
       supportedGrantTypes: minimalOAuthConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: minimalOAuthConfig.authorization.supportedResponseTypes,
       supportedScopes: minimalOAuthConfig.authorization.supportedScopes,
@@ -336,6 +349,7 @@ Deno.test({
     // With dynamic registration enabled
     const enabledMetadataConfig: OAuthMetadataConfig = {
       issuer: enabledRegistrationConfig.issuer,
+      ...endpointConfig,
       supportedGrantTypes: enabledRegistrationConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: enabledRegistrationConfig.authorization.supportedResponseTypes,
       supportedScopes: enabledRegistrationConfig.authorization.supportedScopes,
@@ -349,6 +363,7 @@ Deno.test({
     // With dynamic registration disabled
     const disabledMetadataConfig: OAuthMetadataConfig = {
       issuer: disabledRegistrationConfig.issuer,
+      ...endpointConfig,
       supportedGrantTypes: disabledRegistrationConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: disabledRegistrationConfig.authorization.supportedResponseTypes,
       supportedScopes: disabledRegistrationConfig.authorization.supportedScopes,
@@ -366,6 +381,7 @@ Deno.test({
   async fn() {
     const metadataConfig: OAuthMetadataConfig = {
       issuer: fullOAuthConfig.issuer,
+      ...endpointConfig,
       supportedGrantTypes: fullOAuthConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: fullOAuthConfig.authorization.supportedResponseTypes,
       supportedScopes: fullOAuthConfig.authorization.supportedScopes,
@@ -396,6 +412,7 @@ Deno.test({
   async fn() {
     const metadataConfig: OAuthMetadataConfig = {
       issuer: fullOAuthConfig.issuer,
+      ...endpointConfig,
       supportedGrantTypes: fullOAuthConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: fullOAuthConfig.authorization.supportedResponseTypes,
       supportedScopes: fullOAuthConfig.authorization.supportedScopes,
@@ -437,6 +454,7 @@ Deno.test({
   async fn() {
     const metadataConfig: OAuthMetadataConfig = {
       issuer: fullOAuthConfig.issuer,
+      ...endpointConfig,
       supportedGrantTypes: fullOAuthConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: fullOAuthConfig.authorization.supportedResponseTypes,
       supportedScopes: fullOAuthConfig.authorization.supportedScopes,
@@ -466,6 +484,7 @@ Deno.test({
 
     const metadataConfig: OAuthMetadataConfig = {
       issuer: customIssuerConfig.issuer,
+      ...endpointConfig,
       supportedGrantTypes: customIssuerConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: customIssuerConfig.authorization.supportedResponseTypes,
       supportedScopes: customIssuerConfig.authorization.supportedScopes,
@@ -514,6 +533,7 @@ Deno.test({
 
     const enabledMetadataConfig: OAuthMetadataConfig = {
       issuer: pkceEnabledConfig.issuer,
+      ...endpointConfig,
       supportedGrantTypes: pkceEnabledConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: pkceEnabledConfig.authorization.supportedResponseTypes,
       supportedScopes: pkceEnabledConfig.authorization.supportedScopes,
@@ -522,6 +542,7 @@ Deno.test({
     };
     const disabledMetadataConfig: OAuthMetadataConfig = {
       issuer: pkceDisabledConfig.issuer,
+      ...endpointConfig,
       supportedGrantTypes: pkceDisabledConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: pkceDisabledConfig.authorization.supportedResponseTypes,
       supportedScopes: pkceDisabledConfig.authorization.supportedScopes,
@@ -554,6 +575,7 @@ Deno.test({
 
     const metadataConfig: OAuthMetadataConfig = {
       issuer: customScopesConfig.issuer,
+      ...endpointConfig,
       supportedGrantTypes: customScopesConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: customScopesConfig.authorization.supportedResponseTypes,
       supportedScopes: customScopesConfig.authorization.supportedScopes,
@@ -587,6 +609,7 @@ Deno.test({
 
     const metadataConfig: OAuthMetadataConfig = {
       issuer: customGrantsConfig.issuer,
+      ...endpointConfig,
       supportedGrantTypes: customGrantsConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: customGrantsConfig.authorization.supportedResponseTypes,
       supportedScopes: customGrantsConfig.authorization.supportedScopes,
@@ -618,6 +641,7 @@ Deno.test({
 
     const metadataConfig: OAuthMetadataConfig = {
       issuer: customResponseTypesConfig.issuer,
+      ...endpointConfig,
       supportedGrantTypes: customResponseTypesConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: customResponseTypesConfig.authorization.supportedResponseTypes,
       supportedScopes: customResponseTypesConfig.authorization.supportedScopes,
@@ -637,6 +661,7 @@ Deno.test({
   async fn() {
     const metadataConfig: OAuthMetadataConfig = {
       issuer: fullOAuthConfig.issuer,
+      ...endpointConfig,
       supportedGrantTypes: fullOAuthConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: fullOAuthConfig.authorization.supportedResponseTypes,
       supportedScopes: fullOAuthConfig.authorization.supportedScopes,
@@ -676,6 +701,7 @@ Deno.test({
 
     const emptyScopesMetadataConfig: OAuthMetadataConfig = {
       issuer: emptyScopesConfig.issuer,
+      ...endpointConfig,
       supportedGrantTypes: emptyScopesConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: emptyScopesConfig.authorization.supportedResponseTypes,
       supportedScopes: emptyScopesConfig.authorization.supportedScopes,
@@ -697,6 +723,7 @@ Deno.test({
 
     const emptyGrantsMetadataConfig: OAuthMetadataConfig = {
       issuer: emptyGrantsConfig.issuer,
+      ...endpointConfig,
       supportedGrantTypes: emptyGrantsConfig.authorization.supportedGrantTypes,
       supportedResponseTypes: emptyGrantsConfig.authorization.supportedResponseTypes,
       supportedScopes: emptyGrantsConfig.authorization.supportedScopes,

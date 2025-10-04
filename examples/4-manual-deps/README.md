@@ -114,7 +114,7 @@ const transportManager = new TransportManager({
 await performHealthChecks(
   {
     thirdpartyApiClient,
-    oAuthConsumer,
+    oauthConsumer,
     oauthProvider,
     kvManager,
   },
@@ -140,7 +140,7 @@ await performHealthChecks(
 );
 
 // Validate required configuration for manual setup
-await validateConfiguration(configManager, logger, { oAuthConsumer });
+await validateConfiguration(configManager, logger, { oauthConsumer });
 ```
 
 **Demonstrates**:
@@ -270,8 +270,8 @@ OAUTH_PROVIDER_ISSUER=http://localhost:3000
 OAUTH_PROVIDER_CLIENT_ID=manual-client
 OAUTH_PROVIDER_CLIENT_SECRET=manual-secret
 OAUTH_PROVIDER_REDIRECT_URI=http://localhost:3000/oauth/callback
-OAUTH_TOKEN_EXPIRATION=3600000
-OAUTH_REFRESH_TOKEN_EXPIRATION=2592000000
+OAUTH_PROVIDER_TOKEN_EXPIRATION=3600000
+OAUTH_PROVIDER_REFRESH_TOKEN_EXPIRATION=2592000000
 ```
 
 #### OAuth Consumer Configuration (for External APIs)
@@ -320,7 +320,7 @@ toolRegistry.sdkMcpServer = new SdkMcpServer(
 // Create tools with manual dependency injection
 const exampleTools = new ExampleTools({
   apiClient: thirdpartyApiClient,
-  oauthConsumer: oAuthConsumer,
+  oauthConsumer: oauthConsumer,
   logger: logger,
   auditLogger: auditLogger,
 });
@@ -546,7 +546,7 @@ console.log('Manually registered workflows:', registeredWorkflows);
 // Verify custom dependency injection
 console.log('Custom dependencies:', {
   hasApiClient: !!thirdpartyApiClient,
-  hasOAuthConsumer: !!oAuthConsumer,
+  hasOAuthConsumer: !!oauthConsumer,
   hasCustomLogger: logger.constructor.name === 'Logger',
 });
 ```

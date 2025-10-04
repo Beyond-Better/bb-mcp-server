@@ -43,11 +43,23 @@ export interface OAuthMetadataConfig {
   enablePKCE: boolean;
   /** Enable dynamic client registration */
   enableDynamicRegistration: boolean;
+
+  // High Priority Optional Fields
+  /** URL to human-readable API documentation */
+  serviceDocumentation?: string;
+  /** Supported UI locales for internationalization */
+  uiLocalesSupported?: string[];
+
   /** MCP server extensions */
   mcpExtensions?: {
     serverName: string;
     serverVersion: string;
     supportedWorkflows: string[];
+    mcpEndpoint?: string;
+    callbackUrl?: string;
+    upstreamProvider?: string;
+    description?: string;
+    documentationUrl?: string;
   };
 }
 
@@ -71,20 +83,7 @@ export class OAuthMetadata {
 
   constructor(config: OAuthMetadataConfig, logger?: Logger) {
     // Apply config with proper defaults
-    this.config = {
-      authorizationEndpoint: config.authorizationEndpoint ?? '/authorize',
-      tokenEndpoint: config.tokenEndpoint ?? '/token',
-      registrationEndpoint: config.registrationEndpoint ?? '/register',
-      revocationEndpoint: config.revocationEndpoint ?? '/revoke',
-      metadataEndpoint: config.metadataEndpoint ?? '/.well-known/oauth-authorization-server',
-      supportedGrantTypes: config.supportedGrantTypes ?? ['authorization_code', 'refresh_token'],
-      supportedResponseTypes: config.supportedResponseTypes ?? ['code'],
-      supportedScopes: config.supportedScopes ?? ['read', 'write'],
-      enablePKCE: config.enablePKCE ?? true,
-      enableDynamicRegistration: config.enableDynamicRegistration ?? true,
-      issuer: config.issuer,
-      ...(config.mcpExtensions && { mcpExtensions: config.mcpExtensions }),
-    };
+    this.config = config;
     this.logger = logger;
 
     this.logger?.info('OAuthMetadata: Initialized', {
@@ -106,10 +105,13 @@ export class OAuthMetadata {
   generateMetadata(): AuthorizationServerMetadata {
     const metadataId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`OAuthMetadata: Generating authorization server metadata [${metadataId}]`, {
-      metadataId,
-      issuer: this.config.issuer,
-    });
+    //this.logger?.info(`OAuthMetadata: Generating authorization server metadata [${metadataId}]`, {
+    //  metadataId,
+    //  issuer: this.config.issuer,
+    //  enableDynamicRegistration: this.config.enableDynamicRegistration,
+    //  registrationEndpoint: this.config.registrationEndpoint,
+    //  willIncludeInMetadata: !!this.config.enableDynamicRegistration,
+    //});
 
     try {
       // 🔒 SECURITY-CRITICAL: RFC 8414 compliant metadata structure
@@ -136,13 +138,34 @@ export class OAuthMetadata {
 
         // PKCE support (RFC 7636)
         code_challenge_methods_supported: this.getCodeChallengeMethods(),
+
+        // High Priority Optional Fields
+        // Service documentation for API consumers (RFC 8414 optional)
+        ...(this.config.serviceDocumentation && {
+          service_documentation: this.config.serviceDocumentation,
+        }),
+        // UI locales for internationalization (RFC 8414 optional)
+        ...(this.config.uiLocalesSupported && {
+          ui_locales_supported: [...this.config.uiLocalesSupported],
+        }),
+        // Revocation endpoint auth methods (RFC 7009)
+        // Automatically included when revocation endpoint exists
+        revocation_endpoint_auth_methods_supported: this.getTokenEndpointAuthMethods(),
       };
 
-      // Add MCP-specific extensions (default or configured)
+      this.logger?.debug(`OAuthMetadata: Registration endpoint decision [${metadataId}]`, {
+        metadataId,
+        enableDynamicRegistration: this.config.enableDynamicRegistration,
+        registrationEndpoint: this.config.registrationEndpoint,
+        willIncludeInMetadata: !!this.config.enableDynamicRegistration,
+      });
+
+      // Add MCP-specific extensions (configurable via ConfigManager)
       const defaultMcpExtensions = {
         server_name: 'bb-mcp-server',
         server_version: '1.0.0',
         supported_workflows: ['oauth_authorization', 'session_management', 'token_validation'],
+        mcp_endpoint: `${this.config.issuer}/mcp`,
       };
 
       metadata.mcp_extensions = this.config.mcpExtensions
@@ -150,28 +173,43 @@ export class OAuthMetadata {
           server_name: this.config.mcpExtensions.serverName,
           server_version: this.config.mcpExtensions.serverVersion,
           supported_workflows: [...this.config.mcpExtensions.supportedWorkflows],
+          mcp_endpoint: this.config.mcpExtensions.mcpEndpoint ||
+            `${this.config.issuer}/mcp`,
+          // Optional MCP extension fields (configurable via ConfigManager)
+          ...(this.config.mcpExtensions.callbackUrl && {
+            callback_url: this.config.mcpExtensions.callbackUrl,
+          }),
+          ...(this.config.mcpExtensions.upstreamProvider && {
+            upstream_provider: this.config.mcpExtensions.upstreamProvider,
+          }),
+          ...(this.config.mcpExtensions.description && {
+            description: this.config.mcpExtensions.description,
+          }),
+          ...(this.config.mcpExtensions.documentationUrl && {
+            documentation_url: this.config.mcpExtensions.documentationUrl,
+          }),
         }
         : defaultMcpExtensions;
 
-      this.logger?.info(
-        `OAuthMetadata: Generated authorization server metadata successfully [${metadataId}]`,
-        {
-          metadataId,
-          endpoints: {
-            authorization: !!metadata.authorization_endpoint,
-            token: !!metadata.token_endpoint,
-            registration: !!metadata.registration_endpoint,
-            revocation: !!metadata.revocation_endpoint,
-          },
-          capabilities: {
-            grantTypes: metadata.grant_types_supported.length,
-            responseTypes: metadata.response_types_supported.length,
-            scopes: metadata.scopes_supported.length,
-            pkce: metadata.code_challenge_methods_supported.length > 0,
-            mcpExtensions: !!metadata.mcp_extensions,
-          },
-        },
-      );
+      // this.logger?.info(
+      //   `OAuthMetadata: Generated authorization server metadata successfully [${metadataId}]`,
+      //   {
+      //     metadataId,
+      //     endpoints: {
+      //       authorization: !!metadata.authorization_endpoint,
+      //       token: !!metadata.token_endpoint,
+      //       registration: !!metadata.registration_endpoint,
+      //       revocation: !!metadata.revocation_endpoint,
+      //     },
+      //     capabilities: {
+      //       grantTypes: metadata.grant_types_supported.length,
+      //       responseTypes: metadata.response_types_supported.length,
+      //       scopes: metadata.scopes_supported.length,
+      //       pkce: metadata.code_challenge_methods_supported.length > 0,
+      //       mcpExtensions: !!metadata.mcp_extensions,
+      //     },
+      //   },
+      // );
 
       return metadata;
     } catch (error) {
@@ -309,11 +347,11 @@ export class OAuthMetadata {
 
     const isValid = errors.length === 0;
 
-    this.logger?.info('OAuthMetadata: Configuration validation completed', {
-      valid: isValid,
-      errorCount: errors.length,
-      errors: isValid ? undefined : errors,
-    });
+    // this.logger?.info('OAuthMetadata: Configuration validation completed', {
+    //   valid: isValid,
+    //   errorCount: errors.length,
+    //   errors: isValid ? undefined : errors,
+    // });
 
     return {
       valid: isValid,
@@ -332,12 +370,21 @@ export class OAuthMetadata {
     logger?: Logger,
   ): OAuthMetadata {
     const metadataConfig: OAuthMetadataConfig = {
+      // endpoints are hard-coded values from http handlers
+      authorizationEndpoint: '/authorize',
+      tokenEndpoint: '/token',
+      registrationEndpoint: '/register',
+      revocationEndpoint: '/revoke',
+      metadataEndpoint: '/.well-known/oauth-authorization-server',
+
+      supportedResponseTypes: providerConfig.authorization.supportedResponseTypes ?? ['code'],
+      supportedGrantTypes: providerConfig.authorization.supportedGrantTypes ??
+        ['authorization_code', 'refresh_token'],
+      supportedScopes: providerConfig.authorization.supportedScopes ?? ['read', 'write'],
+      enablePKCE: providerConfig.authorization.enablePKCE ?? true,
+      enableDynamicRegistration: providerConfig.clients.enableDynamicRegistration ?? true,
       issuer: providerConfig.issuer,
-      supportedGrantTypes: providerConfig.authorization.supportedGrantTypes,
-      supportedResponseTypes: providerConfig.authorization.supportedResponseTypes,
-      supportedScopes: providerConfig.authorization.supportedScopes,
-      enablePKCE: providerConfig.authorization.enablePKCE,
-      enableDynamicRegistration: providerConfig.clients.enableDynamicRegistration,
+      //...(providerConfig.mcpExtensions && { mcpExtensions: providerConfig.mcpExtensions }),
     };
 
     return new OAuthMetadata(metadataConfig, logger);

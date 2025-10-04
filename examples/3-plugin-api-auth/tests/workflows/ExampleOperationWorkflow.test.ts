@@ -247,7 +247,7 @@ describe('ExampleOperationWorkflow - Multi-Step OAuth Operations', () => {
     // Create plugin and extract workflow
     plugin = createPlugin({
       thirdpartyApiClient: mockApiClient,
-      oAuthConsumer: mockOAuth,
+      oauthConsumer: mockOAuth,
       logger: mockLogger,
       auditLogger: mockLogger,
     } as any);

@@ -12,13 +12,14 @@ export { KVManager } from './lib/storage/KVManager.ts';
 export { CredentialStore } from './lib/storage/CredentialStore.ts';
 export { SessionStore } from './lib/storage/SessionStore.ts';
 export { TransportEventStore } from './lib/storage/TransportEventStore.ts';
+export { TransportEventStoreChunked } from './lib/storage/TransportEventStoreChunked.ts';
 export { TransportPersistenceService } from './lib/storage/TransportPersistenceService.ts';
 
 // Configuration exports
 export { ConfigManager } from './lib/config/ConfigManager.ts';
 
 // Utility exports
-export { Logger } from './lib/utils/Logger.ts';
+export { type LogFormat, Logger, type LogLevel } from './lib/utils/Logger.ts';
 export { AuditLogger } from './lib/utils/AuditLogger.ts';
 export { ValidationHelpers } from './lib/utils/ValidationHelpers.ts';
 export { ErrorHandler } from './lib/utils/ErrorHandler.ts';
@@ -157,7 +158,13 @@ export type {
   ConfigValidationResult,
   EnvironmentMapping,
   LoggingConfig,
+  OAuthConsumerConfig,
+  OAuthProviderConfig,
   ServerConfig,
+  ThirdPartyApiConfig,
+  TransportEventStoreChunkedConfig,
+  TransportEventStoreConfig,
+  TransportEventStoreType,
 } from './lib/config/ConfigTypes.ts';
 
 // Workflow types (avoiding conflicts with consumer.types.ts)

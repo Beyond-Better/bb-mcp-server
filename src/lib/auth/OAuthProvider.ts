@@ -24,6 +24,7 @@ import { PKCEHandler } from './PKCEHandler.ts';
 import { ClientRegistry } from './ClientRegistry.ts';
 import { AuthorizationHandler } from './AuthorizationHandler.ts';
 import { OAuthMetadata } from './OAuthMetadata.ts';
+import { OAuthConsumer } from './OAuthConsumer.ts';
 
 import type {
   AuthorizationServerMetadata,
@@ -38,7 +39,7 @@ import type {
   TokenMapping,
   TokenRequest,
   TokenResponse,
-  TokenValidation,
+  //TokenValidation,
 } from './OAuthTypes.ts';
 
 /**
@@ -50,11 +51,18 @@ export interface OAuthProviderDependencies {
   /** Credential store for secure token storage */
   credentialStore: CredentialStore;
   /** Logger for security event logging */
-  logger?: Logger;
+  logger: Logger;
+  /** OAuth consumer for third-party authentication (optional) */
+  oauthConsumer?: OAuthConsumer | undefined;
+  /** Third-party API client for token refresh (optional) */
+  thirdPartyApiClient?: ThirdPartyApiClient | undefined;
 }
 
 /**
  * Third-party authentication service interface for MCP session binding
+ *
+ * This interface allows the OAuth provider to validate third-party tokens
+ * and maintain session binding between MCP tokens and external provider tokens.
  */
 export interface ThirdPartyAuthService {
   /** Get user credentials from third-party provider */
@@ -64,6 +72,9 @@ export interface ThirdPartyAuthService {
   /** Update user credentials after token refresh */
   updateUserCredentials(userId: string, tokens: any): Promise<boolean>;
 }
+
+// Note: OAuthConsumer implements ThirdPartyAuthService methods via duck typing
+// The interface compatibility is handled at runtime
 
 /**
  * Third-party API client interface for automatic token refresh
@@ -90,7 +101,13 @@ export interface ThirdPartyApiClient {
  */
 export class OAuthProvider {
   private config: OAuthProviderConfig;
-  private logger: Logger | undefined;
+  private logger: Logger;
+
+  // Dependencies
+  private kvManager: KVManager;
+  private credentialStore: CredentialStore;
+  private oauthConsumer: ThirdPartyAuthService | undefined;
+  private thirdPartyApiClient: ThirdPartyApiClient | undefined;
 
   // OAuth components
   private tokenManager: TokenManager;
@@ -99,15 +116,18 @@ export class OAuthProvider {
   private authorizationHandler: AuthorizationHandler;
   private metadataHandler: OAuthMetadata;
 
-  // Dependencies
-  private kvManager: KVManager;
-  private credentialStore: CredentialStore;
+  // Short-circuit mechanism to prevent infinite auth loops
+  private authAttempts = new Map<string, { count: number; firstAttempt: number }>();
+  private readonly MAX_AUTH_ATTEMPTS = 2;
+  private readonly AUTH_ATTEMPT_WINDOW_MS = 60000; // 60 seconds
 
   constructor(config: OAuthProviderConfig, dependencies: OAuthProviderDependencies) {
     this.config = config;
     this.kvManager = dependencies.kvManager;
     this.credentialStore = dependencies.credentialStore;
     this.logger = dependencies.logger;
+    this.oauthConsumer = dependencies.oauthConsumer;
+    this.thirdPartyApiClient = dependencies.thirdPartyApiClient;
 
     // Initialize OAuth components
     this.tokenManager = new TokenManager(
@@ -179,13 +199,13 @@ export class OAuthProvider {
   ): Promise<AuthorizeResponse> {
     const authId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`OAuthProvider: Processing authorization request [${authId}]`, {
-      authId,
-      clientId: request.client_id,
-      responseType: request.response_type,
-      hasPKCE: !!(request.code_challenge && request.code_challenge_method),
-      userId,
-    });
+    // this.logger?.info(`OAuthProvider: Processing authorization request [${authId}]`, {
+    //   authId,
+    //   clientId: request.client_id,
+    //   responseType: request.response_type,
+    //   hasPKCE: !!(request.code_challenge && request.code_challenge_method),
+    //   userId,
+    // });
 
     try {
       return await this.authorizationHandler.handleAuthorizeRequest(request, userId);
@@ -207,12 +227,12 @@ export class OAuthProvider {
   async handleTokenRequest(request: TokenRequest): Promise<TokenResponse> {
     const tokenId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`OAuthProvider: Processing token request [${tokenId}]`, {
-      tokenId,
-      grantType: request.grant_type,
-      clientId: request.client_id,
-      hasCodeVerifier: !!request.code_verifier,
-    });
+    // this.logger?.info(`OAuthProvider: Processing token request [${tokenId}]`, {
+    //   tokenId,
+    //   grantType: request.grant_type,
+    //   clientId: request.client_id,
+    //   hasCodeVerifier: !!request.code_verifier,
+    // });
 
     try {
       if (request.grant_type === 'authorization_code') {
@@ -239,11 +259,11 @@ export class OAuthProvider {
   ): Promise<ClientRegistrationResponse> {
     const regId = Math.random().toString(36).substring(2, 15);
 
-    this.logger?.info(`OAuthProvider: Processing client registration [${regId}]`, {
-      regId,
-      clientName: request.client_name,
-      redirectUriCount: request.redirect_uris?.length || 0,
-    });
+    // this.logger?.info(`OAuthProvider: Processing client registration [${regId}]`, {
+    //   regId,
+    //   clientName: request.client_name,
+    //   redirectUriCount: request.redirect_uris?.length || 0,
+    // });
 
     try {
       return await this.clientRegistry.registerClient(request, metadata);
@@ -278,10 +298,15 @@ export class OAuthProvider {
     error?: string;
     errorCode?: string;
     actionTaken?: string;
+    authorizationUrl?: string;
   }> {
     const validationId = Math.random().toString(36).substring(2, 15);
 
     try {
+      // Use injected dependencies or method parameters (for backward compatibility)
+      const effectiveAuthService = authService || this.oauthConsumer;
+      const effectiveApiClient = apiClient || this.thirdPartyApiClient;
+
       // 1. Check if MCP token exists and is valid
       const tokenValidation = await this.tokenManager.validateAccessToken(token);
 
@@ -299,6 +324,7 @@ export class OAuthProvider {
           error?: string;
           errorCode?: string;
           actionTaken?: string;
+          authorizationUrl?: string;
         } = {
           valid: false,
         };
@@ -314,10 +340,133 @@ export class OAuthProvider {
       }
 
       // 2. 🔒 SECURITY-CRITICAL: SESSION BINDING REQUIREMENT - Validate third-party token status
-      if (authService) {
-        const isThirdPartyValid = await authService.isUserAuthenticated(tokenValidation.userId!);
+      if (effectiveAuthService) {
+        const isThirdPartyValid = await effectiveAuthService.isUserAuthenticated(
+          tokenValidation.userId!,
+        );
 
         if (!isThirdPartyValid) {
+          // Get credentials to check if they exist at all vs just expired
+          const credentials = await effectiveAuthService.getUserCredentials(
+            tokenValidation.userId!,
+          );
+
+          if (!credentials || !credentials.tokens) {
+            // CASE 1: No credentials exist - user has NEVER authenticated with third-party
+            this.logger?.warn(
+              `OAuthProvider: Third-party credentials not found [${validationId}]`,
+              {
+                validationId,
+                userId: tokenValidation.userId,
+                clientId: tokenValidation.clientId,
+              },
+            );
+
+            // 🚨 SHORT-CIRCUIT: Check if we've already tried to generate auth URL too many times
+            const userId = tokenValidation.userId!;
+            const now = Date.now();
+            const attempts = this.authAttempts.get(userId);
+
+            if (attempts) {
+              // Clean up old attempt if outside window
+              if (now - attempts.firstAttempt > this.AUTH_ATTEMPT_WINDOW_MS) {
+                this.authAttempts.delete(userId);
+              } else if (attempts.count >= this.MAX_AUTH_ATTEMPTS) {
+                // Hit the limit - stop generating new URLs
+                this.logger?.error(
+                  `OAuthProvider: Auth attempt limit reached [${validationId}] - BREAKING LOOP`,
+                  toError(
+                    `Reached ${this.MAX_AUTH_ATTEMPTS} auth attempts in ${this.AUTH_ATTEMPT_WINDOW_MS}ms`,
+                  ),
+                  {
+                    validationId,
+                    userId,
+                    attemptCount: attempts.count,
+                    windowMs: now - attempts.firstAttempt,
+                  },
+                );
+                //Deno.exit(1); // used for testing when auth creates infinite loop
+                return {
+                  valid: false,
+                  error:
+                    `Authentication loop detected. Credentials were not stored after OAuth callback. Check server logs for callback processing errors.`,
+                  errorCode: 'auth_loop_detected',
+                  ...(tokenValidation.clientId && { clientId: tokenValidation.clientId }),
+                  ...(tokenValidation.userId && { userId: tokenValidation.userId }),
+                };
+              }
+            }
+
+            // Track this attempt
+            if (attempts) {
+              attempts.count++;
+              this.logger?.warn(
+                `OAuthProvider: Auth attempt ${attempts.count}/${this.MAX_AUTH_ATTEMPTS} [${validationId}]`,
+                {
+                  validationId,
+                  userId,
+                  attemptCount: attempts.count,
+                },
+              );
+            } else {
+              this.authAttempts.set(userId, { count: 1, firstAttempt: now });
+              //this.logger?.info(`OAuthProvider: First auth attempt [${validationId}]`, {
+              //  validationId,
+              //  userId,
+              //});
+            }
+
+            // Generate OAuth authorization URL
+            let authorizationUrl: string | undefined;
+            try {
+              if (
+                'startAuthorizationFlow' in effectiveAuthService &&
+                typeof effectiveAuthService.startAuthorizationFlow === 'function'
+              ) {
+                const authFlow = await effectiveAuthService.startAuthorizationFlow(
+                  tokenValidation.userId!,
+                );
+                authorizationUrl = authFlow.authorizationUrl;
+                // this.logger?.info(`OAuthProvider: Generated authorization URL [${validationId}]`, {
+                //   validationId,
+                //   userId: tokenValidation.userId,
+                //   authorizationUrl,
+                // });
+              }
+            } catch (authError) {
+              this.logger?.error(
+                `OAuthProvider: Failed to generate authorization URL [${validationId}]:`,
+                toError(authError),
+              );
+            }
+
+            const result: {
+              valid: boolean;
+              clientId?: string;
+              userId?: string;
+              scope?: string;
+              error?: string;
+              errorCode?: string;
+              actionTaken?: string;
+              authorizationUrl?: string;
+            } = {
+              valid: false,
+              error: authorizationUrl
+                ? `Third-party authentication required. Open this URL in your browser: ${authorizationUrl}`
+                : 'Third-party authentication required. Please complete the authorization flow.',
+              errorCode: 'third_party_auth_required',
+              ...(tokenValidation.clientId && { clientId: tokenValidation.clientId }),
+              ...(tokenValidation.userId && { userId: tokenValidation.userId }),
+            };
+
+            if (authorizationUrl) {
+              result.authorizationUrl = authorizationUrl;
+            }
+
+            return result;
+          }
+
+          // CASE 2: Credentials exist but are expired - attempt refresh
           this.logger?.warn(`OAuthProvider: Third-party token expired [${validationId}]`, {
             validationId,
             userId: tokenValidation.userId,
@@ -325,49 +474,47 @@ export class OAuthProvider {
           });
 
           // ATTEMPT THIRD-PARTY TOKEN REFRESH before failing
-          if (apiClient && authService.updateUserCredentials) {
-            this.logger?.info(
-              `OAuthProvider: Attempting third-party token refresh [${validationId}]`,
-              {
-                validationId,
-                userId: tokenValidation.userId,
-              },
-            );
+          if (
+            effectiveApiClient && effectiveAuthService.updateUserCredentials &&
+            credentials.tokens.refreshToken
+          ) {
+            // this.logger?.info(
+            //   `OAuthProvider: Attempting third-party token refresh [${validationId}]`,
+            //   {
+            //     validationId,
+            //     userId: tokenValidation.userId,
+            //   },
+            // );
 
             try {
-              // Get current credentials to extract refresh token
-              const credentials = await authService.getUserCredentials(tokenValidation.userId!);
+              // Attempt to refresh the third-party token
+              const refreshedTokens = await effectiveApiClient.refreshAccessToken(
+                credentials.tokens.refreshToken,
+              );
 
-              if (credentials && credentials.tokens && credentials.tokens.refreshToken) {
-                // Attempt to refresh the third-party token
-                const refreshedTokens = await apiClient.refreshAccessToken(
-                  credentials.tokens.refreshToken,
+              if (refreshedTokens) {
+                // Update stored credentials with new tokens
+                const updateSuccess = await effectiveAuthService.updateUserCredentials(
+                  tokenValidation.userId!,
+                  refreshedTokens,
                 );
 
-                if (refreshedTokens) {
-                  // Update stored credentials with new tokens
-                  const updateSuccess = await authService.updateUserCredentials(
-                    tokenValidation.userId!,
-                    refreshedTokens,
-                  );
+                if (updateSuccess) {
+                  // this.logger?.info(
+                  //   `OAuthProvider: Successfully refreshed third-party token [${validationId}]`,
+                  //   {
+                  //     validationId,
+                  //     userId: tokenValidation.userId,
+                  //   },
+                  // );
 
-                  if (updateSuccess) {
-                    this.logger?.info(
-                      `OAuthProvider: Successfully refreshed third-party token [${validationId}]`,
-                      {
-                        validationId,
-                        userId: tokenValidation.userId,
-                      },
-                    );
-
-                    return {
-                      valid: true,
-                      ...(tokenValidation.clientId && { clientId: tokenValidation.clientId }),
-                      ...(tokenValidation.userId && { userId: tokenValidation.userId }),
-                      ...(tokenValidation.scopes && { scope: tokenValidation.scopes.join(' ') }),
-                      actionTaken: 'third_party_token_refreshed',
-                    };
-                  }
+                  return {
+                    valid: true,
+                    ...(tokenValidation.clientId && { clientId: tokenValidation.clientId }),
+                    ...(tokenValidation.userId && { userId: tokenValidation.userId }),
+                    ...(tokenValidation.scopes && { scope: tokenValidation.scopes.join(' ') }),
+                    actionTaken: 'third_party_token_refreshed',
+                  };
                 }
               }
             } catch (refreshError) {
@@ -381,7 +528,7 @@ export class OAuthProvider {
             }
           }
 
-          // If we reach here, token refresh failed
+          // CASE 3: Refresh failed or no refresh token - user must re-authenticate
           const errorMsg =
             `Third-party token refresh failed, invalidating MCP token [${validationId}]`;
           this.logger?.error(`OAuthProvider: ${errorMsg}`, toError(errorMsg), {
@@ -389,14 +536,54 @@ export class OAuthProvider {
             userId: tokenValidation.userId,
           });
 
-          return {
+          // Generate OAuth authorization URL for re-authentication
+          let authorizationUrl: string | undefined;
+          try {
+            if (
+              'startAuthorizationFlow' in effectiveAuthService &&
+              typeof effectiveAuthService.startAuthorizationFlow === 'function'
+            ) {
+              const authFlow = await effectiveAuthService.startAuthorizationFlow(
+                tokenValidation.userId!,
+              );
+              authorizationUrl = authFlow.authorizationUrl;
+              // this.logger?.info(`OAuthProvider: Generated re-authorization URL [${validationId}]`, {
+              //   validationId,
+              //   userId: tokenValidation.userId,
+              //   authorizationUrl,
+              // });
+            }
+          } catch (authError) {
+            this.logger?.error(
+              `OAuthProvider: Failed to generate re-authorization URL [${validationId}]:`,
+              toError(authError),
+            );
+          }
+
+          const result: {
+            valid: boolean;
+            clientId?: string;
+            userId?: string;
+            scope?: string;
+            error?: string;
+            errorCode?: string;
+            actionTaken?: string;
+            authorizationUrl?: string;
+          } = {
             valid: false,
-            error:
-              'Third-party authorization expired and refresh failed. User must re-authenticate.',
+            error: authorizationUrl
+              ? `Third-party authorization expired and refresh failed. Open this URL to re-authorize: ${authorizationUrl}`
+              : 'Third-party authorization expired and refresh failed. User must re-authenticate.',
             errorCode: 'third_party_reauth_required',
             ...(tokenValidation.clientId && { clientId: tokenValidation.clientId }),
             ...(tokenValidation.userId && { userId: tokenValidation.userId }),
           };
+
+          if (authorizationUrl) {
+            result.authorizationUrl = authorizationUrl;
+          }
+
+          return result;
         }
       }
 

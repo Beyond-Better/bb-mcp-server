@@ -30,7 +30,7 @@ import type { ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts';
  */
 export interface ExamplePluginDependencies {
   thirdpartyApiClient: ExampleApiClient;
-  oAuthConsumer: ExampleOAuthConsumer;
+  oauthConsumer: ExampleOAuthConsumer;
   logger: Logger;
 }
 
@@ -88,13 +88,13 @@ export default function createPlugin(dependencies: AppServerDependencies): AppPl
 
   // Initialize the plugin synchronously for simple use cases
   // Note: For async initialization, use the initialize() method
-  const { thirdpartyApiClient, oAuthConsumer, logger, auditLogger } = dependencies;
+  const { thirdpartyApiClient, oauthConsumer, logger, auditLogger } = dependencies;
 
   // Validate required dependencies
-  if (!thirdpartyApiClient || !oAuthConsumer) {
+  if (!thirdpartyApiClient || !oauthConsumer) {
     logger.warn('ExamplePlugin: Missing required dependencies', {
       hasApiClient: !!thirdpartyApiClient,
-      hasOAuthConsumer: !!oAuthConsumer,
+      hasOAuthConsumer: !!oauthConsumer,
       impact: 'Some tools and workflows may not function correctly',
     });
   }
@@ -116,10 +116,10 @@ export default function createPlugin(dependencies: AppServerDependencies): AppPl
   ];
 
   // Create tools - PluginManager will register these
-  if (thirdpartyApiClient && oAuthConsumer) {
+  if (thirdpartyApiClient && oauthConsumer) {
     const exampleToolsDependencies: ExampleToolsDependencies = {
       apiClient: thirdpartyApiClient,
-      oauthConsumer: oAuthConsumer,
+      oauthConsumer: oauthConsumer,
       logger,
       auditLogger,
     };

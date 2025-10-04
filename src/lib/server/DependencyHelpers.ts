@@ -7,11 +7,16 @@
  */
 
 import { ConfigManager } from '../config/ConfigManager.ts';
+import type {
+  OAuthProviderConfig,
+  TransportEventStoreChunkedConfig,
+} from '../config/ConfigTypes.ts';
 import { Logger } from '../utils/Logger.ts';
 import { AuditLogger } from '../utils/AuditLogger.ts';
 import { KVManager } from '../storage/KVManager.ts';
 import { SessionStore } from '../storage/SessionStore.ts';
 import { TransportEventStore } from '../storage/TransportEventStore.ts';
+import { TransportEventStoreChunked } from '../storage/TransportEventStoreChunked.ts';
 import { CredentialStore } from '../storage/CredentialStore.ts';
 import { ErrorHandler } from '../utils/ErrorHandler.ts';
 import { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
@@ -23,7 +28,7 @@ import { TransportManager } from '../transport/TransportManager.ts';
 import { BeyondMcpServer } from './BeyondMcpServer.ts';
 import { toError } from '../utils/Error.ts';
 import type {
-  AppServerConfig,
+  //AppServerConfig,
   AppServerDependencies,
   AppServerOverrides,
   DependenciesHealthCheck,
@@ -46,10 +51,12 @@ export async function getConfigManager(): Promise<ConfigManager> {
  * Create standard logger instance
  */
 export function getLogger(configManager: ConfigManager): Logger {
-  return new Logger({
+  const logger = new Logger({
     level: configManager.get('LOG_LEVEL', 'info'),
     format: configManager.get('LOG_FORMAT', 'json'),
   });
+  configManager.logger = logger; // configManager would have been created with default values for Logger
+  return logger;
 }
 
 /**
@@ -91,8 +98,55 @@ export function getSessionStore(kvManager: KVManager, logger: Logger): SessionSt
 /**
  * Create standard transport event store instance
  */
-export function getTransportEventStore(kvManager: KVManager, logger: Logger): TransportEventStore {
+export function getTransportEventStoreBase(
+  transportEventStoreConfig: TransportEventStoreChunkedConfig, //TransportEventStoreConfig,
+  logger: Logger,
+  kvManager: KVManager,
+): TransportEventStore {
   return new TransportEventStore(kvManager.getKV(), ['events'], logger);
+}
+
+/**
+ * Create chunked transport event store instance for handling large messages
+ */
+export function getTransportEventStoreChunked(
+  transportEventStoreConfig: TransportEventStoreChunkedConfig,
+  logger: Logger,
+  kvManager: KVManager,
+): TransportEventStoreChunked {
+  const chunkedConfig = {
+    maxChunkSize: transportEventStoreConfig.chunking.maxChunkSize,
+    enableCompression: transportEventStoreConfig.compression.enable,
+    compressionThreshold: transportEventStoreConfig.compression.threshold,
+    maxMessageSize: transportEventStoreConfig.chunking.maxMessageSize,
+  };
+  return new TransportEventStoreChunked(
+    kvManager.getKV(),
+    ['events'],
+    logger,
+    chunkedConfig,
+  );
+}
+
+/**
+ * Create transport event store instance with automatic chunked storage selection
+ * Uses chunked storage if TRANSPORT_STORAGE_TYPE=chunked or large message support is needed
+ */
+export function getTransportEventStore(
+  configManager: ConfigManager,
+  logger: Logger,
+  kvManager: KVManager,
+): TransportEventStore | TransportEventStoreChunked {
+  const transportEventStoreConfig = configManager?.get<TransportEventStoreChunkedConfig>(
+    'transportEventStore',
+  );
+
+  if (transportEventStoreConfig.storageType === 'chunked') {
+    logger.info('Using chunked transport event store for large message support');
+    return getTransportEventStoreChunked(transportEventStoreConfig, logger, kvManager);
+  }
+
+  return getTransportEventStoreBase(transportEventStoreConfig, logger, kvManager);
 }
 
 /**
@@ -188,49 +242,38 @@ export function getOAuthProvider(
   logger: Logger,
   kvManager: KVManager,
   credentialStore: CredentialStore,
+  oauthConsumer?: OAuthConsumer,
+  thirdPartyApiClient?: any,
 ): OAuthProvider | undefined {
-  const clientId = configManager.get<string>('OAUTH_PROVIDER_CLIENT_ID');
-  const clientSecret = configManager.get<string>('OAUTH_PROVIDER_CLIENT_SECRET');
-  const redirectUri = configManager.get<string>('OAUTH_PROVIDER_REDIRECT_URI');
+  const oauthConfig = configManager.get<OAuthProviderConfig>('oauthProvider');
 
-  if (!clientId || !clientSecret || !redirectUri) {
+  if (!oauthConfig) {
+    logger.debug('OAuthProvider: No OAuth provider configuration found');
     return undefined;
   }
 
-  return new OAuthProvider({
-    issuer: configManager.get('OAUTH_PROVIDER_ISSUER', 'http://localhost:3000'),
-    clientId,
-    clientSecret,
-    redirectUri,
-    tokens: {
-      accessTokenExpiryMs: parseInt(configManager.get('OAUTH_TOKEN_EXPIRATION', '3600000'), 10),
-      refreshTokenExpiryMs: parseInt(
-        configManager.get('OAUTH_REFRESH_TOKEN_EXPIRATION', '2592000000'),
-        10,
-      ),
-      authorizationCodeExpiryMs: parseInt(configManager.get('OAUTH_CODE_EXPIRATION', '600000'), 10),
-    },
-    clients: {
-      enableDynamicRegistration: configManager.get('OAUTH_ENABLE_DYNAMIC_CLIENT_REG') === 'true',
-      requireHTTPS: configManager.get('OAUTH_REQUIRE_HTTPS') === 'true',
-      allowedRedirectHosts: configManager.get('OAUTH_ALLOWED_HOSTS', 'localhost').split(','),
-    },
-    authorization: {
-      supportedGrantTypes: ['authorization_code', 'refresh_token'],
-      supportedResponseTypes: ['code'],
-      supportedScopes: ['read', 'write', 'admin'],
-      enablePKCE: true,
-      requirePKCE: false,
-    },
-  }, {
+  //logger.info('OAuthProvider: oauthConfig', oauthConfig);
+  logger.info('OAuthProvider: Creating OAuth provider with configuration', {
+    issuer: oauthConfig.issuer,
+    enableDynamicRegistration: oauthConfig.clients.enableDynamicRegistration,
+    enablePKCE: oauthConfig.authorization.enablePKCE,
+    supportedGrantTypes: oauthConfig.authorization.supportedGrantTypes,
+    supportedScopes: oauthConfig.authorization.supportedScopes,
+    hasOAuthConsumer: !!oauthConsumer,
+    hasThirdPartyApiClient: !!thirdPartyApiClient,
+  });
+
+  return new OAuthProvider(oauthConfig, {
     logger,
     kvManager,
     credentialStore,
+    oauthConsumer,
+    thirdPartyApiClient,
   });
 }
 
 /**
- * Create transport manager instance
+ * Create transport manager instance with optional OAuth dependencies
  */
 export function getTransportManager(
   configManager: ConfigManager,
@@ -238,7 +281,9 @@ export function getTransportManager(
   kvManager: KVManager,
   sessionStore: SessionStore,
   eventStore: TransportEventStore,
-  //workflowRegistry: WorkflowRegistry,
+  oauthProvider?: OAuthProvider,
+  oauthConsumer?: OAuthConsumer,
+  thirdpartyApiClient?: any,
 ): TransportManager {
   return new TransportManager({
     type: configManager.get('MCP_TRANSPORT', 'stdio') as 'stdio' | 'http',
@@ -257,13 +302,29 @@ export function getTransportManager(
         return typeof origins === 'string' ? origins.split(',') : origins;
       })(),
       preserveCompatibilityMode: true,
+      // 🔒 NEW: Authentication configuration from environment
+      enableAuthentication: configManager.get('MCP_AUTH_HTTP_ENABLED', 'true') === 'true',
+      skipAuthentication: (configManager.get('MCP_AUTH_HTTP_SKIP', 'false') as string) === 'true',
+      requireAuthentication: configManager.get('MCP_AUTH_HTTP_REQUIRE', 'true') === 'true',
+    },
+    stdio: {
+      enableLogging: configManager.get('STDIO_LOGGING_ENABLED', 'true') === 'true',
+      bufferSize: parseInt(configManager.get('STDIO_BUFFER_SIZE', '8192'), 10),
+      encoding: configManager.get('STDIO_ENCODING', 'utf8'),
+      // 🔒 NEW: STDIO authentication (discouraged by MCP spec)
+      enableAuthentication:
+        (configManager.get('MCP_AUTH_STDIO_ENABLED', 'false') as string) === 'true',
+      skipAuthentication: (configManager.get('MCP_AUTH_STDIO_SKIP', 'false') as string) === 'true',
     },
   }, {
     logger,
     kvManager,
     sessionStore,
     eventStore,
-    //workflowRegistry,
+    // 🔒 NEW: OAuth authentication dependencies
+    oauthProvider,
+    oauthConsumer,
+    thirdPartyApiClient: thirdpartyApiClient,
   });
 }
 
@@ -368,10 +429,10 @@ function getInstructionsSource(configManager: ConfigManager): string {
 export async function validateConfiguration(
   configManager: ConfigManager,
   logger: Logger,
-  dependencies?: { oAuthConsumer?: unknown },
+  dependencies?: { oauthConsumer?: unknown },
 ): Promise<void> {
   // Only validate OAuth consumer config if OAuth consumer is actually being used
-  if (dependencies?.oAuthConsumer) {
+  if (dependencies?.oauthConsumer) {
     const requiredConfig = [
       'OAUTH_CONSUMER_CLIENT_ID',
       'OAUTH_CONSUMER_CLIENT_SECRET',
@@ -474,7 +535,7 @@ export async function performHealthChecks(
   dependencies: {
     kvManager: KVManager;
     oauthProvider: OAuthProvider;
-    oAuthConsumer?: OAuthConsumer;
+    oauthConsumer?: OAuthConsumer;
     thirdpartyApiClient?: any;
   },
   logger: Logger,
@@ -510,13 +571,13 @@ export async function performHealthChecks(
       },
     },
   ];
-  if (dependencies.oAuthConsumer) {
-    const oAuthConsumer = dependencies.oAuthConsumer;
+  if (dependencies.oauthConsumer) {
+    const oauthConsumer = dependencies.oauthConsumer;
     healthChecks.push({
       name: 'ExampleCorp OAuth Consumer',
       check: async () => {
         // Basic initialization check
-        await oAuthConsumer.initialize();
+        await oauthConsumer.initialize();
         return { healthy: true, status: 'initialized' };
       },
     });
@@ -611,16 +672,32 @@ export async function getAllDependencies(
 
   const kvManager = overrides.kvManager || await getKvManager(configManager, logger);
   const sessionStore = overrides.sessionStore || getSessionStore(kvManager, logger);
-  const eventStore = overrides.eventStore || getTransportEventStore(kvManager, logger);
+  const eventStore = overrides.eventStore ||
+    getTransportEventStore(configManager, logger, kvManager);
   const credentialStore = overrides.credentialStore || getCredentialStore(kvManager, logger);
   const errorHandler = overrides.errorHandler || getErrorHandler();
   const workflowRegistry = overrides.workflowRegistry || getWorkflowRegistry(logger, errorHandler);
   const toolRegistry = overrides.toolRegistry || getToolRegistry(logger, errorHandler);
+  // Consumer-specific dependencies must be created before OAuthProvider
+  // because OAuthProvider needs them for session binding
+  const consumerDeps: any = {};
+
+  // Use pre-built consumer instances (Option A pattern)
+  if (overrides.oauthConsumer) {
+    consumerDeps.oauthConsumer = overrides.oauthConsumer;
+  }
+
+  if (overrides.thirdpartyApiClient) {
+    consumerDeps.thirdpartyApiClient = overrides.thirdpartyApiClient;
+  }
+
   const oauthProvider = overrides.oauthProvider || getOAuthProvider(
     configManager,
     logger,
     kvManager,
     credentialStore,
+    consumerDeps.oauthConsumer, // Pass OAuth consumer for third-party auth
+    consumerDeps.thirdpartyApiClient, // Pass API client for token refresh
   );
   const transportManager = overrides.transportManager || getTransportManager(
     configManager,
@@ -628,22 +705,13 @@ export async function getAllDependencies(
     kvManager,
     sessionStore,
     eventStore,
+    oauthProvider, // 🔒 Pass OAuth provider for MCP token validation
+    consumerDeps.oauthConsumer, // 🔒 Pass OAuth consumer for third-party authentication
+    consumerDeps.thirdpartyApiClient, // 🔒 Pass third-party API client for token refresh
   );
 
   // Create HTTP server config if needed
   const httpServerConfig = overrides.httpServerConfig || getHttpServerConfig(configManager);
-
-  // Consumer-specific dependencies (instances only - simple approach)
-  const consumerDeps: any = {};
-
-  // Use pre-built consumer instances (Option A pattern)
-  if (overrides.oAuthConsumer) {
-    consumerDeps.oAuthConsumer = overrides.oAuthConsumer;
-  }
-
-  if (overrides.thirdpartyApiClient) {
-    consumerDeps.thirdpartyApiClient = overrides.thirdpartyApiClient;
-  }
 
   // Create MCP server (either from class or default)
   const serverConfig = overrides.serverConfig || {
@@ -675,13 +743,6 @@ export async function getAllDependencies(
   // Use pre-built MCP server instance if it exists
   const beyondMcpServer = overrides.beyondMcpServer || (() => {
     // Fallback: create generic MCP server if no consumer server provided
-    const serverConfig = overrides.serverConfig || {
-      name: configManager.get('SERVER_NAME', 'generic-mcp-server'),
-      version: configManager.get('SERVER_VERSION', '1.0.0'),
-      title: configManager.get('SERVER_TITLE', 'Generic MCP Server'),
-      description: configManager.get('SERVER_DESCRIPTION', 'MCP server built with bb-mcp-server'),
-    };
-
     const server = new BeyondMcpServer({
       server: {
         name: serverConfig.name,
@@ -707,14 +768,14 @@ export async function getAllDependencies(
     return server;
   })();
 
-  // Initialize Beyond MCP server
-  await beyondMcpServer.initialize();
-
   await registerPluginsInRegistries(
     allDeps.toolRegistry,
     allDeps.workflowRegistry,
     allDeps,
   );
+
+  // Initialize Beyond MCP server
+  await beyondMcpServer.initialize();
 
   return {
     ...allDeps,

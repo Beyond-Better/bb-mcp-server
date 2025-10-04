@@ -21,7 +21,7 @@ This example teaches you how to:
 
 ```typescript
 // Custom OAuth consumer for ExampleCorp API
-const oAuthConsumer = new ExampleOAuthConsumer({
+const oauthConsumer = new ExampleOAuthConsumer({
   provider: 'examplecorp',
   authUrl: 'https://api.examplecorp.com/oauth/authorize',
   tokenUrl: 'https://api.examplecorp.com/oauth/token',
@@ -60,7 +60,7 @@ const apiClient = new ExampleApiClient(
     retryAttempts: 3,
     userAgent: 'ExampleCorp-MCP-Server/1.0',
   },
-  oAuthConsumer,
+  oauthConsumer,
   logger,
 );
 ```
@@ -82,10 +82,10 @@ export async function createExampleDependencies(
   { configManager, logger, kvManager }: CreateCustomAppServerDependencies,
 ): Promise<Partial<AppServerDependencies>> {
   // Create OAuth consumer with environment configuration
-  const oAuthConsumer = new ExampleOAuthConsumer(oauthConfig, logger, kvManager);
+  const oauthConsumer = new ExampleOAuthConsumer(oauthConfig, logger, kvManager);
 
   // Create API client with OAuth integration
-  const thirdpartyApiClient = new ExampleApiClient(apiConfig, oAuthConsumer, logger);
+  const thirdpartyApiClient = new ExampleApiClient(apiConfig, oauthConsumer, logger);
 
   return {
     // Library dependencies (provided by bb-mcp-server)
@@ -94,7 +94,7 @@ export async function createExampleDependencies(
 
     // Custom dependencies (ExampleCorp-specific)
     thirdpartyApiClient,
-    oAuthConsumer,
+    oauthConsumer,
 
     serverConfig: {
       name: 'examplecorp-mcp-server',
@@ -436,7 +436,7 @@ const result = await apiClient.get('/customers', { userId: 'test-user' });
 3. **Check Token Storage**:
    ```typescript
    // Inspect stored tokens
-   const tokens = await oAuthConsumer.getStoredTokens('user-123');
+   const tokens = await oauthConsumer.getStoredTokens('user-123');
    console.log('Stored tokens:', tokens);
    ```
 
@@ -475,7 +475,7 @@ If you're coming from the `2-plugin-workflows` example:
 oauthProvider: new OAuthProvider({/* server config */});
 
 // OAuth Consumer (server consumes external OAuth)
-oAuthConsumer: new ExampleOAuthConsumer({/* external API config */});
+oauthConsumer: new ExampleOAuthConsumer({/* external API config */});
 ```
 
 ### Dependency Injection Benefits

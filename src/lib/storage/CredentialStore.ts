@@ -64,6 +64,7 @@ export class CredentialStore {
       };
 
       await this.kvManager.set(credentialKey, credentialData);
+      // this.logger?.info('CredentialStore: Stored credentials', { userId, provider, credentialData });
 
       // Store user index for easy lookup
       const userIndexKey = [...this.keyPrefix, 'by_user', userId, provider];
@@ -98,6 +99,7 @@ export class CredentialStore {
           lastUsedAt: number;
         }
       >(credentialKey);
+      //this.logger?.info('CredentialStore: Retrieved credentials', { userId, provider, credentials });
 
       if (!credentials) {
         return null;
@@ -120,6 +122,7 @@ export class CredentialStore {
 
       // Return credentials without internal metadata
       const { storedAt, lastUsedAt, ...publicCredentials } = credentials;
+      // this.logger?.info('CredentialStore: Returning credentials', { userId, provider, publicCredentials });
       return publicCredentials;
     } catch (error) {
       this.logger?.error('CredentialStore: Failed to get credentials', toError(error), {
@@ -231,7 +234,7 @@ export class CredentialStore {
         deletedCount++;
       }
 
-      this.logger?.info('CredentialStore: Deleted all user credentials', { userId, deletedCount });
+      this.logger?.debug('CredentialStore: Deleted all user credentials', { userId, deletedCount });
       return deletedCount;
     } catch (error) {
       this.logger?.error('CredentialStore: Failed to delete user credentials', toError(error), {
