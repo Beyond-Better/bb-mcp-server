@@ -492,7 +492,7 @@ export async function validateConfiguration(
   // Only validate OAuth consumer config if OAuth consumer is actually being used
   if (dependencies?.oauthConsumer) {
     const oauthConsumerConfig = configManager.get<OAuthConsumerConfig>('oauthConsumer');
-    
+
     if (!oauthConsumerConfig) {
       const error = 'OAuth consumer is configured but OAuth consumer configuration is missing';
       logger.error('OAuth consumer configuration validation failed', new Error(error));
@@ -501,14 +501,14 @@ export async function validateConfiguration(
 
     // Validate required OAuth consumer fields
     const missingFields: string[] = [];
-    
+
     if (!oauthConsumerConfig.clientId || oauthConsumerConfig.clientId.startsWith('your-')) {
       missingFields.push('clientId');
     }
     if (!oauthConsumerConfig.clientSecret || oauthConsumerConfig.clientSecret.startsWith('your-')) {
       missingFields.push('clientSecret');
     }
-    
+
     // Validate third-party API config if OAuth consumer is present
     const thirdPartyApiConfig = configManager.get<ThirdPartyApiConfig>('thirdpartyApiClient');
     if (!thirdPartyApiConfig?.baseUrl || thirdPartyApiConfig.baseUrl.startsWith('your-')) {
@@ -516,10 +516,12 @@ export async function validateConfiguration(
     }
 
     if (missingFields.length > 0) {
-      const error = `Missing or invalid OAuth consumer configuration: ${formatFieldErrors(missingFields)}`;
+      const error = `Missing or invalid OAuth consumer configuration: ${
+        formatFieldErrors(missingFields)
+      }`;
       logger.error('OAuth consumer configuration validation failed', new Error(error), {
         missingFields,
-        envVars: missingFields.map(f => getEnvVarForField(f)),
+        envVars: missingFields.map((f) => getEnvVarForField(f)),
       });
       throw new Error(error);
     }
@@ -531,10 +533,10 @@ export async function validateConfiguration(
 
   // Validate OAuth provider configuration if HTTP transport is used
   const transportConfig = configManager.get<TransportConfig>('transport');
-  
+
   if (transportConfig.type === 'http') {
     const oauthProviderConfig = configManager.get<OAuthProviderConfig>('oauthProvider');
-    
+
     if (!oauthProviderConfig) {
       // Check if user explicitly wants to disable OAuth provider requirement
       const allowInsecureHttp = transportConfig.http?.allowInsecure === true;
@@ -558,7 +560,8 @@ export async function validateConfiguration(
           recommendation: 'OAuth provider is strongly recommended for production HTTP transport',
         });
 
-        const error = `Missing OAuth provider configuration for HTTP transport. Set HTTP_ALLOW_INSECURE=true to allow insecure HTTP mode.`;
+        const error =
+          `Missing OAuth provider configuration for HTTP transport. Set HTTP_ALLOW_INSECURE=true to allow insecure HTTP mode.`;
         logger.error('OAuth provider configuration validation failed', new Error(error), {
           allowInsecureHint: 'Set HTTP_ALLOW_INSECURE=true to bypass this requirement',
         });
@@ -567,18 +570,23 @@ export async function validateConfiguration(
     } else {
       // Validate OAuth provider has required fields
       const missingProviderFields: string[] = [];
-      
+
       if (!oauthProviderConfig.clientId || oauthProviderConfig.clientId.startsWith('your-')) {
         missingProviderFields.push('clientId');
       }
-      if (!oauthProviderConfig.clientSecret || oauthProviderConfig.clientSecret.startsWith('your-')) {
+      if (
+        !oauthProviderConfig.clientSecret || oauthProviderConfig.clientSecret.startsWith('your-')
+      ) {
         missingProviderFields.push('clientSecret');
       }
 
       if (missingProviderFields.length > 0) {
-        const error = `Missing or invalid OAuth provider configuration: ${formatFieldErrors(missingProviderFields.map(f => `provider.${f}`))}`;        logger.error('OAuth provider configuration validation failed', new Error(error), {
+        const error = `Missing or invalid OAuth provider configuration: ${
+          formatFieldErrors(missingProviderFields.map((f) => `provider.${f}`))
+        }`;
+        logger.error('OAuth provider configuration validation failed', new Error(error), {
           missingProviderFields,
-          envVars: missingProviderFields.map(f => getEnvVarForField(`provider.${f}`)),
+          envVars: missingProviderFields.map((f) => getEnvVarForField(`provider.${f}`)),
         });
         throw new Error(error);
       }

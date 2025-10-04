@@ -80,6 +80,21 @@ export class HttpTransport implements Transport {
     this.dependencies = dependencies;
     this.logger = dependencies.logger;
 
+    // Validate transport persistence dependencies
+    if (this.config.enableTransportPersistence && !dependencies.transportPersistence) {
+      this.logger.warn(
+        'HttpTransport: Transport persistence enabled but transportPersistence service not provided - persistence disabled',
+      );
+      this.config.enableTransportPersistence = false;
+    }
+
+    if (this.config.enableSessionRestore && !dependencies.sdkMcpServer) {
+      this.logger.warn(
+        'HttpTransport: Session restore enabled but sdkMcpServer not provided - restore disabled',
+      );
+      this.config.enableSessionRestore = false;
+    }
+
     // Initialize authentication middleware
     const authConfig: AuthenticationConfig = {
       enabled: config.enableAuthentication ?? (!!dependencies.oauthProvider),
@@ -97,13 +112,40 @@ export class HttpTransport implements Transport {
     this.authenticationMiddleware = new AuthenticationMiddleware(authConfig, authDependencies);
   }
 
-  // deno-lint-ignore require-await
   async start(): Promise<void> {
     this.logger.info('HttpTransport: Starting HTTP transport', {
       hostname: this.config.hostname,
       port: this.config.port,
       compatibilityMode: this.config.preserveCompatibilityMode,
+      transportPersistenceEnabled: this.config.enableTransportPersistence,
+      sessionRestoreEnabled: this.config.enableSessionRestore,
     });
+
+    // Restore persisted sessions if enabled
+    if (
+      this.config.enableSessionRestore &&
+      this.dependencies.transportPersistence &&
+      this.dependencies.sdkMcpServer
+    ) {
+      try {
+        const restoreResult = await this.dependencies.transportPersistence.restoreTransports(
+          this.dependencies.sdkMcpServer,
+          this.mcpTransports,
+          this.dependencies.eventStore,
+        );
+
+        this.logger.info('HttpTransport: Session restore completed', restoreResult);
+
+        if (restoreResult.errors.length > 0) {
+          this.logger.warn('HttpTransport: Session restore had errors', {
+            errors: restoreResult.errors,
+          });
+        }
+      } catch (error) {
+        this.logger.error('HttpTransport: Failed to restore sessions', toError(error));
+        // Don't fail startup due to restore errors
+      }
+    }
 
     // Start periodic event cleanup if event store is available
     if (this.dependencies.eventStore) {
@@ -748,31 +790,53 @@ export class HttpTransport implements Transport {
 
     const keepaliveInterval = setInterval(() => {
       try {
+        // Check if stream is still open before attempting write
+        if (serverResponse.isStreamEnded()) {
+          this.logger.debug('HttpTransport: Stream ended, stopping keepalive', { sessionId });
+          this.stopSSEKeepalive(sessionId);
+          return;
+        }
+
+        // Check if controller is still writable
+        if (!serverResponse.isControllerWritable()) {
+          this.logger.debug('HttpTransport: Controller not writable, stopping keepalive', {
+            sessionId,
+          });
+          this.stopSSEKeepalive(sessionId);
+          return;
+        }
+
         // Send SSE comment ping to keep connection alive
         // Format: ": keepalive\n\n" (SSE comment format - comments are ignored by clients)
         const pingMessage = ': keepalive\n\n';
 
-        if (
-          nodeResponse && typeof nodeResponse.write === 'function' &&
-          !serverResponse.isStreamEnded()
-        ) {
+        if (nodeResponse && typeof nodeResponse.write === 'function') {
           const success = nodeResponse.write(pingMessage);
           if (success) {
             this.logger.debug('HttpTransport: Sent SSE keepalive ping', { sessionId });
           } else {
-            this.logger.warn('HttpTransport: SSE keepalive write failed - stopping', { sessionId });
+            this.logger.warn('HttpTransport: SSE keepalive write returned false - stopping', {
+              sessionId,
+            });
             this.stopSSEKeepalive(sessionId);
           }
         } else {
-          this.logger.warn('HttpTransport: SSE keepalive failed - response ended or not writable', {
+          this.logger.warn('HttpTransport: SSE keepalive failed - response not writable', {
             sessionId,
             hasNodeResponse: !!nodeResponse,
-            isEnded: serverResponse.isStreamEnded(),
           });
           this.stopSSEKeepalive(sessionId);
         }
       } catch (error) {
-        this.logger.error('HttpTransport: SSE keepalive error', toError(error), { sessionId });
+        const err = toError(error);
+        // Gracefully handle stream controller closure (expected when client disconnects)
+        if (err.message.includes('cannot close or enqueue')) {
+          this.logger.debug('HttpTransport: Stream controller closed, stopping keepalive', {
+            sessionId,
+          });
+        } else {
+          this.logger.error('HttpTransport: SSE keepalive error', err, { sessionId });
+        }
         this.stopSSEKeepalive(sessionId);
       }
     }, this.KEEPALIVE_INTERVAL_MS);
@@ -908,18 +972,64 @@ export class HttpTransport implements Transport {
     transport: StreamableHTTPServerTransport,
     request: Request,
   ): void {
-    // Implementation depends on TransportPersistenceService availability
-    // Placeholder for future integration
+    if (!this.dependencies.transportPersistence) {
+      return;
+    }
+
+    const userAgent = request.headers.get('user-agent');
+    const origin = request.headers.get('origin');
+
+    // Extract userId from authenticated request context
+    const userId = request.headers.get('X-MCP-User-ID') || undefined;
+
+    this.dependencies.transportPersistence.persistSession(
+      sessionId,
+      transport,
+      {
+        hostname: this.config.hostname,
+        port: this.config.port,
+        allowedHosts: this.config.allowedHosts || [
+          this.config.hostname,
+          `${this.config.hostname}:${this.config.port}`,
+        ],
+      },
+      userId,
+      {
+        userAgent,
+        origin,
+        createdFromEndpoint: 'POST /mcp',
+      },
+    ).catch((error) => {
+      this.logger.error('HttpTransport: Failed to persist session', toError(error), {
+        sessionId,
+      });
+    });
   }
 
   private updateSessionActivity(sessionId: string): void {
-    // Implementation depends on TransportPersistenceService availability
-    // Placeholder for future integration
+    if (!this.dependencies.transportPersistence) {
+      return;
+    }
+
+    this.dependencies.transportPersistence.updateSessionActivity(sessionId).catch((error) => {
+      this.logger.debug('HttpTransport: Failed to update session activity', {
+        sessionId,
+        error: toError(error).message,
+      });
+    });
   }
 
   private markSessionInactive(sessionId: string): void {
-    // Implementation depends on TransportPersistenceService availability
-    // Placeholder for future integration
+    if (!this.dependencies.transportPersistence) {
+      return;
+    }
+
+    this.dependencies.transportPersistence.markSessionInactive(sessionId).catch((error) => {
+      this.logger.debug('HttpTransport: Failed to mark session inactive', {
+        sessionId,
+        error: toError(error).message,
+      });
+    });
   }
 
   /**
@@ -1338,6 +1448,27 @@ class ReadableStreamServerResponse {
 
   isStreamEnded(): boolean {
     return this.isEnded;
+  }
+
+  /**
+   * Check if the stream controller is still writable
+   * Safely checks controller state without throwing
+   */
+  isControllerWritable(): boolean {
+    if (this.isEnded) {
+      return false;
+    }
+
+    try {
+      // Check if controller still exists and isn't closed
+      // ReadableStreamDefaultController has a desiredSize property:
+      // - null means the stream is closed
+      // - number (including 0) means it's still open
+      return this.streamController?.desiredSize !== null;
+    } catch {
+      // If accessing desiredSize throws, controller is invalid
+      return false;
+    }
   }
 
   close(): void {

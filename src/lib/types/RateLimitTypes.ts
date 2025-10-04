@@ -7,4 +7,3 @@ export interface RateLimitConfig {
   burstLimit?: number;
   windowMs?: number;
 }
-
