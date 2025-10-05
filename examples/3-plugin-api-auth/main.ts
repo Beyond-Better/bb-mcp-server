@@ -1,7 +1,9 @@
-#!/usr/bin/env -S deno run --allow-all
+#!/usr/bin/env -S deno run --allow-all --unstable-kv
 
 /**
- * Plugin-API-Auth MCP Server - OAuth and External API Integration
+ * @module examples/3-plugin-api-auth
+ * 
+ * # Plugin-API-Auth MCP Server - OAuth and External API Integration
  *
  * This demonstrates advanced capabilities with bb-mcp-server:
  * - OAuth authentication with external APIs
@@ -53,10 +55,10 @@
  * ======
  *
  * # STDIO transport:
- * deno run --allow-all main.ts
+ * deno run --allow-all --unstable-kv main.ts
  *
  * # HTTP transport with OAuth endpoints:
- * MCP_TRANSPORT=http deno run --allow-all main.ts
+ * MCP_TRANSPORT=http deno run --allow-all --unstable-kv main.ts
  * # Then access: http://localhost:3000
  *
  * NEXT STEPS:
@@ -66,6 +68,36 @@
  * 1. Try 4-manual-deps for complete infrastructure control
  * 2. Build your own OAuth integrations for different providers
  * 3. Implement custom authentication and API patterns
+ * 
+ * @example Run this example directly from JSR (requires OAuth credentials)
+ * ```bash
+ * # Set up OAuth credentials first
+ * export OAUTH_CONSUMER_CLIENT_ID=your-client-id
+ * export OAUTH_CONSUMER_CLIENT_SECRET=your-client-secret
+ * 
+ * # Run with STDIO transport
+ * deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/3-plugin-api-auth
+ * 
+ * # Run with HTTP transport (includes OAuth endpoints)
+ * MCP_TRANSPORT=http deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/3-plugin-api-auth
+ * ```
+ * 
+ * @example Custom OAuth consumer setup
+ * ```typescript
+ * import { OAuthConsumer } from 'jsr:@beyondbetter/bb-mcp-server';
+ * 
+ * const oauthConsumer = new ExampleOAuthConsumer({
+ *   provider: 'examplecorp',
+ *   authUrl: 'https://api.example.com/oauth/authorize',
+ *   tokenUrl: 'https://api.example.com/oauth/token',
+ *   clientId: process.env.OAUTH_CONSUMER_CLIENT_ID,
+ *   clientSecret: process.env.OAUTH_CONSUMER_CLIENT_SECRET,
+ *   scopes: ['read', 'write'],
+ * });
+ * ```
+ * 
+ * @see {@link https://github.com/beyond-better/bb-mcp-server/tree/main/examples/3-plugin-api-auth | Full example documentation}
+ * @see {@link https://github.com/beyond-better/bb-mcp-server/tree/main/examples/2-plugin-workflows | Previous example: Multi-step Workflows}
  */
 
 // Import the bb-mcp-server library - handles ALL infrastructure

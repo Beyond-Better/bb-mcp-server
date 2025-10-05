@@ -1,7 +1,9 @@
-#!/usr/bin/env -S deno run --allow-all
+#!/usr/bin/env -S deno run --allow-all --unstable-kv
 
 /**
- * Plugin-Workflows MCP Server - Multi-Step Workflow Demonstrations
+ * @module examples/2-plugin-workflows
+ * 
+ * # Plugin-Workflows MCP Server - Multi-Step Workflow Demonstrations
  *
  * This demonstrates advanced workflow capabilities with bb-mcp-server:
  * - Multi-step workflow implementations with state management
@@ -63,14 +65,14 @@
  * ======
  *
  * # STDIO transport (default):
- * deno run --allow-all main.ts
+ * deno run --allow-all --unstable-kv main.ts
  *
  * # HTTP transport:
- * MCP_TRANSPORT=http deno run --allow-all main.ts
+ * MCP_TRANSPORT=http deno run --allow-all --unstable-kv main.ts
  * # Then access: http://localhost:3000
  *
  * # Test workflows:
- * deno test --allow-all src/tests/
+ * deno test --allow-all --unstable-kv src/tests/
  *
  * WORKFLOW EXAMPLES:
  * ==================
@@ -108,6 +110,30 @@
  * 1. Try 3-plugin-api-auth to learn OAuth and external API integration
  * 2. Explore 4-manual-deps for complete infrastructure control
  * 3. Build your own workflows for specific business processes
+ * 
+ * @example Run this example directly from JSR
+ * ```bash
+ * # Run with STDIO transport (default)
+ * deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/2-plugin-workflows
+ * 
+ * # Run with HTTP transport
+ * MCP_TRANSPORT=http deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/2-plugin-workflows
+ * ```
+ * 
+ * @example Execute a workflow
+ * ```typescript
+ * // Data processing workflow example
+ * const result = await workflow.execute({
+ *   userId: 'user123',
+ *   data: [{name: 'Alice', score: 95}],
+ *   transformations: ['normalize', 'sort'],
+ *   outputFormat: 'json',
+ *   analysisType: 'summary'
+ * });
+ * ```
+ * 
+ * @see {@link https://github.com/beyond-better/bb-mcp-server/tree/main/examples/2-plugin-workflows | Full example documentation}
+ * @see {@link https://github.com/beyond-better/bb-mcp-server/tree/main/examples/1-simple | Previous example: Simple MCP Server}
  */
 
 // Import the bb-mcp-server library - handles ALL infrastructure
@@ -155,7 +181,7 @@ async function main(): Promise<void> {
     console.log('   - content_generation_pipeline (plan → generate → review → publish)');
     console.log('🛠️ Available tools: current_datetime, validate_json');
     console.log('🔄 Transport:', process.env.MCP_TRANSPORT || 'stdio');
-    console.log('🧪 Run tests: deno test --allow-all src/tests/');
+    console.log('🧪 Run tests: deno test --allow-all --unstable-kv src/tests/');
   } catch (error) {
     console.error('❌ Failed to start Plugin-Workflows MCP Server:', error);
     Deno.exit(1);

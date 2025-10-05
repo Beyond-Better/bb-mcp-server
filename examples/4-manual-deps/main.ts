@@ -1,7 +1,9 @@
-#!/usr/bin/env -S deno run --allow-all
+#!/usr/bin/env -S deno run --allow-all --unstable-kv
 
 /**
- * Manual-Deps MCP Server - Complete Infrastructure Control
+ * @module examples/4-manual-deps
+ * 
+ * # Manual-Deps MCP Server - Complete Infrastructure Control
  *
  * This demonstrates expert-level capabilities with bb-mcp-server:
  * - Complete control over dependency creation and configuration
@@ -50,10 +52,10 @@
  * ======
  *
  * # STDIO transport:
- * deno run --allow-all main.ts
+ * deno run --allow-all --unstable-kv main.ts
  *
  * # HTTP transport with OAuth endpoints:
- * MCP_TRANSPORT=http deno run --allow-all main.ts
+ * MCP_TRANSPORT=http deno run --allow-all --unstable-kv main.ts
  * # Then access: http://localhost:3000
  *
  * EXPERT PATTERNS:
@@ -64,6 +66,39 @@
  * - Manual registration within library lifecycle
  * - Advanced configuration and environment handling
  * - Integration with existing enterprise infrastructure
+ * 
+ * @example Run this example directly from JSR
+ * ```bash
+ * # Run with STDIO transport (default)
+ * deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/4-manual-deps
+ * 
+ * # Run with HTTP transport and OAuth endpoints
+ * MCP_TRANSPORT=http deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/4-manual-deps
+ * ```
+ * 
+ * @example Manual dependency creation
+ * ```typescript
+ * import { AppServer } from 'jsr:@beyondbetter/bb-mcp-server';
+ * 
+ * // Custom dependency function with complete control
+ * async function createManualDependencies(baseConfig) {
+ *   // Manually create all dependencies
+ *   const toolRegistry = await getToolRegistry(logger, errorHandler);
+ *   const workflowRegistry = await getWorkflowRegistry(logger, errorHandler);
+ *   
+ *   // Manual registration with custom logic
+ *   toolRegistry.registerTool('my_tool', definition, handler);
+ *   workflowRegistry.registerWorkflow(myWorkflow);
+ *   
+ *   return { toolRegistry, workflowRegistry, ...otherDeps };
+ * }
+ * 
+ * const appServer = await AppServer.create(createManualDependencies);
+ * await appServer.start();
+ * ```
+ * 
+ * @see {@link https://github.com/beyond-better/bb-mcp-server/tree/main/examples/4-manual-deps | Full example documentation}
+ * @see {@link https://github.com/beyond-better/bb-mcp-server/tree/main/examples/3-plugin-api-auth | Previous example: OAuth and API Integration}
  */
 
 // Import the bb-mcp-server library
