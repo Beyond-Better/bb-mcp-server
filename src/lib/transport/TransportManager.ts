@@ -111,7 +111,7 @@ export class TransportManager {
 
     try {
       // Start the current transport
-      await this.currentTransport.start();
+      await this.currentTransport.start(this.sdkMcpServer);
 
       // For STDIO transport, establish the connection immediately
       if (this.stdioTransport && this.config.type === 'stdio') {
@@ -311,7 +311,7 @@ export class TransportManager {
       }
 
       // Start new transport
-      await this.currentTransport.start();
+      await this.currentTransport.start(this.sdkMcpServer);
 
       // For STDIO, establish connection
       if (newType === 'stdio' && this.stdioTransport && this.sdkMcpServer) {

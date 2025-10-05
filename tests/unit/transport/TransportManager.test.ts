@@ -57,7 +57,6 @@ const corsConfig = {
 // Helper function to create test dependencies
 async function createTestDependencies(): Promise<
   TransportDependencies & {
-    eventStoreKv: Deno.Kv;
     sessionManager: SessionManager;
     beyondMcpServer: TestBeyondMcpServer;
   }
@@ -65,8 +64,7 @@ async function createTestDependencies(): Promise<
   const kvManager = new KVManager({ kvPath: ':memory:' });
   await kvManager.initialize();
 
-  const eventStoreKv = await Deno.openKv(':memory:');
-  const eventStore = new TransportEventStore(eventStoreKv, undefined, mockLogger);
+  const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
   // Note: SessionManager constructor expects (config, sessionStore, logger)
   // but we need to import SessionStore for this
@@ -89,7 +87,6 @@ async function createTestDependencies(): Promise<
     eventStore,
     sessionStore,
     logger: mockLogger,
-    eventStoreKv,
     sessionManager,
     beyondMcpServer,
   };
@@ -97,13 +94,10 @@ async function createTestDependencies(): Promise<
 
 // Helper function to clean up test dependencies
 async function cleanupTestDependencies(
-  dependencies: TransportDependencies & { eventStoreKv: Deno.Kv; sessionManager: SessionManager },
+  dependencies: TransportDependencies & { sessionManager: SessionManager },
 ): Promise<void> {
   // Close KV manager
   await dependencies.kvManager.close();
-
-  // Close the eventStore KV instance
-  dependencies.eventStoreKv.close();
 
   // Close the session store (which will stop any auto-cleanup intervals)
   await dependencies.sessionStore.close();

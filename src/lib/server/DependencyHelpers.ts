@@ -24,6 +24,7 @@ import { Logger } from '../utils/Logger.ts';
 import { AuditLogger } from '../utils/AuditLogger.ts';
 import { KVManager } from '../storage/KVManager.ts';
 import { SessionStore } from '../storage/SessionStore.ts';
+import { TransportPersistenceStore } from '../storage/TransportPersistenceStore.ts';
 import { TransportEventStore } from '../storage/TransportEventStore.ts';
 import { TransportEventStoreChunked } from '../storage/TransportEventStoreChunked.ts';
 import { CredentialStore } from '../storage/CredentialStore.ts';
@@ -115,7 +116,7 @@ export function getTransportEventStoreBase(
   logger: Logger,
   kvManager: KVManager,
 ): TransportEventStore {
-  return new TransportEventStore(kvManager.getKV(), ['events'], logger);
+  return new TransportEventStore(kvManager, ['events'], logger);
 }
 
 /**
@@ -133,7 +134,7 @@ export function getTransportEventStoreChunked(
     maxMessageSize: transportEventStoreConfig.chunking.maxMessageSize,
   };
   return new TransportEventStoreChunked(
-    kvManager.getKV(),
+    kvManager,
     ['events'],
     logger,
     chunkedConfig,
@@ -342,6 +343,7 @@ export function getTransportManager(
   kvManager: KVManager,
   sessionStore: SessionStore,
   eventStore: TransportEventStore,
+  transportPersistenceStore: TransportPersistenceStore,
   oauthProvider?: OAuthProvider,
   oauthConsumer?: OAuthConsumer,
   thirdpartyApiClient?: any,
@@ -352,11 +354,28 @@ export function getTransportManager(
     kvManager,
     sessionStore,
     eventStore,
+    transportPersistenceStore,
     // 🔒 NEW: OAuth authentication dependencies
     oauthProvider,
     oauthConsumer,
     thirdPartyApiClient: thirdpartyApiClient,
   });
+}
+
+/**
+ * Create transport persistence store instance
+ */
+export function getTransportPersistenceStore(
+  configManager: ConfigManager,
+  kvManager: KVManager,
+  logger: Logger,
+): TransportPersistenceStore {
+  const transportConfig = configManager.get<TransportConfig>('transport');
+  return new TransportPersistenceStore(
+    kvManager,
+    transportConfig,
+    logger,
+  );
 }
 
 /**

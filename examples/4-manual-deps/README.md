@@ -388,7 +388,7 @@ const sessionStore = new SessionStore(
 
 // Manual event store setup
 const eventStore = new TransportEventStore(
-  kvManager.getKV(),
+  kvManager),
   ['events'],
   logger,
 );

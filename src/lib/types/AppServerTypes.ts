@@ -8,6 +8,7 @@ import type { AuditLogger } from '../utils/AuditLogger.ts';
 import type { KVManager } from '../storage/KVManager.ts';
 import type { CredentialStore } from '../storage/CredentialStore.ts';
 import type { SessionStore } from '../storage/SessionStore.ts';
+import type { TransportPersistenceStore } from '../storage/TransportPersistenceStore.ts';
 import type { TransportEventStore } from '../storage/TransportEventStore.ts';
 import type { TransportEventStoreChunked } from '../storage/TransportEventStoreChunked.ts';
 import type { ErrorHandler } from '../utils/ErrorHandler.ts';
@@ -49,6 +50,7 @@ export interface AppServerDependencies {
   auditLogger: AuditLogger;
   kvManager: KVManager;
   sessionStore: SessionStore;
+  transportPersistenceStore: TransportPersistenceStore;
   eventStore: TransportEventStore | TransportEventStoreChunked;
   credentialStore: CredentialStore;
   errorHandler: ErrorHandler;

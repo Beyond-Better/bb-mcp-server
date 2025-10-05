@@ -284,17 +284,17 @@ export interface SessionStats {
 export interface TransportDependencies {
   logger: Logger;
   kvManager: KVManager;
+  sdkMcpServer?: any; // SdkMcpServer for session restoration
   sessionStore: SessionStore;
   eventStore: TransportEventStore | TransportEventStoreChunked;
+  // Session persistence for transport restoration (optional)
+  transportPersistenceStore?: any; // TransportPersistenceStore for session restoration
 
   // 🔒 SECURITY: OAuth authentication components (optional)
   oauthProvider?: any; // OAuthProvider for MCP token validation
   oauthConsumer?: any; // OAuthConsumer for third-party authentication
   thirdPartyApiClient?: any; // Third-party API client for token refresh
 
-  // Session persistence for transport restoration (optional)
-  transportPersistence?: any; // TransportPersistenceService for session restoration
-  sdkMcpServer?: any; // SdkMcpServer for session restoration
 }
 
 // Authentication result (from OAuth integration)

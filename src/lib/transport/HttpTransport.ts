@@ -81,19 +81,20 @@ export class HttpTransport implements Transport {
     this.logger = dependencies.logger;
 
     // Validate transport persistence dependencies
-    if (this.config.enableTransportPersistence && !dependencies.transportPersistence) {
+    if (this.config.enableTransportPersistence && !dependencies.transportPersistenceStore) {
       this.logger.warn(
-        'HttpTransport: Transport persistence enabled but transportPersistence service not provided - persistence disabled',
+        'HttpTransport: Transport persistence enabled but transportPersistenceStore service not provided - persistence disabled',
       );
       this.config.enableTransportPersistence = false;
     }
 
-    if (this.config.enableSessionRestore && !dependencies.sdkMcpServer) {
-      this.logger.warn(
-        'HttpTransport: Session restore enabled but sdkMcpServer not provided - restore disabled',
-      );
-      this.config.enableSessionRestore = false;
-    }
+    // we don't get sdkMcpServer until start() is called
+    //if (this.config.enableSessionRestore && !dependencies.sdkMcpServer) {
+    //  this.logger.warn(
+    //    'HttpTransport: Session restore enabled but sdkMcpServer not provided - restore disabled',
+    //  );
+    //  this.config.enableSessionRestore = false;
+    //}
 
     // Initialize authentication middleware
     const authConfig: AuthenticationConfig = {
@@ -112,7 +113,7 @@ export class HttpTransport implements Transport {
     this.authenticationMiddleware = new AuthenticationMiddleware(authConfig, authDependencies);
   }
 
-  async start(): Promise<void> {
+  async start(sdkMcpServer: SdkMcpServer): Promise<void> {
     this.logger.info('HttpTransport: Starting HTTP transport', {
       hostname: this.config.hostname,
       port: this.config.port,
@@ -124,12 +125,12 @@ export class HttpTransport implements Transport {
     // Restore persisted sessions if enabled
     if (
       this.config.enableSessionRestore &&
-      this.dependencies.transportPersistence &&
-      this.dependencies.sdkMcpServer
+      this.dependencies.transportPersistenceStore &&
+      sdkMcpServer
     ) {
       try {
-        const restoreResult = await this.dependencies.transportPersistence.restoreTransports(
-          this.dependencies.sdkMcpServer,
+        const restoreResult = await this.dependencies.transportPersistenceStore.restoreTransports(
+          sdkMcpServer,
           this.mcpTransports,
           this.dependencies.eventStore,
         );
@@ -972,7 +973,7 @@ export class HttpTransport implements Transport {
     transport: StreamableHTTPServerTransport,
     request: Request,
   ): void {
-    if (!this.dependencies.transportPersistence) {
+    if (!this.dependencies.transportPersistenceStore) {
       return;
     }
 
@@ -982,7 +983,7 @@ export class HttpTransport implements Transport {
     // Extract userId from authenticated request context
     const userId = request.headers.get('X-MCP-User-ID') || undefined;
 
-    this.dependencies.transportPersistence.persistSession(
+    this.dependencies.transportPersistenceStore.persistSession(
       sessionId,
       transport,
       {
@@ -1007,7 +1008,7 @@ export class HttpTransport implements Transport {
   }
 
   private updateSessionActivity(sessionId: string): void {
-    if (!this.dependencies.transportPersistence) {
+    if (!this.dependencies.transportPersistenceStore) {
       return;
     }
 
@@ -1020,7 +1021,7 @@ export class HttpTransport implements Transport {
   }
 
   private markSessionInactive(sessionId: string): void {
-    if (!this.dependencies.transportPersistence) {
+    if (!this.dependencies.transportPersistenceStore) {
       return;
     }
 

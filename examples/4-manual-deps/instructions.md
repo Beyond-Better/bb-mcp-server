@@ -641,7 +641,7 @@ logger.debug('Memory usage after manual dependency creation:', {
    // ADD: Manual component creation
    const auditLogger = new AuditLogger(/* config */, logger);
    const sessionStore = new SessionStore(kvManager, /* config */, logger);
-   const eventStore = new TransportEventStore(kvManager.getKV(), /* config */, logger);
+   const eventStore = new TransportEventStore(kvManager, /* config */, logger);
    const transportManager = new TransportManager(/* config */, { /* deps */ });
    ```
 

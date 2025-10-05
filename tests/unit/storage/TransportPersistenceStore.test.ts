@@ -16,27 +16,19 @@ import { assert, assertEquals, assertExists } from '@std/assert';
 import { TransportPersistenceStore } from '../../../src/lib/storage/TransportPersistenceStore.ts';
 import { KVManager } from '../../../src/lib/storage/KVManager.ts';
 import { TransportEventStore } from '../../../src/lib/storage/TransportEventStore.ts';
-import type { Logger } from '../../../src/types/library.types.ts';
+//import type { Logger } from '../../../src/types/library.types.ts';
 import type { TransportConfig } from '../../../src/lib/transport/TransportTypes.ts';
 import type { PersistedSessionInfo } from '../../../src/lib/storage/TransportPersistenceStore.ts';
-import { MockSdkMcpServer } from '../../utils/test-helpers.ts';
+import { MockSdkMcpServer ,  SpyLogger} from '../../utils/test-helpers.ts';
 import { StreamableHTTPServerTransport } from 'mcp/server/streamableHttp.js';
-
-// Mock logger for testing
-const mockLogger: Logger = {
-  debug: () => {},
-  info: () => {},
-  warn: () => {},
-  error: () => {},
-} as any;
 
 // Helper function to create test dependencies
 async function createTestDependencies() {
   const kvManager = new KVManager({ kvPath: ':memory:' });
   await kvManager.initialize();
 
-  const eventStoreKv = await Deno.openKv(':memory:');
-  const eventStore = new TransportEventStore(eventStoreKv, undefined, mockLogger);
+const spyLogger = new SpyLogger();
+  const eventStore = new TransportEventStore(kvManager, undefined, spyLogger);
 
   const transportConfig: TransportConfig = {
     type: 'http',
@@ -57,7 +49,7 @@ async function createTestDependencies() {
   return {
     kvManager,
     eventStore,
-    eventStoreKv,
+    spyLogger,
     transportConfig,
   };
 }
@@ -65,10 +57,8 @@ async function createTestDependencies() {
 // Helper function to clean up test dependencies
 async function cleanupTestDependencies(dependencies: {
   kvManager: KVManager;
-  eventStoreKv: Deno.Kv;
 }): Promise<void> {
   await dependencies.kvManager.close();
-  dependencies.eventStoreKv.close();
 }
 
 // Helper function to create test session info
@@ -104,7 +94,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     assertExists(persistenceStore);
@@ -122,7 +112,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
       customPrefix,
     );
 
@@ -140,7 +130,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     const sessionId = 'test_session_persist';
@@ -197,7 +187,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     const sessionId = 'test_session_anonymous';
@@ -238,7 +228,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     const sessionId = 'test_session_activity';
@@ -289,7 +279,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     // Try to update non-existent session (should not throw)
@@ -311,7 +301,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     const sessionId = 'test_session_inactive';
@@ -359,7 +349,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     // Try to mark non-existent session as inactive (should not throw)
@@ -381,7 +371,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     const sessionId = 'test_session_get';
@@ -424,7 +414,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     // Try to get non-existent session
@@ -444,7 +434,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     const userId = 'multi_session_user';
@@ -496,7 +486,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     // Try to get sessions for non-existent user
@@ -516,7 +506,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     const mockTransport = {} as StreamableHTTPServerTransport;
@@ -561,7 +551,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     const mockTransport = {} as StreamableHTTPServerTransport;
@@ -617,7 +607,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     // Create mock MCP server
@@ -655,7 +645,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     const mockTransport = {} as StreamableHTTPServerTransport;
@@ -709,7 +699,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     const mockTransport = {} as StreamableHTTPServerTransport;
@@ -767,7 +757,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     const mockTransport = {} as StreamableHTTPServerTransport;
@@ -810,7 +800,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
       ['test_stats_' + Date.now()],
     );
 
@@ -862,7 +852,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     // Get statistics with no sessions
@@ -886,7 +876,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     const mockTransport = {} as StreamableHTTPServerTransport;
@@ -935,7 +925,7 @@ Deno.test({
     const persistenceStore = new TransportPersistenceStore(
       dependencies.kvManager,
       dependencies.transportConfig,
-      mockLogger,
+      dependencies.spyLogger,
     );
 
     const sessionId = 'test_complex_metadata';

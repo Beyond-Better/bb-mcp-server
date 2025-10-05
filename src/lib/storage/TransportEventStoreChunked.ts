@@ -9,6 +9,7 @@
 
 import type { JSONRPCMessage } from 'mcp/types.js';
 import { TransportEventStore } from './TransportEventStore.ts';
+import type { KVManager } from './KVManager.ts';
 import { toError } from '../utils/Error.ts';
 
 export interface StoredEventMetadata {
@@ -55,12 +56,12 @@ export class TransportEventStoreChunked extends TransportEventStore {
   private config: Required<ChunkedEventStoreConfig>;
 
   constructor(
-    kv: Deno.Kv,
+    kvManager: KVManager,
     keyPrefix: readonly string[] = ['events'],
     logger?: any,
     config: ChunkedEventStoreConfig = {},
   ) {
-    super(kv, keyPrefix, logger);
+    super(kvManager, keyPrefix, logger);
     this.config = {
       maxChunkSize: config.maxChunkSize ?? 60 * 1024, // 60KB
       enableCompression: config.enableCompression ?? true,
@@ -353,7 +354,7 @@ export class TransportEventStoreChunked extends TransportEventStore {
     };
 
     // Store everything in a transaction with KV expiry as fallback
-    const atomic = this.kv.atomic();
+    const atomic = this.kvManager.getKV().atomic();
 
     // Store metadata with expiry
     atomic.set(
@@ -404,8 +405,9 @@ export class TransportEventStoreChunked extends TransportEventStore {
     streamId: string,
   ): Promise<JSONRPCMessage | null> {
     try {
+      const kv = this.kvManager.getKV();
       // Get metadata
-      const metadataResult = await this.kv.get<StoredEventMetadata>([
+      const metadataResult = await kv.get<StoredEventMetadata>([
         ...this.keyPrefix,
         'stream',
         streamId,
@@ -422,7 +424,7 @@ export class TransportEventStoreChunked extends TransportEventStore {
 
       // Get all chunks
       for (let i = 0; i < metadata.chunkCount; i++) {
-        const chunkResult = await this.kv.get<StoredEventChunk>([
+        const chunkResult = await kv.get<StoredEventChunk>([
           ...this.keyPrefix,
           'stream',
           streamId,
@@ -544,6 +546,7 @@ export class TransportEventStoreChunked extends TransportEventStore {
     lastEventId: string,
     { send }: { send: (eventId: string, message: JSONRPCMessage) => Promise<void> },
   ): Promise<string> {
+    const kv = this.kvManager.getKV();
     // If lastEventId is empty, this is a request to replay ALL events
     // We need to iterate through all streams and replay everything
     if (!lastEventId) {
@@ -554,7 +557,7 @@ export class TransportEventStoreChunked extends TransportEventStore {
 
         // Collect all event metadata from all streams
         const prefix = [...this.keyPrefix, 'stream'];
-        const iter = this.kv.list<StoredEventMetadata>({ prefix }, {
+        const iter = kv.list<StoredEventMetadata>({ prefix }, {
           consistency: 'strong',
           batchSize: 100,
         });
@@ -614,7 +617,7 @@ export class TransportEventStoreChunked extends TransportEventStore {
 
       // Collect all event metadata for the stream
       const prefix = [...this.keyPrefix, 'stream', streamId, 'metadata'];
-      const iter = this.kv.list<StoredEventMetadata>({ prefix }, {
+      const iter = kv.list<StoredEventMetadata>({ prefix }, {
         consistency: 'strong',
         batchSize: 100,
       });
@@ -678,11 +681,12 @@ export class TransportEventStoreChunked extends TransportEventStore {
    */
   override async cleanupOldEvents(streamId: string, keepCount: number = 1000): Promise<number> {
     try {
+      const kv = this.kvManager.getKV();
       const metadataPrefix = [...this.keyPrefix, 'stream', streamId, 'metadata'];
       const events: Array<{ eventId: string; timestamp: number; chunkCount: number }> = [];
 
       // Collect all event metadata including chunk counts
-      const iter = this.kv.list<StoredEventMetadata>({ prefix: metadataPrefix });
+      const iter = kv.list<StoredEventMetadata>({ prefix: metadataPrefix });
       for await (const entry of iter) {
         if (entry.value) {
           events.push({
@@ -710,7 +714,7 @@ export class TransportEventStoreChunked extends TransportEventStore {
         const batch = toDelete.slice(i, i + batchSize);
 
         try {
-          const atomic = this.kv.atomic();
+          const atomic = kv.atomic();
 
           for (const { eventId, chunkCount } of batch) {
             // Delete metadata
@@ -760,9 +764,10 @@ export class TransportEventStoreChunked extends TransportEventStore {
    */
   async cleanupOrphanedChunks(streamId: string): Promise<number> {
     try {
+      const kv = this.kvManager.getKV();
       // Get all metadata event IDs
       const validEventIds = new Set<string>();
-      const metadataIter = this.kv.list<StoredEventMetadata>({
+      const metadataIter = kv.list<StoredEventMetadata>({
         prefix: [...this.keyPrefix, 'stream', streamId, 'metadata'],
       });
 
@@ -774,7 +779,7 @@ export class TransportEventStoreChunked extends TransportEventStore {
 
       // Find chunk event IDs
       const chunkEventIds = new Set<string>();
-      const chunksIter = this.kv.list({
+      const chunksIter = kv.list({
         prefix: [...this.keyPrefix, 'stream', streamId, 'chunks'],
       });
 
@@ -792,12 +797,12 @@ export class TransportEventStoreChunked extends TransportEventStore {
       let deletedCount = 0;
       for (const eventId of orphanedEventIds) {
         // Delete all chunks for this orphaned event
-        const orphanIter = this.kv.list({
+        const orphanIter = kv.list({
           prefix: [...this.keyPrefix, 'stream', streamId, 'chunks', eventId],
         });
 
         for await (const entry of orphanIter) {
-          await this.kv.delete(entry.key);
+          await kv.delete(entry.key);
           deletedCount++;
         }
       }
@@ -844,7 +849,7 @@ export class TransportEventStoreChunked extends TransportEventStore {
         ? [...this.keyPrefix, 'stream', streamId, 'metadata']
         : [...this.keyPrefix, 'stream'];
 
-      const iter = this.kv.list<StoredEventMetadata>({ prefix }, { batchSize: 100 });
+      const iter = this.kvManager.getKV().list<StoredEventMetadata>({ prefix }, { batchSize: 100 });
 
       try {
         for await (const entry of iter) {

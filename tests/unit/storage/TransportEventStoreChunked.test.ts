@@ -11,6 +11,7 @@
 
 import { assert, assertEquals, assertExists, assertRejects } from '@std/assert';
 import { TransportEventStoreChunked } from '../../../src/lib/storage/TransportEventStoreChunked.ts';
+import { KVManager } from '../../../src/lib/storage/KVManager.ts';
 import type { Logger } from '../../../src/types/library.types.ts';
 import type { JSONRPCMessage } from 'mcp/types.js';
 
@@ -23,9 +24,17 @@ const mockLogger: Logger = {
 };
 
 // Helper to create test KV instance
-async function createTestKV(): Promise<Deno.Kv> {
-  return await Deno.openKv(':memory:');
+async function createTestKvManager(): Promise<KVManager> {
+  const kvManager = new KVManager({ kvPath: ':memory:' });
+  await kvManager.initialize();
+  return kvManager;
 }
+
+// Helper function to close kvManager
+async function cleanupTestDependencies(  kvManager: KVManager): Promise<void> {
+  await kvManager.close();
+}
+
 
 // Helper to create test config that avoids hanging promises
 function getTestConfig() {
@@ -80,14 +89,14 @@ function createLargeMessage(sizeKB: number): JSONRPCMessage {
 Deno.test({
   name: 'TransportEventStoreChunked - Initialize with Default Configuration',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStoreChunked(kv, undefined, mockLogger, getTestConfig());
+    const eventStore = new TransportEventStoreChunked(kvManager, undefined, mockLogger, getTestConfig());
 
     // Verify store is initialized
     assertExists(eventStore);
 
-    kv.close();
+    cleanupTestDependencies(kvManager);
   },
   sanitizeOps: false,
   sanitizeResources: false,
@@ -96,7 +105,7 @@ Deno.test({
 Deno.test({
   name: 'TransportEventStoreChunked - Initialize with Custom Configuration',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
     const config = {
       maxChunkSize: 50 * 1024, // 50KB
@@ -105,19 +114,19 @@ Deno.test({
       maxMessageSize: 5 * 1024 * 1024, // 5MB
     };
 
-    const eventStore = new TransportEventStoreChunked(kv, ['test_events'], mockLogger, config);
+    const eventStore = new TransportEventStoreChunked(kvManager, ['test_events'], mockLogger, config);
 
     assertExists(eventStore);
 
-    kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStoreChunked - Store Small Message (No Chunking)',
   async fn() {
-    const kv = await createTestKV();
-    const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger, getTestConfig());
+    const kvManager = await createTestKvManager();
+    const eventStore = new TransportEventStoreChunked(kvManager, ['test'], mockLogger, getTestConfig());
 
     const message: JSONRPCMessage = {
       jsonrpc: '2.0',
@@ -131,19 +140,19 @@ Deno.test({
     assertExists(eventId);
     assert(eventId.startsWith('test-stream-1|'));
 
-    kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStoreChunked - Store Large Message (100KB)',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
     let eventStore: TransportEventStoreChunked | undefined;
 
     try {
       // Disable compression for this test to avoid stream cleanup issues
-      eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger, {
+      eventStore = new TransportEventStoreChunked(kvManager, ['test'], mockLogger, {
         enableCompression: false,
       });
 
@@ -160,7 +169,7 @@ Deno.test({
       assertEquals(stats.totalEvents, 1);
       assert(stats.totalChunks > 1); // Should be chunked
     } finally {
-      kv.close();
+      cleanupTestDependencies(kvManager);
     }
   },
 });
@@ -168,11 +177,11 @@ Deno.test({
 Deno.test({
   name: 'TransportEventStoreChunked - Store Very Large Message (500KB)',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
     try {
       // Disable compression to avoid stream cleanup issues
-      const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger, {
+      const eventStore = new TransportEventStoreChunked(kvManager, ['test'], mockLogger, {
         enableCompression: false,
       });
 
@@ -189,7 +198,7 @@ Deno.test({
       assert(stats.totalChunks >= 8); // Should require multiple chunks
       assert(stats.averageChunksPerEvent >= 8);
     } finally {
-      kv.close();
+      cleanupTestDependencies(kvManager);
     }
   },
 });
@@ -197,8 +206,8 @@ Deno.test({
 Deno.test({
   name: 'TransportEventStoreChunked - Reject Oversized Message',
   async fn() {
-    const kv = await createTestKV();
-    const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger, {
+    const kvManager = await createTestKvManager();
+    const eventStore = new TransportEventStoreChunked(kvManager, ['test'], mockLogger, {
       maxMessageSize: 100 * 1024, // 100KB limit
     });
 
@@ -213,15 +222,15 @@ Deno.test({
       'exceeds maximum allowed size',
     );
 
-    kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStoreChunked - Message Replay After Storage',
   async fn() {
-    const kv = await createTestKV();
-    const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger);
+    const kvManager = await createTestKvManager();
+    const eventStore = new TransportEventStoreChunked(kvManager, ['test'], mockLogger);
 
     const streamId = 'test-stream-replay';
 
@@ -252,17 +261,17 @@ Deno.test({
     assertEquals((replayedMessages[0]?.message as any)?.params?.size, '75KB');
     assertEquals((replayedMessages[1]?.message as any)?.params?.size, '100KB');
 
-    kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStoreChunked - Compression Functionality',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
     try {
-      const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger, {
+      const eventStore = new TransportEventStoreChunked(kvManager, ['test'], mockLogger, {
         enableCompression: true,
         compressionThreshold: 1024, // 1KB
       });
@@ -299,7 +308,7 @@ Deno.test({
       assertEquals(replayedMessages.length, 1);
       assertEquals((replayedMessages[0] as any)?.params?.content, compressibleContent);
     } finally {
-      kv.close();
+      cleanupTestDependencies(kvManager);
     }
   },
 });
@@ -307,11 +316,11 @@ Deno.test({
 Deno.test({
   name: 'TransportEventStoreChunked - Global Statistics',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
     try {
       // Disable compression to avoid hanging promises
-      const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger, {
+      const eventStore = new TransportEventStoreChunked(kvManager, ['test'], mockLogger, {
         enableCompression: false,
       });
 
@@ -335,7 +344,7 @@ Deno.test({
       const stream2Stats = await eventStore.getChunkStatistics('stream-2');
       assertEquals(stream2Stats.totalEvents, 1);
     } finally {
-      kv.close();
+      cleanupTestDependencies(kvManager);
     }
   },
 });
@@ -343,8 +352,8 @@ Deno.test({
 Deno.test({
   name: 'TransportEventStoreChunked - Stream Management',
   async fn() {
-    const kv = await createTestKV();
-    const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger);
+    const kvManager = await createTestKvManager();
+    const eventStore = new TransportEventStoreChunked(kvManager, ['test'], mockLogger);
 
     const streams = ['stream-a', 'stream-b', 'stream-c'];
 
@@ -370,15 +379,15 @@ Deno.test({
       assertExists(metadata.lastEventId);
     }
 
-    kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStoreChunked - Cleanup Old Events',
   async fn() {
-    const kv = await createTestKV();
-    const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger);
+    const kvManager = await createTestKvManager();
+    const eventStore = new TransportEventStoreChunked(kvManager, ['test'], mockLogger);
 
     const streamId = 'test-stream-cleanup';
 
@@ -403,15 +412,15 @@ Deno.test({
     stats = await eventStore.getChunkStatistics(streamId);
     assertEquals(stats.totalEvents, 3);
 
-    kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStoreChunked - Transport Event Logging',
   async fn() {
-    const kv = await createTestKV();
-    const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger);
+    const kvManager = await createTestKvManager();
+    const eventStore = new TransportEventStoreChunked(kvManager, ['test'], mockLogger);
 
     // Log various transport events
     await eventStore.logEvent({
@@ -448,19 +457,21 @@ Deno.test({
     // Events should be logged without throwing errors
     // (Verification of log content would require more complex KV inspection)
 
-    kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStoreChunked - Error Handling for Corrupted Data',
   async fn() {
-    const kv = await createTestKV();
-    const eventStore = new TransportEventStoreChunked(kv, ['test'], mockLogger);
+    const kvManager = await createTestKvManager();
+    const eventStore = new TransportEventStoreChunked(kvManager, ['test'], mockLogger);
 
     // Store a valid message
     const message = createLargeMessage(50);
     const eventId = await eventStore.storeEvent('test-stream-corrupt', message);
+
+	const kv = kvManager.getKV();
 
     // Manually corrupt a chunk by writing invalid data
     const corruptChunkKey = ['test', 'stream', 'test-stream-corrupt', 'chunks', eventId, 0];
@@ -483,6 +494,6 @@ Deno.test({
     // Should not replay the corrupted message
     assertEquals(replayedMessages.length, 0);
 
-    kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });

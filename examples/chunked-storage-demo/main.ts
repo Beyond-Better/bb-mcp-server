@@ -230,7 +230,7 @@ async function main() {
 
   // Create chunked event store
   const eventStore = new TransportEventStoreChunked(
-    kvManager.getKV(),
+    kvManager,
     ['demo_events'],
     logger,
     {

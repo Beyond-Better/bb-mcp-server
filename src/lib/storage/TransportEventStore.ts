@@ -8,6 +8,7 @@
 
 import type { JSONRPCMessage } from 'mcp/types.js';
 import type { EventStore } from 'mcp/server/streamableHttp.js';
+import type { KVManager } from './KVManager.ts';
 import { toError } from '../utils/Error.ts';
 
 interface Logger {
@@ -35,16 +36,16 @@ export interface StreamMetadata {
  * Deno KV-backed EventStore implementation for persistent MCP session state
  */
 export class TransportEventStore implements EventStore {
-  protected kv: Deno.Kv;
+  protected kvManager: KVManager;
   protected keyPrefix: readonly string[];
   protected logger: Logger | undefined;
 
   constructor(
-    kv: Deno.Kv,
+    kvManager: KVManager,
     keyPrefix: readonly string[] = ['events'],
     logger?: Logger,
   ) {
-    this.kv = kv;
+    this.kvManager = kvManager;
     this.keyPrefix = keyPrefix;
     this.logger = logger;
   }
@@ -71,7 +72,10 @@ export class TransportEventStore implements EventStore {
         stored_at: new Date().toISOString(),
       };
 
-      await this.kv.set([...this.keyPrefix, 'transport_logs', event.type, eventId], logEntry);
+      await this.kvManager.getKV().set(
+        [...this.keyPrefix, 'transport_logs', event.type, eventId],
+        logEntry,
+      );
 
       // Also log to the logger if available
       if (this.logger) {
@@ -155,7 +159,7 @@ export class TransportEventStore implements EventStore {
 
     try {
       // Use a transaction to store event with expiry as fallback
-      const result = await this.kv.atomic()
+      const result = await this.kvManager.getKV().atomic()
         .set(
           [...this.keyPrefix, 'stream', streamId, eventId],
           storedEvent,
@@ -214,7 +218,7 @@ export class TransportEventStore implements EventStore {
 
       // Iterate through events for the stream, ordered by eventId
       const prefix = [...this.keyPrefix, 'stream', streamId];
-      const iter = this.kv.list<StoredEvent>({ prefix }, {
+      const iter = this.kvManager.getKV().list<StoredEvent>({ prefix }, {
         consistency: 'strong',
         batchSize: 100,
       });
@@ -271,7 +275,7 @@ export class TransportEventStore implements EventStore {
    */
   async getStreamMetadata(streamId: string): Promise<StreamMetadata | null> {
     try {
-      const result = await this.kv.get<StreamMetadata>([
+      const result = await this.kvManager.getKV().get<StreamMetadata>([
         ...this.keyPrefix,
         'stream_metadata',
         streamId,
@@ -292,7 +296,7 @@ export class TransportEventStore implements EventStore {
     try {
       const streams = new Set<string>();
       const prefix = [...this.keyPrefix, 'stream_metadata'];
-      const iter = this.kv.list<StreamMetadata>({ prefix });
+      const iter = this.kvManager.getKV().list<StreamMetadata>({ prefix });
 
       for await (const entry of iter) {
         if (entry.value) {
@@ -314,9 +318,10 @@ export class TransportEventStore implements EventStore {
     try {
       const prefix = [...this.keyPrefix, 'stream', streamId];
       const events: Array<{ key: Deno.KvKey; timestamp: number }> = [];
+      const kv = this.kvManager.getKV();
 
       // Collect all events with their timestamps
-      const iter = this.kv.list<StoredEvent>({ prefix });
+      const iter = kv.list<StoredEvent>({ prefix });
       for await (const entry of iter) {
         if (entry.value) {
           events.push({
@@ -342,7 +347,7 @@ export class TransportEventStore implements EventStore {
       for (let i = 0; i < toDelete.length; i += batchSize) {
         const batch = toDelete.slice(i, i + batchSize);
 
-        const atomic = this.kv.atomic();
+        const atomic = kv.atomic();
         for (const { key } of batch) {
           atomic.delete(key);
         }
@@ -378,9 +383,10 @@ export class TransportEventStore implements EventStore {
    */
   protected async updateStreamMetadata(streamId: string, lastEventId: string): Promise<void> {
     const metadataKey = [...this.keyPrefix, 'stream_metadata', streamId];
+    const kv = this.kvManager.getKV();
 
     try {
-      const existing = await this.kv.get<StreamMetadata>(metadataKey);
+      const existing = await kv.get<StreamMetadata>(metadataKey);
       const metadata: StreamMetadata = existing.value || {
         streamId,
         createdAt: Date.now(),
@@ -391,7 +397,7 @@ export class TransportEventStore implements EventStore {
       metadata.lastEventId = lastEventId;
       metadata.eventCount += 1;
 
-      await this.kv.set(metadataKey, metadata);
+      await kv.set(metadataKey, metadata);
     } catch (error) {
       // Non-critical error, just log it
       this.logger?.debug('TransportEventStore: Failed to update stream metadata', {

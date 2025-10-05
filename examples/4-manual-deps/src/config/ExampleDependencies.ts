@@ -122,7 +122,7 @@ export async function createManualDependencies(
 
   const eventStore = useChunkedStorage
     ? new TransportEventStoreChunked(
-      kvManager.getKV(),
+      kvManager,
       ['events'],
       logger,
       {
@@ -133,7 +133,7 @@ export async function createManualDependencies(
       },
     )
     : new TransportEventStore(
-      kvManager.getKV(),
+      kvManager,
       ['events'],
       logger,
     );

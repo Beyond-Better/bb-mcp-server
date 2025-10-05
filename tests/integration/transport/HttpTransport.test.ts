@@ -70,7 +70,7 @@ async function createMockTransportDependencies(): Promise<
 
   // Disable auto-cleanup to prevent interval leak
   const sessionStore = new SessionStore(kvManager, { enableAutoCleanup: false }, logger);
-  const eventStore = new TransportEventStore(kv, ['test_events'], logger);
+  const eventStore = new TransportEventStore(kvManager, ['test_events'], logger);
 
   const cleanup = async () => {
     // Stop any cleanup intervals
