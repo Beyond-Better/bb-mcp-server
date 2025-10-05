@@ -10,8 +10,6 @@
 
 // 🎯 Library imports - OAuth infrastructure
 import {
-  KVManager,
-  Logger,
   OAuthConsumer,
   type OAuthConsumerConfig,
   type OAuthConsumerDependencies,
@@ -118,6 +116,10 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
           client_secret: this.config.clientSecret,
           redirect_uri: this.config.redirectUri,
           code_verifier: codeVerifier || '',
+
+          // mock values to get passed back
+          access_token: `demo-access-token-${Date.now()}`,
+          refresh_token: `demo-access-token-${Date.now()}`,
         }).toString(),
       });
 
@@ -125,8 +127,8 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
 
       // 🎯 Transform httpbin response to OAuth token format
       const tokens: OAuthCredentials & Record<string, any> = {
-        accessToken: `demo-access-token-${Date.now()}`,
-        refreshToken: `demo-refresh-token-${Date.now()}`,
+        accessToken: httpbinResponse.args.access_token,
+        refreshToken: httpbinResponse.args.refresh_token,
         tokenType: 'Bearer',
         expiresAt: Date.now() + 3600000, // 1 hour from now (timestamp)
         scopes: this.config.scopes,

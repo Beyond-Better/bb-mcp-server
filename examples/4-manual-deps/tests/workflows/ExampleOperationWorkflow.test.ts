@@ -33,7 +33,6 @@ import { ExampleOperationWorkflow } from '../../src/workflows/ExampleOperationWo
 // Import OAuth-aware test utilities
 import {
   createAuthenticatedWorkflowContext,
-  createMockApiClient,
   createMockAuthLogger,
   createMockOAuthConsumer,
   MockApiClient,
@@ -53,6 +52,7 @@ class MockOperationApiClient extends MockApiClient {
 
   // Customer operations
   override async createCustomer(
+    accessToken: string,
     customerData: any,
     userId: string,
   ): Promise<any> {
@@ -72,7 +72,7 @@ class MockOperationApiClient extends MockApiClient {
     };
   }
 
-  override async deleteCustomer(customerId: string): Promise<void> {
+  override async deleteCustomer(accessToken: string, customerId: string): Promise<void> {
     this.logCall('deleteCustomer', { customerId }, 'system');
 
     if (this.getFailureStatus('deleteCustomer')) {
@@ -83,13 +83,14 @@ class MockOperationApiClient extends MockApiClient {
   }
 
   // Order operations
-  override async cancelOrder(orderId: string): Promise<void> {
+  override async cancelOrder(accessToken: string, orderId: string): Promise<void> {
     this.logCall('cancelOrder', { orderId }, 'system');
     this.rollbackLog.push({ action: 'cancel_order', data: { orderId } });
   }
 
   // Inventory operations
   override async getInventoryLevels(
+    accessToken: string,
     productIds: string[],
     userId: string,
   ): Promise<any> {
@@ -103,6 +104,7 @@ class MockOperationApiClient extends MockApiClient {
   }
 
   override async bulkUpdateInventory(
+    accessToken: string,
     updateData: any,
     userId: string,
   ): Promise<any> {
@@ -121,6 +123,7 @@ class MockOperationApiClient extends MockApiClient {
   }
 
   override async restoreInventoryLevels(
+    accessToken: string,
     inventory: Record<string, number>,
   ): Promise<void> {
     this.logCall('restoreInventoryLevels', { inventory }, 'system');
@@ -128,7 +131,7 @@ class MockOperationApiClient extends MockApiClient {
   }
 
   // Refund operations
-  override async processRefund(refundData: any, userId: string): Promise<any> {
+  override async processRefund(accessToken: string, refundData: any, userId: string): Promise<any> {
     this.logCall('processRefund', refundData, userId);
 
     if (this.getFailureStatus('processRefund')) {
@@ -147,6 +150,7 @@ class MockOperationApiClient extends MockApiClient {
 
   // Data migration operations
   override async validateDataMigration(
+    accessToken: string,
     migrationData: any,
     userId: string,
   ): Promise<any> {
@@ -162,6 +166,7 @@ class MockOperationApiClient extends MockApiClient {
   }
 
   override async executeDataMigration(
+    accessToken: string,
     migrationData: any,
     userId: string,
   ): Promise<any> {
@@ -246,6 +251,7 @@ describe('ExampleOperationWorkflow - Multi-Step OAuth Operations', () => {
     workflow = new ExampleOperationWorkflow({
       apiClient: mockApiClient as any,
       logger: mockLogger as any,
+      oauthConsumer: mockOAuth as any,
     });
 
     assertExists(

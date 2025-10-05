@@ -122,7 +122,7 @@ export class ExampleApiClient extends BaseApiClient {
       if (response.ok) {
         const post = await response.json();
         return {
-          healthy: true,
+          healthy: !!post,
           version: 'jsonplaceholder-v1',
           uptime: Date.now(), // Mock uptime
           services: {
@@ -197,7 +197,7 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Query customers with filtering and pagination (using JSONPlaceholder /users)
    */
-  async queryCustomers(params: {
+  async queryCustomers(_accessToken: string | null, params: {
     search?: string;
     filters?: {
       status?: string;
@@ -245,7 +245,8 @@ export class ExampleApiClient extends BaseApiClient {
         : customers;
 
       // Apply pagination
-      const startIndex = ((params.pagination?.page || 1) - 1) * (params.pagination?.limit || 10);
+      const startIndex = ((params.pagination?.page || 1) - 1) *
+        (params.pagination?.limit || 10);
       const endIndex = startIndex + (params.pagination?.limit || 10);
       const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex);
 
@@ -255,7 +256,9 @@ export class ExampleApiClient extends BaseApiClient {
         pagination: {
           page: params.pagination?.page || 1,
           limit: params.pagination?.limit || 10,
-          totalPages: Math.ceil(filteredCustomers.length / (params.pagination?.limit || 10)),
+          totalPages: Math.ceil(
+            filteredCustomers.length / (params.pagination?.limit || 10),
+          ),
         },
       };
     } catch (error) {
@@ -271,6 +274,7 @@ export class ExampleApiClient extends BaseApiClient {
    * Create a new customer (using JSONPlaceholder /users)
    */
   async createCustomer(
+    _accessToken: string | null,
     customerData: Omit<Customer, 'id' | 'status' | 'createdAt' | 'updatedAt'>,
     userId: string,
   ): Promise<Customer> {
@@ -325,7 +329,10 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Delete a customer (for rollback operations)
    */
-  async deleteCustomer(customerId: string): Promise<void> {
+  async deleteCustomer(
+    _accessToken: string | null,
+    customerId: string,
+  ): Promise<void> {
     await this.makeRequest(
       'DELETE',
       `/customers/${customerId}`,
@@ -340,7 +347,7 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Query orders with filtering and pagination (using JSONPlaceholder /posts)
    */
-  async queryOrders(params: {
+  async queryOrders(_accessToken: string | null, params: {
     search?: string;
     filters?: {
       status?: string;
@@ -376,14 +383,21 @@ export class ExampleApiClient extends BaseApiClient {
           },
         ],
         totalAmount: Math.floor(Math.random() * 500) + 50,
-        status: ['pending', 'processing', 'shipped', 'delivered'][post.id % 4] as Order['status'],
+        status: [
+          'pending',
+          'processing',
+          'shipped',
+          'delivered',
+        ][post.id % 4] as Order['status'],
         shippingMethod: [
           'standard',
           'expedited',
           'overnight',
         ][post.id % 3] as Order['shippingMethod'],
         trackingNumber: `TRACK-${post.id.toString().padStart(6, '0')}`,
-        estimatedDelivery: new Date(Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000)
+        estimatedDelivery: new Date(
+          Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000,
+        )
           .toISOString(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -398,7 +412,8 @@ export class ExampleApiClient extends BaseApiClient {
         : orders;
 
       // Apply pagination
-      const startIndex = ((params.pagination?.page || 1) - 1) * (params.pagination?.limit || 10);
+      const startIndex = ((params.pagination?.page || 1) - 1) *
+        (params.pagination?.limit || 10);
       const endIndex = startIndex + (params.pagination?.limit || 10);
       const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
 
@@ -408,7 +423,9 @@ export class ExampleApiClient extends BaseApiClient {
         pagination: {
           page: params.pagination?.page || 1,
           limit: params.pagination?.limit || 10,
-          totalPages: Math.ceil(filteredOrders.length / (params.pagination?.limit || 10)),
+          totalPages: Math.ceil(
+            filteredOrders.length / (params.pagination?.limit || 10),
+          ),
         },
       };
     } catch (error) {
@@ -423,19 +440,16 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Create a new order
    */
-  async createOrder(
-    orderData: {
-      customerId: string;
-      items: Array<{
-        productId: string;
-        quantity: number;
-        unitPrice: number;
-      }>;
-      shippingMethod?: 'standard' | 'expedited' | 'overnight';
-      notes?: string;
-    },
-    userId: string,
-  ): Promise<Order> {
+  async createOrder(_accessToken: string | null, orderData: {
+    customerId: string;
+    items: Array<{
+      productId: string;
+      quantity: number;
+      unitPrice: number;
+    }>;
+    shippingMethod?: 'standard' | 'expedited' | 'overnight';
+    notes?: string;
+  }, userId: string): Promise<Order> {
     const response = await this.makeRequest<Order>(
       'POST',
       '/orders',
@@ -455,7 +469,7 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Get order status and details
    */
-  async getOrderStatus(params: {
+  async getOrderStatus(_accessToken: string | null, params: {
     orderId: string;
     includeHistory?: boolean;
     userId: string;
@@ -475,7 +489,10 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Cancel an order (for rollback operations)
    */
-  async cancelOrder(orderId: string): Promise<void> {
+  async cancelOrder(
+    _accessToken: string | null,
+    orderId: string,
+  ): Promise<void> {
     await this.makeRequest(
       'POST',
       `/orders/${orderId}/cancel`,
@@ -490,7 +507,7 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Query products
    */
-  async queryProducts(params: {
+  async queryProducts(_accessToken: string | null, params: {
     search?: string;
     filters?: {
       category?: string;
@@ -506,11 +523,21 @@ export class ExampleApiClient extends BaseApiClient {
     const queryParams = new URLSearchParams();
 
     if (params.search) queryParams.set('search', params.search);
-    if (params.filters?.category) queryParams.set('category', params.filters.category);
-    if (params.pagination?.page) queryParams.set('page', params.pagination.page.toString());
-    if (params.pagination?.limit) queryParams.set('limit', params.pagination.limit.toString());
-    if (params.pagination?.sortBy) queryParams.set('sortBy', params.pagination.sortBy);
-    if (params.pagination?.sortOrder) queryParams.set('sortOrder', params.pagination.sortOrder);
+    if (params.filters?.category) {
+      queryParams.set('category', params.filters.category);
+    }
+    if (params.pagination?.page) {
+      queryParams.set('page', params.pagination.page.toString());
+    }
+    if (params.pagination?.limit) {
+      queryParams.set('limit', params.pagination.limit.toString());
+    }
+    if (params.pagination?.sortBy) {
+      queryParams.set('sortBy', params.pagination.sortBy);
+    }
+    if (params.pagination?.sortOrder) {
+      queryParams.set('sortOrder', params.pagination.sortOrder);
+    }
 
     const response = await this.makeRequest<
       { items: Product[]; totalCount: number; pagination: any }
@@ -526,7 +553,11 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Get inventory levels for products
    */
-  async getInventoryLevels(productIds: string[], userId: string): Promise<Record<string, number>> {
+  async getInventoryLevels(
+    _accessToken: string | null,
+    productIds: string[],
+    userId: string,
+  ): Promise<Record<string, number>> {
     const response = await this.makeRequest<Record<string, number>>(
       'POST',
       '/inventory/levels',
@@ -542,17 +573,14 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Bulk update inventory levels
    */
-  async bulkUpdateInventory(
-    updateData: {
-      updates: Array<{
-        productId: string;
-        quantity: number;
-        operation: 'set' | 'add' | 'subtract';
-      }>;
-      reason: string;
-    },
-    userId: string,
-  ): Promise<any> {
+  async bulkUpdateInventory(_accessToken: string | null, updateData: {
+    updates: Array<{
+      productId: string;
+      quantity: number;
+      operation: 'set' | 'add' | 'subtract';
+    }>;
+    reason: string;
+  }, userId: string): Promise<any> {
     const response = await this.makeRequest(
       'POST',
       '/inventory/bulk-update',
@@ -568,7 +596,10 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Restore inventory levels (for rollback operations)
    */
-  async restoreInventoryLevels(inventory: Record<string, number>): Promise<void> {
+  async restoreInventoryLevels(
+    _accessToken: string | null,
+    inventory: Record<string, number>,
+  ): Promise<void> {
     await this.makeRequest(
       'POST',
       '/inventory/restore',
@@ -586,7 +617,7 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Query analytics data
    */
-  async queryAnalytics(params: {
+  async queryAnalytics(_accessToken: string | null, params: {
     filters?: {
       dateRange?: {
         startDate: string;
@@ -620,19 +651,16 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Process a refund
    */
-  async processRefund(
-    refundData: {
-      orderId: string;
-      refundAmount?: number;
-      refundItems?: Array<{
-        orderItemId: string;
-        quantity: number;
-        reason: string;
-      }>;
+  async processRefund(_accessToken: string | null, refundData: {
+    orderId: string;
+    refundAmount?: number;
+    refundItems?: Array<{
+      orderItemId: string;
+      quantity: number;
       reason: string;
-    },
-    userId: string,
-  ): Promise<any> {
+    }>;
+    reason: string;
+  }, userId: string): Promise<any> {
     const response = await this.makeRequest(
       'POST',
       '/refunds',
@@ -652,15 +680,12 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Validate data migration
    */
-  async validateDataMigration(
-    migrationData: {
-      sourceSystem: string;
-      targetSystem: string;
-      dataTypes: string[];
-      batchSize: number;
-    },
-    userId: string,
-  ): Promise<any> {
+  async validateDataMigration(_accessToken: string | null, migrationData: {
+    sourceSystem: string;
+    targetSystem: string;
+    dataTypes: string[];
+    batchSize: number;
+  }, userId: string): Promise<any> {
     const response = await this.makeRequest(
       'POST',
       '/migration/validate',
@@ -676,15 +701,12 @@ export class ExampleApiClient extends BaseApiClient {
   /**
    * Execute data migration
    */
-  async executeDataMigration(
-    migrationData: {
-      sourceSystem: string;
-      targetSystem: string;
-      dataTypes: string[];
-      batchSize: number;
-    },
-    userId: string,
-  ): Promise<any> {
+  async executeDataMigration(_accessToken: string | null, migrationData: {
+    sourceSystem: string;
+    targetSystem: string;
+    dataTypes: string[];
+    batchSize: number;
+  }, userId: string): Promise<any> {
     const response = await this.makeRequest(
       'POST',
       '/migration/execute',
@@ -836,7 +858,10 @@ export class ExampleApiClient extends BaseApiClient {
 
         // Exponential backoff delay
         await new Promise((resolve) =>
-          setTimeout(resolve, this.config.retryDelayMs * Math.pow(2, attempt - 1))
+          setTimeout(
+            resolve,
+            this.config.retryDelayMs * Math.pow(2, attempt - 1),
+          )
         );
 
         return this.makeHttpRequestWithRetry(url, options, attempt + 1);

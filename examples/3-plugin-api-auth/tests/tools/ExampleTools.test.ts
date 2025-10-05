@@ -42,7 +42,6 @@ import {
   assertApiClientCall,
   assertAuthenticatedCall,
   assertAuthenticationError,
-  createAuthenticatedToolContext,
   createMockApiClient,
   createMockAuthLogger,
   createMockOAuthConsumer,

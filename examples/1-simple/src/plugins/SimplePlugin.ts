@@ -34,7 +34,7 @@
  */
 
 import { z } from 'zod';
-import type { AppPlugin, ToolRegistration } from '@beyondbetter/bb-mcp-server';
+import type { AppPlugin } from '@beyondbetter/bb-mcp-server';
 
 /**
  * Simple Plugin Implementation

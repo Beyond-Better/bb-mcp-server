@@ -60,16 +60,48 @@ The examples directory contains everything you need to:
 If you prefer to start from scratch:
 
 ```typescript
-import { BeyondMcpServer } from 'jsr:@beyondbetter/bb-mcp-server';
+import { AppServer } from 'jsr:@beyondbetter/bb-mcp-server';
 
 // Create and start server with minimal configuration
-const server = await BeyondMcpServer.create({
-  transport: { type: 'stdio' },
-  plugins: { discoveryPaths: ['./src/plugins'] },
+const appServer = await AppServer.create({
+  serverConfig: {
+    name: 'my-mcp-server',
+    version: '1.0.0',
+    title: 'My MCP Server',
+    description: 'My custom MCP server implementation',
+  },
+  // Optional: plugin configuration
+  pluginConfig: {
+    discoveryPaths: ['./src/plugins'],
+    autoLoad: true,
+  },
 });
 
-await server.start();
+await appServer.start();
 ```
+
+### Running Examples Directly from JSR
+
+You can run any example directly without cloning the repository:
+
+```bash
+# Run the simple example
+deno run --allow-all jsr:@beyondbetter/bb-mcp-server@0.1.4/examples/1-simple
+
+# Run the plugin-workflows example
+deno run --allow-all jsr:@beyondbetter/bb-mcp-server@0.1.4/examples/2-plugin-workflows
+
+# Run the OAuth example
+deno run --allow-all jsr:@beyondbetter/bb-mcp-server@0.1.4/examples/3-plugin-api-auth
+
+# Run the manual dependencies example
+deno run --allow-all jsr:@beyondbetter/bb-mcp-server@0.1.4/examples/4-manual-deps
+
+# Run the chunked storage demo
+deno run --allow-all jsr:@beyondbetter/bb-mcp-server@0.1.4/examples/chunked-storage-demo
+```
+
+**Note**: Examples may require environment configuration (`.env` file) for full functionality.
 
 ## ✨ Key Features
 

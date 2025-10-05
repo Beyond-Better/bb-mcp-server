@@ -103,11 +103,13 @@ export default function createPlugin(dependencies: AppServerDependencies): AppPl
   const queryWorkflowDeps: ExampleQueryWorkflowDependencies = {
     apiClient: thirdpartyApiClient,
     logger,
+    oauthConsumer,
   };
 
   const operationWorkflowDeps: ExampleOperationWorkflowDependencies = {
     apiClient: thirdpartyApiClient,
     logger,
+    oauthConsumer,
   };
 
   plugin.workflows = [
