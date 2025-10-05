@@ -15,10 +15,12 @@ import { z } from 'zod'; // Library provides Zod integration
 
 // 🎯 Consumer-specific imports
 import { ExampleApiClient } from '../api/ExampleApiClient.ts';
+import { ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts';
 
 export interface ExampleQueryWorkflowDependencies {
   apiClient: ExampleApiClient;
   logger: Logger;
+  oauthConsumer: ExampleOAuthConsumer;
 }
 
 /**
@@ -89,12 +91,14 @@ export class ExampleQueryWorkflow extends WorkflowBase {
   });
 
   private apiClient: ExampleApiClient;
+  private oauthConsumer: ExampleOAuthConsumer;
   private logger: Logger;
 
   constructor(dependencies: ExampleQueryWorkflowDependencies) {
     super(); // 🎯 Initialize library base class
 
     this.apiClient = dependencies.apiClient;
+    this.oauthConsumer = dependencies.oauthConsumer;
     this.logger = dependencies.logger;
   }
 
@@ -343,6 +347,9 @@ export class ExampleQueryWorkflow extends WorkflowBase {
       userId: params.userId,
     };
 
+    // 🎯 Get OAuth access token
+    const accessToken = await this.oauthConsumer.getAccessToken(params.userId);
+
     // Only set filter properties if they have values
     if (params.filters?.status) {
       queryParams.filters.status = params.filters.status;
@@ -354,7 +361,7 @@ export class ExampleQueryWorkflow extends WorkflowBase {
       queryParams.filters.customerType = params.filters.category;
     }
 
-    return await this.apiClient.queryCustomers(queryParams);
+    return await this.apiClient.queryCustomers(accessToken, queryParams);
   }
 
   /**
@@ -375,6 +382,9 @@ export class ExampleQueryWorkflow extends WorkflowBase {
       userId: params.userId,
     };
 
+    // 🎯 Get OAuth access token
+    const accessToken = await this.oauthConsumer.getAccessToken(params.userId);
+
     // Only set filter properties if they have values
     if (params.filters?.status) {
       queryParams.filters.status = params.filters.status;
@@ -388,7 +398,7 @@ export class ExampleQueryWorkflow extends WorkflowBase {
       };
     }
 
-    return await this.apiClient.queryOrders(queryParams);
+    return await this.apiClient.queryOrders(accessToken, queryParams);
   }
 
   /**
@@ -414,7 +424,10 @@ export class ExampleQueryWorkflow extends WorkflowBase {
       queryParams.filters.category = params.filters.category;
     }
 
-    return await this.apiClient.queryProducts(queryParams);
+    // 🎯 Get OAuth access token
+    const accessToken = await this.oauthConsumer.getAccessToken(params.userId);
+
+    return await this.apiClient.queryProducts(accessToken, queryParams);
   }
 
   /**
@@ -423,7 +436,10 @@ export class ExampleQueryWorkflow extends WorkflowBase {
   private async queryAnalytics(
     params: z.infer<typeof this.parameterSchema>,
   ): Promise<any> {
-    return await this.apiClient.queryAnalytics({
+    // 🎯 Get OAuth access token
+    const accessToken = await this.oauthConsumer.getAccessToken(params.userId);
+
+    return await this.apiClient.queryAnalytics(accessToken, {
       filters: {
         dateRange: params.filters?.dateRange
           ? {

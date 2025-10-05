@@ -406,7 +406,7 @@ export class MockApiClient {
     });
   }
 
-  async queryCustomers(params: any): Promise<any> {
+  async queryCustomers(accessToken: string, params: any): Promise<any> {
     this.logCall('queryCustomers', params, params.userId);
 
     // Check OAuth authentication first
@@ -458,7 +458,7 @@ export class MockApiClient {
     return response;
   }
 
-  async createOrder(orderData: any, userId: string): Promise<any> {
+  async createOrder(accessToken: string, orderData: any, userId: string): Promise<any> {
     this.logCall('createOrder', orderData, userId);
 
     // Check OAuth authentication first
@@ -479,7 +479,7 @@ export class MockApiClient {
     return response;
   }
 
-  async getOrderStatus(params: any): Promise<any> {
+  async getOrderStatus(accessToken: string, params: any): Promise<any> {
     this.logCall('getOrderStatus', params, params.userId);
 
     // Check OAuth authentication first
@@ -534,7 +534,7 @@ export class MockApiClient {
   }
 
   // Workflow-specific API methods
-  async queryOrders(params: any): Promise<any> {
+  async queryOrders(accessToken: string, params: any): Promise<any> {
     this.logCall('queryOrders', params, params.userId);
 
     // Check OAuth authentication first
@@ -570,7 +570,7 @@ export class MockApiClient {
     };
   }
 
-  async queryProducts(params: any): Promise<any> {
+  async queryProducts(accessToken: string, params: any): Promise<any> {
     this.logCall('queryProducts', params, params.userId);
 
     return {
@@ -595,7 +595,7 @@ export class MockApiClient {
     };
   }
 
-  async queryAnalytics(params: any): Promise<any> {
+  async queryAnalytics(accessToken: string, params: any): Promise<any> {
     this.logCall('queryAnalytics', params, params.userId);
 
     return {
@@ -640,7 +640,7 @@ export class MockApiClient {
   }
 
   // Additional methods to match ExampleApiClient interface
-  async createCustomer(customerData: any, userId: string): Promise<any> {
+  async createCustomer(accessToken: string, customerData: any, userId: string): Promise<any> {
     this.logCall('createCustomer', customerData, userId);
 
     // Check OAuth authentication first
@@ -655,17 +655,18 @@ export class MockApiClient {
     };
   }
 
-  async deleteCustomer(customerId: string): Promise<void> {
+  async deleteCustomer(accessToken: string, customerId: string): Promise<void> {
     this.logCall('deleteCustomer', { customerId }, 'system');
     // Mock deletion - no return value needed
   }
 
-  async cancelOrder(orderId: string): Promise<void> {
+  async cancelOrder(accessToken: string, orderId: string): Promise<void> {
     this.logCall('cancelOrder', { orderId }, 'system');
     // Mock cancellation - no return value needed
   }
 
   async getInventoryLevels(
+    accessToken: string,
     productIds: string[],
     userId: string,
   ): Promise<Record<string, number>> {
@@ -677,7 +678,7 @@ export class MockApiClient {
     return result;
   }
 
-  async bulkUpdateInventory(updateData: any, userId: string): Promise<any> {
+  async bulkUpdateInventory(accessToken: string, updateData: any, userId: string): Promise<any> {
     this.logCall('bulkUpdateInventory', updateData, userId);
     return {
       updated: updateData.updates?.length || 0,
@@ -690,13 +691,14 @@ export class MockApiClient {
   }
 
   async restoreInventoryLevels(
+    accessToken: string,
     inventory: Record<string, number>,
   ): Promise<void> {
     this.logCall('restoreInventoryLevels', { inventory }, 'system');
     // Mock restore - no return value needed
   }
 
-  async processRefund(refundData: any, userId: string): Promise<any> {
+  async processRefund(accessToken: string, refundData: any, userId: string): Promise<any> {
     this.logCall('processRefund', refundData, userId);
     return {
       refundId: 'refund-' + Date.now(),
@@ -707,6 +709,7 @@ export class MockApiClient {
   }
 
   async validateDataMigration(
+    accessToken: string,
     migrationData: any,
     userId: string,
   ): Promise<any> {
@@ -719,7 +722,11 @@ export class MockApiClient {
     };
   }
 
-  async executeDataMigration(migrationData: any, userId: string): Promise<any> {
+  async executeDataMigration(
+    accessToken: string,
+    migrationData: any,
+    userId: string,
+  ): Promise<any> {
     this.logCall('executeDataMigration', migrationData, userId);
     return {
       migrationId: 'migration-' + Date.now(),
@@ -769,34 +776,34 @@ export class MockApiClient {
     return attempt < this.config.retryAttempts;
   }
 
-  // Private methods to match ExampleApiClient interface
-  private async makeRequest<T = any>(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
-    endpoint: string,
-    options: any = {},
-  ): Promise<any> {
-    this.logCall(
-      'makeRequest',
-      { method, endpoint, options },
-      options.userId || 'system',
-    );
-
-    // Mock request - return success response
-    return this.createApiResponse({ mockData: true } as T);
-  }
-
-  private async makeHttpRequestWithRetry(
-    url: string,
-    options: RequestInit,
-    attempt = 1,
-  ): Promise<Response> {
-    // Mock HTTP request - return mock response
-    return new Response(JSON.stringify({ mock: true }), {
-      status: 200,
-      statusText: 'OK',
-      headers: { 'content-type': 'application/json' },
-    });
-  }
+  //   // Private methods to match ExampleApiClient interface
+  //   private async makeRequest<T = any>(
+  //     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  //     endpoint: string,
+  //     options: any = {},
+  //   ): Promise<any> {
+  //     this.logCall(
+  //       'makeRequest',
+  //       { method, endpoint, options },
+  //       options.userId || 'system',
+  //     );
+  //
+  //     // Mock request - return success response
+  //     return this.createApiResponse({ mockData: true } as T);
+  //   }
+  //
+  //   private async makeHttpRequestWithRetry(
+  //     url: string,
+  //     options: RequestInit,
+  //     attempt = 1,
+  //   ): Promise<Response> {
+  //     // Mock HTTP request - return mock response
+  //     return new Response(JSON.stringify({ mock: true }), {
+  //       status: 200,
+  //       statusText: 'OK',
+  //       headers: { 'content-type': 'application/json' },
+  //     });
+  //   }
 
   protected logCall(method: string, params: any, userId: string): void {
     this.callLog.push({
@@ -830,9 +837,9 @@ export class MockAuthLogger {
   };
 
   // Properties to match AuditLogger interface
-  private logger: any = null;
-  private auditFile: any = null;
-  private buffer: string[] = [];
+  //private logger: any = null;
+  //private auditFile: any = null;
+  // private buffer: string[] = [];
   private flushTimer?: number;
 
   info(message: string, data?: any): void {
@@ -931,72 +938,74 @@ export class MockAuthLogger {
   }
 
   // Private methods to match Logger interface
-  private shouldLog(level: string): boolean {
-    return true; // Always log in tests
-  }
+  // private shouldLog(level: string): boolean {
+  //   return true; // Always log in tests
+  // }
+  //
+  // private writeLog(level: string, message: string, data?: unknown): void {
+  //   // Mock implementation - just call the appropriate public method
+  //   switch (level) {
+  //     case "debug":
+  //       this.debug(message, data);
+  //       break;
+  //     case "info":
+  //       this.info(message, data);
+  //       break;
+  //     case "warn":
+  //       this.warn(message, data);
+  //       break;
+  //     case "error":
+  //       this.error(message, data instanceof Error ? data : undefined, data);
+  //       break;
+  //   }
+  // }
 
-  private writeLog(level: string, message: string, data?: unknown): void {
-    // Mock implementation - just call the appropriate public method
-    switch (level) {
-      case 'debug':
-        this.debug(message, data);
-        break;
-      case 'info':
-        this.info(message, data);
-        break;
-      case 'warn':
-        this.warn(message, data);
-        break;
-      case 'error':
-        this.error(message, data instanceof Error ? data : undefined, data);
-        break;
-    }
-  }
-
-  private formatLogEntry(
-    level: string,
-    message: string,
-    data?: unknown,
-  ): string {
-    return `${level.toUpperCase()}: ${message}${data ? ' ' + JSON.stringify(data) : ''}`;
-  }
-
-  private formatJsonEntry(
-    level: string,
-    message: string,
-    data?: unknown,
-  ): string {
-    return JSON.stringify({ level, message, data });
-  }
-
-  private formatTextEntry(
-    level: string,
-    message: string,
-    data?: unknown,
-  ): string {
-    return this.formatLogEntry(level, message, data);
-  }
-
-  private colorMessage(message: string, level: string): string {
-    return message; // No coloring in tests
-  }
-
-  private getLogLevelFromEnv(): string {
-    return 'debug';
-  }
+  // private formatLogEntry(
+  //   level: string,
+  //   message: string,
+  //   data?: unknown,
+  // ): string {
+  //   return `${level.toUpperCase()}: ${message}${
+  //     data ? " " + JSON.stringify(data) : ""
+  //   }`;
+  // }
+  //
+  // private formatJsonEntry(
+  //   level: string,
+  //   message: string,
+  //   data?: unknown,
+  // ): string {
+  //   return JSON.stringify({ level, message, data });
+  // }
+  //
+  // private formatTextEntry(
+  //   level: string,
+  //   message: string,
+  //   data?: unknown,
+  // ): string {
+  //   return this.formatLogEntry(level, message, data);
+  // }
+  //
+  // private colorMessage(message: string, level: string): string {
+  //   return message; // No coloring in tests
+  // }
+  //
+  // private getLogLevelFromEnv(): string {
+  //   return "debug";
+  // }
 
   // Additional properties to match AuditLogger interface
-  private initialized = true;
+  // private initialized = true;
 
-  private async writeLogEntry(entry: Record<string, unknown>): Promise<void> {
-    // Mock implementation
-    this.buffer.push(JSON.stringify(entry));
-  }
-
-  private async flushBuffer(): Promise<void> {
-    // Mock implementation - clear buffer
-    this.buffer = [];
-  }
+  // private async writeLogEntry(entry: Record<string, unknown>): Promise<void> {
+  //   // Mock implementation
+  //   this.buffer.push(JSON.stringify(entry));
+  // }
+  //
+  // private async flushBuffer(): Promise<void> {
+  //   // Mock implementation - clear buffer
+  //   this.buffer = [];
+  // }
 
   // Test helper methods
   clear(): void {

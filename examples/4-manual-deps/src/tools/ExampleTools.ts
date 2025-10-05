@@ -14,11 +14,9 @@ import {
   type CallToolResult,
   Logger,
   ToolBase,
-  type ToolDefinition,
   ToolHandlerMode,
   type ToolRegistration,
   type ToolRegistry,
-  WorkflowRegistry,
 } from '@beyondbetter/bb-mcp-server';
 import { z } from 'zod'; // Library provides Zod integration
 
@@ -51,7 +49,7 @@ export class ExampleTools extends ToolBase {
   private apiClient: ExampleApiClient;
   private oauthConsumer: ExampleOAuthConsumer;
   private logger: Logger;
-  private auditLogger?: AuditLogger;
+  private auditLogger: AuditLogger;
 
   constructor(dependencies: ExampleToolsDependencies) {
     super(); // Call ToolBase constructor
@@ -330,7 +328,7 @@ export class ExampleTools extends ToolBase {
       const accessToken = await this.oauthConsumer.getAccessToken(userId);
 
       // 🎯 Make authenticated API call
-      const customers = await this.apiClient.queryCustomers({
+      const customers = await this.apiClient.queryCustomers(accessToken, {
         search,
         filters,
         pagination: {
@@ -340,6 +338,15 @@ export class ExampleTools extends ToolBase {
           sortOrder: 'asc',
         },
         userId,
+      });
+
+      await this.auditLogger.logSystemEvent({
+        event: 'query_customers_executed',
+        severity: 'info',
+        details: {
+          customers_length: customers.items.length,
+          success: true,
+        },
       });
 
       return {
@@ -380,13 +387,20 @@ export class ExampleTools extends ToolBase {
    */
   private async createOrder(args: any, extra?: any): Promise<CallToolResult> {
     try {
-      const { customerId, items, shippingAddress, priority, notes, userId } = args;
+      const {
+        customerId,
+        items,
+        shippingAddress: _shippingAddress,
+        priority,
+        notes,
+        userId,
+      } = args;
 
       // 🎯 Get OAuth access token
       const accessToken = await this.oauthConsumer.getAccessToken(userId);
 
       // 🎯 Create order via API
-      const order = await this.apiClient.createOrder({
+      const order = await this.apiClient.createOrder(accessToken, {
         customerId,
         items,
         shippingMethod: priority === 'urgent'
@@ -394,6 +408,15 @@ export class ExampleTools extends ToolBase {
           : (priority === 'expedited' ? 'expedited' : 'standard'),
         notes,
       }, userId);
+
+      await this.auditLogger.logSystemEvent({
+        event: 'create_order_executed',
+        severity: 'info',
+        details: {
+          customer_id: order.customerId,
+          success: true,
+        },
+      });
 
       return {
         content: [{
@@ -443,10 +466,19 @@ export class ExampleTools extends ToolBase {
       const accessToken = await this.oauthConsumer.getAccessToken(userId);
 
       // 🎯 Query order status
-      const orderStatus = await this.apiClient.getOrderStatus({
+      const orderStatus = await this.apiClient.getOrderStatus(accessToken, {
         orderId,
         includeHistory,
         userId,
+      });
+
+      await this.auditLogger.logSystemEvent({
+        event: 'get_order_status_executed',
+        severity: 'info',
+        details: {
+          order_id: orderStatus.orderId,
+          success: true,
+        },
       });
 
       return {

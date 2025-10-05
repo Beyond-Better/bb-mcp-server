@@ -25,17 +25,12 @@ import { beforeEach, describe, it } from 'https://deno.land/std@0.208.0/testing/
 
 // Import plugin factory and components
 import createPlugin from '../../src/plugins/ExamplePlugin.ts';
-import { ExampleTools } from '../../src/plugins/tools/ExampleTools.ts';
-import { ExampleQueryWorkflow } from '../../src/plugins/workflows/ExampleQueryWorkflow.ts';
-import { ExampleOperationWorkflow } from '../../src/plugins/workflows/ExampleOperationWorkflow.ts';
 
 // Import OAuth-aware test utilities
 import {
   createAuthenticatedWorkflowContext,
   createConnectedMocks,
-  createMockApiClient,
   createMockAuthLogger,
-  createMockOAuthConsumer,
   MockApiClient,
   MockAuthLogger,
   MockOAuthConsumer,
@@ -82,12 +77,19 @@ describe('Plugin OAuth Integration', () => {
       assertEquals(plugin.name, 'example-corp-plugin');
       assertEquals(plugin.version, '1.0.0');
       assert(plugin.tags.includes('api'), 'Should have API tag');
-      assert(plugin.tags.includes('examplecorp'), 'Should have ExampleCorp tag');
+      assert(
+        plugin.tags.includes('examplecorp'),
+        'Should have ExampleCorp tag',
+      );
     });
 
     it('should initialize tools with OAuth dependencies', () => {
       assertExists(plugin.tools, 'Plugin should have tools array');
-      assertEquals(plugin.tools.length, 4, 'Should have 4 OAuth-authenticated tools');
+      assertEquals(
+        plugin.tools.length,
+        4,
+        'Should have 4 OAuth-authenticated tools',
+      );
 
       const expectedTools = [
         'query_customers_example',
@@ -99,14 +101,21 @@ describe('Plugin OAuth Integration', () => {
       expectedTools.forEach((toolName) => {
         const tool = plugin.tools.find((t: any) => t.name === toolName);
         assertExists(tool, `Tool '${toolName}' should be registered`);
-        assertExists(tool.definition, `Tool '${toolName}' should have definition`);
+        assertExists(
+          tool.definition,
+          `Tool '${toolName}' should have definition`,
+        );
         assertExists(tool.handler, `Tool '${toolName}' should have handler`);
       });
     });
 
     it('should initialize workflows with OAuth dependencies', () => {
       assertExists(plugin.workflows, 'Plugin should have workflows array');
-      assertEquals(plugin.workflows.length, 2, 'Should have 2 OAuth-authenticated workflows');
+      assertEquals(
+        plugin.workflows.length,
+        2,
+        'Should have 2 OAuth-authenticated workflows',
+      );
 
       const expectedWorkflows = [
         'example_query',
@@ -115,7 +124,10 @@ describe('Plugin OAuth Integration', () => {
 
       expectedWorkflows.forEach((workflowName) => {
         const workflow = plugin.workflows.find((w: any) => w.name === workflowName);
-        assertExists(workflow, `Workflow '${workflowName}' should be registered`);
+        assertExists(
+          workflow,
+          `Workflow '${workflowName}' should be registered`,
+        );
       });
     });
 
@@ -130,11 +142,17 @@ describe('Plugin OAuth Integration', () => {
 
       // Should create plugin but with warnings
       assertExists(pluginWithoutOAuth);
-      assertEquals(pluginWithoutOAuth.tools.length, 0, 'Should have no tools without OAuth');
+      assertEquals(
+        pluginWithoutOAuth.tools.length,
+        0,
+        'Should have no tools without OAuth',
+      );
 
       // Should log warnings about missing dependencies
       const warnCalls = mockLogger.warnCalls;
-      assert(warnCalls.some((call) => call[0].includes('Missing required dependencies')));
+      assert(
+        warnCalls.some((call) => call[0].includes('Missing required dependencies')),
+      );
     });
   });
 
@@ -191,14 +209,21 @@ describe('Plugin OAuth Integration', () => {
         includeHistory: true,
       });
 
-      assertEquals(statusResult.isError, undefined, 'Status tool should succeed');
+      assertEquals(
+        statusResult.isError,
+        undefined,
+        'Status tool should succeed',
+      );
 
       // Verify OAuth token was used consistently
       assert(mockOAuth.hasValidToken(userId), 'Should have valid OAuth token');
 
       // Verify API calls were made in sequence
       const apiCalls = mockApiClient.getCallLog();
-      assert(apiCalls.length >= 4, 'Should have made multiple authenticated API calls');
+      assert(
+        apiCalls.length >= 4,
+        'Should have made multiple authenticated API calls',
+      );
       assert(
         apiCalls.every((call) => call.userId === userId),
         'All calls should use same user context',
@@ -260,11 +285,25 @@ describe('Plugin OAuth Integration', () => {
       // Execute operations with both users
       const queryTool = plugin.tools.find((t: any) => t.name === 'query_customers_example');
 
-      const result1 = await queryTool.handler({ userId: user1, search: 'test1' });
-      const result2 = await queryTool.handler({ userId: user2, search: 'test2' });
+      const result1 = await queryTool.handler({
+        userId: user1,
+        search: 'test1',
+      });
+      const result2 = await queryTool.handler({
+        userId: user2,
+        search: 'test2',
+      });
 
-      assertEquals(result1.isError, undefined, 'User1 operation should succeed');
-      assertEquals(result2.isError, undefined, 'User2 operation should succeed');
+      assertEquals(
+        result1.isError,
+        undefined,
+        'User1 operation should succeed',
+      );
+      assertEquals(
+        result2.isError,
+        undefined,
+        'User2 operation should succeed',
+      );
 
       // Verify each user used their own token
       assertEquals(mockOAuth.getTokenInfo(user1).access_token, 'token_user1');
@@ -323,7 +362,11 @@ describe('Plugin OAuth Integration', () => {
       // Verify API calls all used same authentication context
       const apiCalls = mockApiClient.getCallLog();
       const userCalls = apiCalls.filter((call) => call.userId === userId);
-      assertEquals(userCalls.length, 3, 'Should have made 3 authenticated calls');
+      assertEquals(
+        userCalls.length,
+        3,
+        'Should have made 3 authenticated calls',
+      );
     });
 
     it('should handle authentication failure across components', async () => {
@@ -340,7 +383,9 @@ describe('Plugin OAuth Integration', () => {
       });
 
       assertEquals(toolResult.isError, true);
-      assert(toolResult.content[0].text.includes('OAuth authentication failed'));
+      assert(
+        toolResult.content[0].text.includes('OAuth authentication failed'),
+      );
 
       // Test workflow failure
       const queryWorkflow = plugin.workflows.find((w: any) => w.name === 'example_query');
@@ -350,7 +395,9 @@ describe('Plugin OAuth Integration', () => {
       }, createAuthenticatedWorkflowContext());
 
       assertEquals(workflowResult.success, false);
-      assert(workflowResult.error.message.includes('OAuth authentication failed'));
+      assert(
+        workflowResult.error.message.includes('OAuth authentication failed'),
+      );
 
       // Verify consistent authentication failure handling
       const authEvents = mockLogger.getAuthEventsForUser(userId);
@@ -405,6 +452,7 @@ describe('Plugin OAuth Integration', () => {
       assertEquals(customerQuery.isError, undefined);
       const customers = JSON.parse(customerQuery.content[0].text);
       const customerId = customers.results.items[0].id;
+      assertExists(customerId);
 
       // Step 2: Create order via workflow
       const operationWorkflow = plugin.workflows.find((w: any) => w.name === 'example_operation');
@@ -450,7 +498,10 @@ describe('Plugin OAuth Integration', () => {
       // Verify comprehensive API interaction
       const apiCalls = mockApiClient.getCallLog();
       const userCalls = apiCalls.filter((call) => call.userId === userId);
-      assert(userCalls.length >= 4, 'Should have made multiple authenticated API calls');
+      assert(
+        userCalls.length >= 4,
+        'Should have made multiple authenticated API calls',
+      );
 
       // Verify call sequence: query → create customer → create order → get status
       const callMethods = userCalls.map((call) => call.method);
@@ -479,14 +530,23 @@ describe('Plugin OAuth Integration', () => {
             ? {
               customerId: 'test',
               items: [{ productId: 'test', quantity: 1, unitPrice: 100 }],
-              shippingAddress: { street: 'test', city: 'test', state: 'TS', zipCode: '12345' },
+              shippingAddress: {
+                street: 'test',
+                city: 'test',
+                state: 'TS',
+                zipCode: '12345',
+              },
             }
             : tool.name === 'get_order_status_example'
             ? { orderId: 'test' }
             : {}),
         });
 
-        assertEquals(result.isError, true, `Tool ${tool.name} should fail with OAuth error`);
+        assertEquals(
+          result.isError,
+          true,
+          `Tool ${tool.name} should fail with OAuth error`,
+        );
         assert(
           result.content[0].text.includes('OAuth authentication failed'),
           `Tool ${tool.name} should return OAuth error`,
@@ -508,9 +568,16 @@ describe('Plugin OAuth Integration', () => {
                 customer: {
                   name: 'test',
                   email: 'test@test.com',
-                  address: { street: 'test', city: 'test', state: 'TS', zipCode: '12345' },
+                  address: {
+                    street: 'test',
+                    city: 'test',
+                    state: 'TS',
+                    zipCode: '12345',
+                  },
                 },
-                order: { items: [{ productId: 'test', quantity: 1, unitPrice: 100 }] },
+                order: {
+                  items: [{ productId: 'test', quantity: 1, unitPrice: 100 }],
+                },
               },
             }
             : {}),
@@ -523,7 +590,10 @@ describe('Plugin OAuth Integration', () => {
             JSON.stringify(result, null, 2)
           }`,
         );
-        assertExists(result.error, `Workflow ${workflow.name} should have error object`);
+        assertExists(
+          result.error,
+          `Workflow ${workflow.name} should have error object`,
+        );
         assert(
           result.error.message.includes('OAuth authentication failed'),
           `Workflow ${workflow.name} should return OAuth error`,
@@ -564,12 +634,19 @@ describe('Plugin OAuth Integration', () => {
       // All operations should succeed
       assertEquals(results.length, 3);
       results.forEach((result, index) => {
-        assertEquals(result.isError, undefined, `User ${users[index]} operation should succeed`);
+        assertEquals(
+          result.isError,
+          undefined,
+          `User ${users[index]} operation should succeed`,
+        );
       });
 
       // Verify each user's OAuth token was used correctly
       users.forEach((userId) => {
-        assert(mockOAuth.hasValidToken(userId), `User ${userId} should have valid token`);
+        assert(
+          mockOAuth.hasValidToken(userId),
+          `User ${userId} should have valid token`,
+        );
       });
 
       // Verify API calls were made for all users

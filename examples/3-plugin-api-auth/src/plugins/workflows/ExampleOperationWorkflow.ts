@@ -15,10 +15,12 @@ import { z } from 'zod'; // Library provides Zod integration
 
 // 🎯 Consumer-specific imports
 import { ExampleApiClient } from '../../api/ExampleApiClient.ts';
+import { ExampleOAuthConsumer } from '../../auth/ExampleOAuthConsumer.ts';
 
 export interface ExampleOperationWorkflowDependencies {
   apiClient: ExampleApiClient;
   logger: Logger;
+  oauthConsumer: ExampleOAuthConsumer;
 }
 
 /**
@@ -169,12 +171,14 @@ export class ExampleOperationWorkflow extends WorkflowBase {
   );
 
   private apiClient: ExampleApiClient;
+  private oauthConsumer: ExampleOAuthConsumer;
   private logger: Logger;
 
   constructor(dependencies: ExampleOperationWorkflowDependencies) {
     super(); // 🎯 Initialize library base class
 
     this.apiClient = dependencies.apiClient;
+    this.oauthConsumer = dependencies.oauthConsumer;
     this.logger = dependencies.logger;
   }
 
@@ -244,7 +248,11 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       //   userId: params.userId,
       //   operationId
       // });
-      const operationResult = await this.executeOperation(params, operationId);
+      const operationResult = await this.executeOperation(
+        params,
+        operationId,
+        params.userId,
+      );
       // console.log('📊 OPERATION RESULT:', {
       //   success: operationResult.success,
       //   hasError: !!operationResult.error,
@@ -480,6 +488,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
   private async executeOperation(
     params: z.infer<typeof this.parameterSchema>,
     operationId: string,
+    userId: string,
   ): Promise<
     {
       success: boolean;
@@ -545,7 +554,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
         });
 
         try {
-          await this.performRollback(rollbackActions, operationId);
+          await this.performRollback(rollbackActions, operationId, userId);
         } catch (rollbackError) {
           this.logger.error(
             'Rollback failed',
@@ -584,6 +593,9 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       { type: 'create_customer_with_order' }
     >;
 
+    // 🎯 Get OAuth access token
+    const accessToken = await this.oauthConsumer.getAccessToken(params.userId);
+
     // Step 1: Create customer
     this.logger.debug('Creating customer', { operationId });
     const customerData: any = {
@@ -596,6 +608,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       customerData.phone = operationData.customer.phone;
     }
     const customer = await this.apiClient.createCustomer(
+      accessToken,
       customerData,
       params.userId,
     );
@@ -622,7 +635,11 @@ export class ExampleOperationWorkflow extends WorkflowBase {
     if (operationData.order.notes) {
       orderData.notes = operationData.order.notes;
     }
-    const order = await this.apiClient.createOrder(orderData, params.userId);
+    const order = await this.apiClient.createOrder(
+      accessToken,
+      orderData,
+      params.userId,
+    );
     steps.push({
       step: 'create_order',
       result: order,
@@ -659,8 +676,12 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       { type: 'bulk_update_inventory' }
     >;
 
+    // 🎯 Get OAuth access token
+    const accessToken = await this.oauthConsumer.getAccessToken(params.userId);
+
     // Get current inventory levels for rollback
     const currentInventory = await this.apiClient.getInventoryLevels(
+      accessToken,
       operationData.updates.map((u) => u.productId),
       params.userId,
     );
@@ -672,7 +693,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
     });
 
     // Execute bulk update
-    const updateResult = await this.apiClient.bulkUpdateInventory({
+    const updateResult = await this.apiClient.bulkUpdateInventory(accessToken, {
       updates: operationData.updates,
       reason: operationData.reason,
     }, params.userId);
@@ -708,6 +729,9 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       { type: 'process_refund' }
     >;
 
+    // 🎯 Get OAuth access token
+    const accessToken = await this.oauthConsumer.getAccessToken(params.userId);
+
     // Process the refund
     const refundData: any = {
       orderId: operationData.orderId,
@@ -720,6 +744,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       refundData.refundItems = operationData.refundItems;
     }
     const refund = await this.apiClient.processRefund(
+      accessToken,
       refundData,
       params.userId,
     );
@@ -763,9 +788,13 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       { type: 'migrate_data' }
     >;
 
+    // 🎯 Get OAuth access token
+    const accessToken = await this.oauthConsumer.getAccessToken(params.userId);
+
     if (operationData.validateOnly) {
       // Validation-only migration
       const validation = await this.apiClient.validateDataMigration(
+        accessToken,
         operationData,
         params.userId,
       );
@@ -784,6 +813,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
     } else {
       // Actual migration execution
       const migration = await this.apiClient.executeDataMigration(
+        accessToken,
         operationData,
         params.userId,
       );
@@ -815,10 +845,11 @@ export class ExampleOperationWorkflow extends WorkflowBase {
   private async performRollback(
     rollbackActions: any[],
     operationId: string,
+    userId: string,
   ): Promise<void> {
     for (const action of rollbackActions.reverse()) { // Reverse order for rollback
       try {
-        await this.executeRollbackAction(action, operationId);
+        await this.executeRollbackAction(action, operationId, userId);
       } catch (error) {
         this.logger.error(
           'Rollback action failed',
@@ -839,21 +870,28 @@ export class ExampleOperationWorkflow extends WorkflowBase {
   private async executeRollbackAction(
     action: any,
     operationId: string,
+    userId: string,
   ): Promise<void> {
     this.logger.debug('Executing rollback action', {
       operationId,
       action: action.action,
     });
 
+    // 🎯 Get OAuth access token
+    const accessToken = await this.oauthConsumer.getAccessToken(userId);
+
     switch (action.action) {
       case 'delete_customer':
-        await this.apiClient.deleteCustomer(action.customerId);
+        await this.apiClient.deleteCustomer(accessToken, action.customerId);
         break;
       case 'cancel_order':
-        await this.apiClient.cancelOrder(action.orderId);
+        await this.apiClient.cancelOrder(accessToken, action.orderId);
         break;
       case 'restore_inventory':
-        await this.apiClient.restoreInventoryLevels(action.inventory);
+        await this.apiClient.restoreInventoryLevels(
+          accessToken,
+          action.inventory,
+        );
         break;
       default:
         this.logger.warn('Unknown rollback action', {

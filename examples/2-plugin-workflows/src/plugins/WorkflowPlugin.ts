@@ -32,11 +32,7 @@
  */
 
 import { z } from 'zod';
-import type {
-  AppPlugin,
-  ToolRegistration,
-  WorkflowRegistration,
-} from '@beyondbetter/bb-mcp-server';
+import type { AppPlugin, WorkflowRegistration } from '@beyondbetter/bb-mcp-server';
 import { WorkflowBase } from '@beyondbetter/bb-mcp-server';
 import type { WorkflowContext, WorkflowResult } from '@beyondbetter/bb-mcp-server';
 

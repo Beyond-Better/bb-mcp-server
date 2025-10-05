@@ -25,7 +25,7 @@
 import { assert, assertEquals, assertExists } from 'https://deno.land/std@0.208.0/assert/mod.ts';
 import { afterEach, beforeEach, describe, it } from 'https://deno.land/std@0.208.0/testing/bdd.ts';
 import { type Spy, spy } from 'https://deno.land/std@0.208.0/testing/mock.ts';
-import { errorMessage } from '@beyondbetter/bb-mcp-server';
+//import { errorMessage } from '@beyondbetter/bb-mcp-server';
 
 // Import workflow directly (no plugin in manual-deps)
 import { ExampleQueryWorkflow } from '../../src/workflows/ExampleQueryWorkflow.ts';
@@ -34,9 +34,7 @@ import { ExampleQueryWorkflow } from '../../src/workflows/ExampleQueryWorkflow.t
 import {
   createAuthenticatedWorkflowContext,
   createConnectedMocks,
-  createMockApiClient,
   createMockAuthLogger,
-  createMockOAuthConsumer,
   MockApiClient,
   MockAuthLogger,
   MockOAuthConsumer,
@@ -73,6 +71,7 @@ describe('ExampleQueryWorkflow - OAuth Integration', () => {
     workflow = new ExampleQueryWorkflow({
       apiClient: mockApiClient as any,
       logger: mockLogger as any,
+      oauthConsumer: mockOAuth as any,
     });
 
     assertExists(workflow, 'ExampleQueryWorkflow should be created');
@@ -576,6 +575,7 @@ describe('ExampleQueryWorkflow - OAuth Integration', () => {
       const workflow_direct = new ExampleQueryWorkflow({
         apiClient: mockApiClient as any,
         logger: mockLogger as any,
+        oauthConsumer: mockOAuth as any,
       });
 
       const invalidParams = {
