@@ -7,6 +7,7 @@
  */
 
 import { StreamableHTTPServerTransport } from 'mcp/server/streamableHttp.js';
+import type { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
 import type { TransportEventStore } from './TransportEventStore.ts';
 import { toError } from '../utils/Error.ts';
 
@@ -15,13 +16,6 @@ interface Logger {
   info(message: string, data?: unknown): void;
   warn(message: string, data?: unknown): void;
   error(message: string, error?: Error, data?: unknown): void;
-}
-
-/**
- * Generic interface for MCP servers that support transport restoration
- */
-export interface MCPServerForRestore {
-  getMcpServer(): { connect(transport: StreamableHTTPServerTransport): Promise<void> } | null;
 }
 
 export interface PersistedSessionInfo {
@@ -276,9 +270,13 @@ export class TransportPersistenceService {
    * Restore transports from persisted sessions
    * Note: This creates new transport instances with the same session IDs,
    * but clients will need to reconnect to re-establish the connection.
+   *
+   * @param sdkMcpServer - The MCP SDK server instance to connect transports to
+   * @param transportMap - Map to store restored transport instances
+   * @param eventStore - Event store for transport events
    */
   async restoreTransports(
-    mcpServer: MCPServerForRestore,
+    sdkMcpServer: SdkMcpServer,
     transportMap: Map<string, StreamableHTTPServerTransport>,
     eventStore: TransportEventStore,
   ): Promise<TransportRestoreResult> {
@@ -297,7 +295,7 @@ export class TransportPersistenceService {
 
       for (const sessionInfo of activeSessions) {
         try {
-          await this.restoreSession(mcpServer, transportMap, sessionInfo, eventStore);
+          await this.restoreSession(sdkMcpServer, transportMap, sessionInfo, eventStore);
           result.restoredCount++;
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -332,9 +330,14 @@ export class TransportPersistenceService {
 
   /**
    * Restore a single session
+   *
+   * @param sdkMcpServer - The MCP SDK server instance to connect transport to
+   * @param transportMap - Map to store restored transport instance
+   * @param sessionInfo - Persisted session information
+   * @param eventStore - Event store for transport events
    */
   private async restoreSession(
-    mcpServer: MCPServerForRestore,
+    sdkMcpServer: SdkMcpServer,
     transportMap: Map<string, StreamableHTTPServerTransport>,
     sessionInfo: PersistedSessionInfo,
     eventStore: TransportEventStore,
@@ -370,13 +373,8 @@ export class TransportPersistenceService {
       });
     };
 
-    // Connect to the MCP server
-    const server = mcpServer.getMcpServer();
-    if (!server) {
-      throw new Error('MCP server not available for session restoration');
-    }
-
-    await server.connect(transport);
+    // Connect to the MCP SDK server directly
+    await sdkMcpServer.connect(transport);
 
     // Update last activity to mark as recently restored
     await this.updateSessionActivity(sessionInfo.sessionId);
