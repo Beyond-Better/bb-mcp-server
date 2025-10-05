@@ -16,7 +16,7 @@ import { assert, assertEquals, assertExists } from '@std/assert';
 import { OAuthMetadata, type OAuthMetadataConfig } from '../../../src/lib/auth/OAuthMetadata.ts';
 import type { Logger } from '../../../src/types/library.types.ts';
 import type {
-  AuthorizationServerMetadata,
+  //AuthorizationServerMetadata,
   OAuthProviderConfig,
 } from '../../../src/lib/auth/OAuthTypes.ts';
 

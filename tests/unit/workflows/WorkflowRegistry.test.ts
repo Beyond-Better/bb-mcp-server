@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { WorkflowRegistry } from '../../../src/lib/workflows/WorkflowRegistry.ts';
 import { WorkflowBase } from '../../../src/lib/workflows/WorkflowBase.ts';
 import type {
-  WorkflowContext,
+  //WorkflowContext,
   WorkflowRegistration,
   WorkflowResult,
 } from '../../../src/lib/types/WorkflowTypes.ts';
@@ -357,6 +357,7 @@ Deno.test('WorkflowRegistry - clear registry', () => {
   const workflowA = new TestWorkflowA();
   const workflowB = new TestWorkflowB();
   const plugin = createTestPlugin();
+  assertExists(plugin);
 
   // Register workflows
   registry.registerWorkflow(workflowA);

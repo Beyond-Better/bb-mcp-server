@@ -139,7 +139,7 @@ export class APIRouter {
         if (method === 'GET') {
           // Delegate to OAuth endpoints for callback handling
           const url = reconstructOriginalUrl(request);
-          const code = url.searchParams.get('code') || '';
+          //const code = url.searchParams.get('code') || '';
           const state = url.searchParams.get('state') || '';
 
           try {

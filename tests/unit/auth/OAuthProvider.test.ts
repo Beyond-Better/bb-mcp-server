@@ -18,11 +18,11 @@ import { assert, assertEquals, assertExists } from '@std/assert';
 import { OAuthProvider } from '../../../src/lib/auth/OAuthProvider.ts';
 import { KVManager } from '../../../src/lib/storage/KVManager.ts';
 import { CredentialStore } from '../../../src/lib/storage/CredentialStore.ts';
-import { PKCEHandler } from '../../../src/lib/auth/PKCEHandler.ts';
-import { ClientRegistry } from '../../../src/lib/auth/ClientRegistry.ts';
-import { TokenManager } from '../../../src/lib/auth/TokenManager.ts';
-import { AuthorizationHandler } from '../../../src/lib/auth/AuthorizationHandler.ts';
-import { OAuthMetadata } from '../../../src/lib/auth/OAuthMetadata.ts';
+//import { PKCEHandler } from '../../../src/lib/auth/PKCEHandler.ts';
+//import { ClientRegistry } from '../../../src/lib/auth/ClientRegistry.ts';
+//import { TokenManager } from '../../../src/lib/auth/TokenManager.ts';
+//import { AuthorizationHandler } from '../../../src/lib/auth/AuthorizationHandler.ts';
+//import { OAuthMetadata } from '../../../src/lib/auth/OAuthMetadata.ts';
 import type { Logger } from '../../../src/types/library.types.ts';
 import type {
   AuthorizeRequest,
@@ -401,12 +401,12 @@ Deno.test({
 
     const oauthProvider = new OAuthProvider(testOAuthProviderConfig, dependencies);
 
-    // Mock external authentication service response
-    const mockExternalUser = {
-      id: 'external_user_123',
-      name: 'External Test User',
-      email: 'test@example.com',
-    };
+    // // Mock external authentication service response
+    // const mockExternalUser = {
+    //   id: 'external_user_123',
+    //   name: 'External Test User',
+    //   email: 'test@example.com',
+    // };
 
     // Generate MCP token for External user
     const mcpTokenResult = await oauthProvider.generateMCPAuthorizationCode(

@@ -3,9 +3,9 @@
  * Tests sophisticated tool registration and Zod validation
  */
 
-import { assert, assertEquals, assertExists, assertRejects } from '@std/assert';
+import { assert, assertEquals, assertExists } from '@std/assert';
 import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
-import { assertSpyCalls, spy, stub } from '@std/testing/mock';
+import { assertSpyCalls, spy } from '@std/testing/mock';
 import { z } from 'zod';
 
 // Import components
@@ -15,7 +15,7 @@ import { ErrorHandler } from '../../../src/lib/utils/ErrorHandler.ts';
 
 // Import types
 import type {
-  RegisteredTool,
+  //RegisteredTool,
   ToolDefinition,
   ToolHandler,
   ToolRegistryDependencies,

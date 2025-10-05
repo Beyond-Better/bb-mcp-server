@@ -155,7 +155,7 @@ export function getTransportEventStore(
   );
 
   if (transportEventStoreConfig.storageType === 'chunked') {
-    logger.info('Using chunked transport event store for large message support');
+    logger.info('DependencyHelper: Using chunked transport event store for large message support');
     return getTransportEventStoreChunked(transportEventStoreConfig, logger, kvManager);
   }
 
@@ -227,7 +227,7 @@ export async function registerPluginsInRegistries(
   // =============================================================================
 
   if (staticPlugins && staticPlugins.length > 0) {
-    logger.info('Registering static plugins...', {
+    logger.info('DependencyHelper: Registering static plugins...', {
       count: staticPlugins.length,
       plugins: staticPlugins.map((p) => p.name),
     });
@@ -235,21 +235,21 @@ export async function registerPluginsInRegistries(
     for (const plugin of staticPlugins) {
       try {
         await pluginManager.registerPlugin(plugin);
-        logger.info('Static plugin registered successfully', {
+        logger.info('DependencyHelper: Static plugin registered successfully', {
           plugin: plugin.name,
           version: plugin.version,
           workflows: plugin.workflows.length,
           tools: plugin.tools.length,
         });
       } catch (error) {
-        logger.error('Failed to register static plugin', error as Error, {
+        logger.error('DependencyHelper: Failed to register static plugin', error as Error, {
           plugin: plugin.name,
           error: error instanceof Error ? error.message : 'Unknown error',
         });
       }
     }
   } else {
-    logger.debug('No static plugins to register');
+    logger.debug('DependencyHelper: No static plugins to register');
   }
 
   // =============================================================================
@@ -258,7 +258,7 @@ export async function registerPluginsInRegistries(
 
   if (pluginConfig.autoload) {
     try {
-      logger.info('Discovering plugins...', {
+      logger.info('DependencyHelper: Discovering plugins...', {
         paths: pluginConfig.paths,
         autoload: pluginConfig.autoload,
         hasDependencies: !!dependencies,
@@ -267,19 +267,19 @@ export async function registerPluginsInRegistries(
 
       const discoveredPlugins = await pluginManager.discoverPlugins();
 
-      logger.info('Plugin discovery completed', {
+      logger.info('DependencyHelper: Plugin discovery completed', {
         discovered: discoveredPlugins.length,
         totalWorkflows: discoveredPlugins.reduce((sum, p) => sum + p.workflows.length, 0),
         totalPlugins: pluginManager.getLoadedPlugins().length,
       });
     } catch (error) {
-      logger.warn('Plugin discovery failed', {
+      logger.warn('DependencyHelper: Plugin discovery failed', {
         error: error instanceof Error ? error.message : 'Unknown error',
         paths: pluginConfig.paths,
       });
     }
   } else {
-    logger.debug('Plugin autoload disabled, skipping discovery');
+    logger.debug('DependencyHelper: Plugin autoload disabled, skipping discovery');
   }
 
   // =============================================================================
@@ -287,7 +287,7 @@ export async function registerPluginsInRegistries(
   // =============================================================================
 
   const stats = pluginManager.getStats();
-  logger.info('Plugin registration complete', {
+  logger.info('DependencyHelper: Plugin registration complete', {
     totalPlugins: stats.totalPlugins,
     activePlugins: stats.activePlugins,
     totalWorkflows: stats.totalWorkflows,
@@ -310,12 +310,12 @@ export function getOAuthProvider(
   const oauthConfig = configManager.get<OAuthProviderConfig>('oauthProvider');
 
   if (!oauthConfig) {
-    logger.debug('OAuthProvider: No OAuth provider configuration found');
+    logger.debug('DependencyHelper: No OAuth provider configuration found');
     return undefined;
   }
 
   //logger.info('OAuthProvider: oauthConfig', oauthConfig);
-  logger.info('OAuthProvider: Creating OAuth provider with configuration', {
+  logger.info('DependencyHelper: Creating OAuth provider with configuration', {
     issuer: oauthConfig.issuer,
     enableDynamicRegistration: oauthConfig.clients.enableDynamicRegistration,
     enablePKCE: oauthConfig.authorization.enablePKCE,
@@ -429,11 +429,11 @@ export async function getMcpServerInstructions(
     // Validate the loaded instructions
     if (!validateInstructions(instructions, logger)) {
       logger.warn(
-        'BeyondMcpServer: Loaded instructions failed validation but will be used anyway',
+        'DependencyHelper: Loaded instructions failed validation but will be used anyway',
       );
     }
 
-    logger.info('BeyondMcpServer: Instructions loaded successfully', {
+    logger.info('DependencyHelper: Instructions loaded successfully', {
       source: getInstructionsSource(configManager),
       contentLength: instructions.length,
       hasWorkflowContent: instructions.includes('workflow'),
@@ -442,7 +442,7 @@ export async function getMcpServerInstructions(
     return instructions;
   } catch (error) {
     logger.error(
-      'BeyondMcpServer: Failed to load instructions:',
+      'DependencyHelper: Failed to load instructions:',
       toError(error),
     );
     throw ErrorHandler.wrapError(error, 'INSTRUCTIONS_LOADING_FAILED');
@@ -514,7 +514,7 @@ export async function validateConfiguration(
 
     if (!oauthConsumerConfig) {
       const error = 'OAuth consumer is configured but OAuth consumer configuration is missing';
-      logger.error('OAuth consumer configuration validation failed', new Error(error));
+      logger.error('DependencyHelper: OAuth consumer configuration validation failed', new Error(error));
       throw new Error(error);
     }
 
@@ -538,16 +538,16 @@ export async function validateConfiguration(
       const error = `Missing or invalid OAuth consumer configuration: ${
         formatFieldErrors(missingFields)
       }`;
-      logger.error('OAuth consumer configuration validation failed', new Error(error), {
+      logger.error('DependencyHelper: OAuth consumer configuration validation failed', new Error(error), {
         missingFields,
         envVars: missingFields.map((f) => getEnvVarForField(f)),
       });
       throw new Error(error);
     }
 
-    logger.debug('OAuth consumer configuration validation passed');
+    logger.debug('DependencyHelper: OAuth consumer configuration validation passed');
   } else {
-    logger.debug('OAuth consumer not configured - skipping OAuth consumer validation');
+    logger.debug('DependencyHelper: OAuth consumer not configured - skipping OAuth consumer validation');
   }
 
   // Validate OAuth provider configuration if HTTP transport is used
@@ -561,7 +561,7 @@ export async function validateConfiguration(
       const allowInsecureHttp = transportConfig.http?.allowInsecure === true;
 
       if (allowInsecureHttp) {
-        logger.warn('🚨 SECURITY WARNING: Running HTTP transport without OAuth provider', {
+        logger.warn('DependencyHelper: 🚨 SECURITY WARNING: Running HTTP transport without OAuth provider', {
           security: 'INSECURE',
           transport: 'http',
           reason: 'HTTP_ALLOW_INSECURE=true',
@@ -569,10 +569,10 @@ export async function validateConfiguration(
           environment: configManager.get('environment', 'development'),
         });
         logger.warn(
-          '🔓 HTTP server will accept unauthenticated requests - suitable for development only',
+          'DependencyHelper: 🔓 HTTP server will accept unauthenticated requests - suitable for development only',
         );
       } else {
-        logger.warn('🚨 HTTP transport without OAuth provider detected', {
+        logger.warn('DependencyHelper: 🚨 HTTP transport without OAuth provider detected', {
           securityRisk: 'HTTP server will accept unauthenticated requests',
           solution:
             'Set HTTP_ALLOW_INSECURE=true to explicitly allow insecure mode, or configure OAuth provider',
@@ -581,7 +581,7 @@ export async function validateConfiguration(
 
         const error =
           `Missing OAuth provider configuration for HTTP transport. Set HTTP_ALLOW_INSECURE=true to allow insecure HTTP mode.`;
-        logger.error('OAuth provider configuration validation failed', new Error(error), {
+        logger.error('DependencyHelper: OAuth provider configuration validation failed', new Error(error), {
           allowInsecureHint: 'Set HTTP_ALLOW_INSECURE=true to bypass this requirement',
         });
         throw new Error(error);
@@ -603,18 +603,18 @@ export async function validateConfiguration(
         const error = `Missing or invalid OAuth provider configuration: ${
           formatFieldErrors(missingProviderFields.map((f) => `provider.${f}`))
         }`;
-        logger.error('OAuth provider configuration validation failed', new Error(error), {
+        logger.error('DependencyHelper: OAuth provider configuration validation failed', new Error(error), {
           missingProviderFields,
           envVars: missingProviderFields.map((f) => getEnvVarForField(`provider.${f}`)),
         });
         throw new Error(error);
       }
 
-      logger.debug('OAuth provider configuration validated for HTTP transport');
+      logger.debug('DependencyHelper: OAuth provider configuration validated for HTTP transport');
     }
   }
 
-  logger.debug('Configuration validation passed', {
+  logger.debug('DependencyHelper: Configuration validation passed', {
     transportType: transportConfig.type,
     hasOAuthConsumer: !!dependencies?.oauthConsumer,
     hasOAuthProviderConfig: !!configManager.get<OAuthProviderConfig>('oauthProvider'),
@@ -697,7 +697,7 @@ export async function performHealthChecks(
 
   for (const healthCheck of healthChecks) {
     try {
-      logger.debug(`Performing health check: ${healthCheck.name}`);
+      logger.debug(`DependencyHelper: Performing health check: ${healthCheck.name}`);
 
       const result = await healthCheck.check();
       results.push({
@@ -706,7 +706,7 @@ export async function performHealthChecks(
         result,
       });
 
-      logger.debug(`Health check passed: ${healthCheck.name}`, { result });
+      logger.debug(`DependencyHelper: Health check passed: ${healthCheck.name}`, { result });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
@@ -716,7 +716,7 @@ export async function performHealthChecks(
         error: errorMessage,
       });
 
-      logger.warn(`Health check failed: ${healthCheck.name}`, {
+      logger.warn(`DependencyHelper: Health check failed: ${healthCheck.name}`, {
         error: errorMessage,
         stack: error instanceof Error ? error.stack : undefined,
       });
@@ -733,7 +733,7 @@ export async function performHealthChecks(
   const healthyCount = results.filter((r) => r.healthy).length;
   const totalCount = results.length;
 
-  logger.info('Dependency health checks completed', {
+  logger.info('DependencyHelper: Dependency health checks completed', {
     healthy: healthyCount,
     total: totalCount,
     allHealthy: healthyCount === totalCount,
@@ -743,7 +743,7 @@ export async function performHealthChecks(
   // Warn if any non-critical dependencies are unhealthy
   const unhealthyDeps = results.filter((r) => !r.healthy);
   if (unhealthyDeps.length > 0) {
-    logger.warn('Some dependencies are unhealthy - server may have limited functionality', {
+    logger.warn('DependencyHelper: Some dependencies are unhealthy - server may have limited functionality', {
       unhealthyDependencies: unhealthyDeps.map((d) => d.name),
     });
   }
@@ -767,6 +767,8 @@ export async function getAllDependencies(
   const sessionStore = overrides.sessionStore || getSessionStore(kvManager, logger);
   const eventStore = overrides.eventStore ||
     getTransportEventStore(configManager, logger, kvManager);
+  const transportPersistenceStore = overrides.transportPersistenceStore ||
+    getTransportPersistenceStore(configManager, kvManager, logger);
   const credentialStore = overrides.credentialStore || getCredentialStore(kvManager, logger);
   const errorHandler = overrides.errorHandler || getErrorHandler();
   const workflowRegistry = overrides.workflowRegistry || getWorkflowRegistry(logger, errorHandler);
@@ -802,6 +804,7 @@ export async function getAllDependencies(
     kvManager,
     sessionStore,
     eventStore,
+    transportPersistenceStore,
     oauthProvider, // 🔒 Pass OAuth provider for MCP token validation
     consumerDeps.oauthConsumer, // 🔒 Pass OAuth consumer for third-party authentication
     consumerDeps.thirdpartyApiClient, // 🔒 Pass third-party API client for token refresh
@@ -825,6 +828,7 @@ export async function getAllDependencies(
     kvManager,
     sessionStore,
     eventStore,
+    transportPersistenceStore,
     credentialStore,
     errorHandler,
     workflowRegistry,

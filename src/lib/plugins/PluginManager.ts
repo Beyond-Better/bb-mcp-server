@@ -21,7 +21,7 @@ export class PluginManager {
   private workflowRegistry: WorkflowRegistry;
   private logger: Logger | undefined;
   private discoveryOptions: PluginDiscoveryOptions;
-  private watchedPaths: string[] = [];
+  // private watchedPaths: string[] = [];
   private dependencies: AppServerDependencies;
   private plugins = new Map<string, LoadedPlugin>();
 

@@ -5,7 +5,7 @@
 
 import { assert, assertEquals, assertExists } from '@std/assert';
 import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
-import { assertSpyCalls, returnsNext, spy, stub } from '@std/testing/mock';
+import { assertSpyCalls, spy } from '@std/testing/mock';
 
 // Import components
 import { CoreTools } from '../../../src/lib/tools/CoreTools.ts';
@@ -14,7 +14,7 @@ import { AuditLogger } from '../../../src/lib/utils/AuditLogger.ts';
 
 // Import types
 import type { CoreToolsDependencies } from '../../../src/lib/types/BeyondMcpTypes.ts';
-import type { ToolRegistry } from '../../../src/lib/tools/ToolRegistry.ts';
+//import type { ToolRegistry } from '../../../src/lib/tools/ToolRegistry.ts';
 
 // Test helpers
 import {

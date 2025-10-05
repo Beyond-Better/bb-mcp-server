@@ -1000,7 +1000,7 @@ export class HttpTransport implements Transport {
         origin,
         createdFromEndpoint: 'POST /mcp',
       },
-    ).catch((error) => {
+    ).catch((error: Error | string) => {
       this.logger.error('HttpTransport: Failed to persist session', toError(error), {
         sessionId,
       });
@@ -1012,12 +1012,14 @@ export class HttpTransport implements Transport {
       return;
     }
 
-    this.dependencies.transportPersistence.updateSessionActivity(sessionId).catch((error) => {
-      this.logger.debug('HttpTransport: Failed to update session activity', {
-        sessionId,
-        error: toError(error).message,
-      });
-    });
+    this.dependencies.transportPersistenceStore.updateSessionActivity(sessionId).catch(
+      (error: Error | string) => {
+        this.logger.debug('HttpTransport: Failed to update session activity', {
+          sessionId,
+          error: toError(error).message,
+        });
+      },
+    );
   }
 
   private markSessionInactive(sessionId: string): void {
@@ -1025,12 +1027,14 @@ export class HttpTransport implements Transport {
       return;
     }
 
-    this.dependencies.transportPersistence.markSessionInactive(sessionId).catch((error) => {
-      this.logger.debug('HttpTransport: Failed to mark session inactive', {
-        sessionId,
-        error: toError(error).message,
-      });
-    });
+    this.dependencies.transportPersistenceStore.markSessionInactive(sessionId).catch(
+      (error: Error | string) => {
+        this.logger.debug('HttpTransport: Failed to mark session inactive', {
+          sessionId,
+          error: toError(error).message,
+        });
+      },
+    );
   }
 
   /**
@@ -1322,7 +1326,7 @@ class SimpleResponseCapture implements SSEStreamCapture {
 class ReadableStreamServerResponse {
   private streamController: ReadableStreamDefaultController<Uint8Array>;
   private textEncoder = new TextEncoder();
-  private sessionId: string;
+  // private sessionId: string; // sessionId grabbed from header, and then passed around
   private responseStatus = 200;
   private responseHeaders: Record<string, string> = {};
   private isEnded = false;
@@ -1331,7 +1335,7 @@ class ReadableStreamServerResponse {
 
   constructor(controller: ReadableStreamDefaultController<Uint8Array>, sessionId: string) {
     this.streamController = controller;
-    this.sessionId = sessionId;
+    // this.sessionId = sessionId; // sessionId grabbed from header, and then passed around
   }
 
   createNodeResponse() {

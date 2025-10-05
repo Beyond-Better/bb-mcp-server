@@ -13,7 +13,7 @@
  * - Session binding interface compliance
  */
 
-import { assert, assertEquals, assertExists, assertRejects } from '@std/assert';
+import { assert, assertEquals, assertExists } from '@std/assert';
 import {
   OAuthConsumer,
   type OAuthConsumerDependencies,
@@ -22,8 +22,8 @@ import { KVManager } from '../../../src/lib/storage/KVManager.ts';
 import { CredentialStore } from '../../../src/lib/storage/CredentialStore.ts';
 import type { Logger } from '../../../src/types/library.types.ts';
 import type {
-  AuthCallbackResult,
-  AuthFlowResult,
+  //AuthCallbackResult,
+  //AuthFlowResult,
   OAuthConsumerConfig,
   OAuthCredentials,
   TokenResult,
@@ -98,9 +98,15 @@ class TestOAuthConsumer extends OAuthConsumer {
   setTokenExchangeResult(result: TokenResult) {
     this.mockTokenExchangeResult = result;
   }
+  getTokenExchangeResult(): TokenResult {
+    return this.mockTokenExchangeResult;
+  }
 
   setRefreshResult(result: TokenResult) {
     this.mockRefreshResult = result;
+  }
+  getRefreshResult(): TokenResult {
+    return this.mockRefreshResult;
   }
 
   setShouldFailTokenExchange(shouldFail: boolean) {

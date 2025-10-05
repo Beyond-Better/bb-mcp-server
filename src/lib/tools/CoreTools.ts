@@ -40,9 +40,9 @@ export class CoreTools {
 
   constructor(dependencies: CoreToolsDependencies) {
     this.dependencies = dependencies;
-    this.sdkMcpServer = dependencies.sdkMcpServer;
-    this.logger = dependencies.logger;
-    this.auditLogger = dependencies.auditLogger;
+    this.sdkMcpServer = this.dependencies.sdkMcpServer;
+    this.logger = this.dependencies.logger;
+    this.auditLogger = this.dependencies.auditLogger;
   }
 
   /**

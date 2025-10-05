@@ -6,17 +6,18 @@
 
 import { assert, assertEquals, assertExists } from '@std/assert';
 import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
-import { assertSpyCalls, spy } from '@std/testing/mock';
+import { //assertSpyCalls, 
+spy } from '@std/testing/mock';
 import { z } from 'zod';
 
 // Import components
-import { ToolBase } from '../../src/lib/tools/ToolBase.ts';
+//import { ToolBase } from '../../src/lib/tools/ToolBase.ts';
 import { ToolRegistry } from '../../src/lib/tools/ToolRegistry.ts';
-import type { Logger } from '../../src/lib/utils/Logger.ts';
+//import type { Logger } from '../../src/lib/utils/Logger.ts';
 import type { ErrorHandler } from '../../src/lib/utils/ErrorHandler.ts';
 
 // Import test helpers
-import { createMockLogger, SpyLogger } from '../utils/test-helpers.ts';
+import { SpyLogger } from '../utils/test-helpers.ts';
 
 // Import test implementations
 import { MockTool } from '../unit/tools/mocks/MockTool.ts';
@@ -31,12 +32,12 @@ function getTextContent(result: any): string {
 }
 
 // Helper function to safely access content
-function getFirstContent(result: any) {
-  if (!result?.content?.[0]) {
-    throw new Error('Result does not have expected content');
-  }
-  return result.content[0];
-}
+// function getFirstContent(result: any) {
+//   if (!result?.content?.[0]) {
+//     throw new Error('Result does not have expected content');
+//   }
+//   return result.content[0];
+// }
 
 // Mock MCP Server for ToolRegistry integration
 class MockMcpServer {

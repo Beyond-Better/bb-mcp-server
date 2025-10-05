@@ -4,7 +4,7 @@
 
 import { assertEquals, assertExists, assertRejects } from '@std/assert';
 import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
-import { assertSpyCalls, returnsNext, spy, stub } from '@std/testing/mock';
+import { assertSpyCalls, spy, stub } from '@std/testing/mock';
 
 // Import components
 import { BeyondMcpServer } from '../../../src/lib/server/BeyondMcpServer.ts';

@@ -105,7 +105,7 @@ export class ConfigManager {
         }
 
         if (validation.warnings.length > 0) {
-          this._logger?.warn('Configuration warnings:', validation.warnings);
+          this._logger?.warn('ConfigManager: Configuration warnings:', validation.warnings);
         }
       }
 
@@ -247,7 +247,7 @@ export class ConfigManager {
    */
   private loadTransportConfig(): TransportConfig {
     const transport = this.getEnvOptional('MCP_TRANSPORT', 'stdio') as 'stdio' | 'http';
-    this._logger?.debug('Transport Config loaded:', transport);
+    this._logger?.debug('ConfigManager: Transport Config loaded:', transport);
 
     const config: TransportConfig = {
       type: transport,
@@ -702,6 +702,7 @@ export class ConfigManager {
    *
    * Usage: `CONFIG={"debug":"true","timeout":"5000"}`
    */
+  /*
   private getEnvRecordJSON(
     key: string,
     defaultValue: Record<string, string> = {},
@@ -715,4 +716,5 @@ export class ConfigManager {
       return defaultValue;
     }
   }
+   */
 }

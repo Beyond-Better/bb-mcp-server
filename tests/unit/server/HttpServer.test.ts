@@ -8,15 +8,15 @@
 
 import { assert, assertEquals, assertExists } from '@std/assert';
 import { HttpServer } from '../../../src/lib/server/HttpServer.ts';
-import { OAuthProvider } from '../../../src/lib/auth/OAuthProvider.ts';
-import { TransportManager } from '../../../src/lib/transport/TransportManager.ts';
-import { WorkflowRegistry } from '../../../src/lib/workflows/WorkflowRegistry.ts';
-import { Logger } from '../../../src/lib/utils/Logger.ts';
+//import { OAuthProvider } from '../../../src/lib/auth/OAuthProvider.ts';
+//import { TransportManager } from '../../../src/lib/transport/TransportManager.ts';
+//import { WorkflowRegistry } from '../../../src/lib/workflows/WorkflowRegistry.ts';
+//import { Logger } from '../../../src/lib/utils/Logger.ts';
 import type {
   HttpServerConfig,
   HttpServerDependencies,
 } from '../../../src/lib/server/HttpServer.ts';
-import { createTestBeyondMcpServer, TestBeyondMcpServer } from '../../utils/test-helpers.ts';
+import { createTestBeyondMcpServer } from '../../utils/test-helpers.ts';
 
 // Mock dependencies for testing
 class MockLogger {

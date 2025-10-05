@@ -19,8 +19,8 @@ import { SessionStore } from '../../../src/lib/storage/SessionStore.ts';
 import { SessionManager } from '../../../src/lib/transport/SessionManager.ts';
 import type { Logger } from '../../../src/lib/utils/Logger.ts';
 import type {
-  BeyondMcpAuthContext,
-  SessionData,
+  //BeyondMcpAuthContext,
+  //SessionData,
   TransportConfig,
   TransportDependencies,
 } from '../../../src/lib/transport/TransportTypes.ts';
@@ -292,13 +292,13 @@ Deno.test({
       }),
     });
 
-    // Create OAuth auth context
-    const authContext: BeyondMcpAuthContext = {
-      authenticatedUserId: 'oauth_user_123',
-      clientId: 'oauth_client_456',
-      scopes: ['read', 'write'],
-      requestId: 'test_request_123',
-    };
+    // // Create OAuth auth context
+    // const authContext: BeyondMcpAuthContext = {
+    //   authenticatedUserId: 'oauth_user_123',
+    //   clientId: 'oauth_client_456',
+    //   scopes: ['read', 'write'],
+    //   requestId: 'test_request_123',
+    // };
 
     const beyondMcpServer = await createTestBeyondMcpServer();
 
@@ -505,9 +505,10 @@ Deno.test({
     assertExists(sessionId);
 
     // Test session retrieval
-    const retrievedSession = await transportManager.getSession(sessionId);
+    //const retrievedSession = await transportManager.getSession(sessionId);
     // May return null due to mock implementation
-    // assertEquals(retrievedSession?.userId, 'session_user_123');
+    //assertExists(retrievedSession);
+    //assertEquals(retrievedSession?.userId, 'session_user_123');
 
     // Test session count
     const sessionCount = transportManager.getSessionCount();

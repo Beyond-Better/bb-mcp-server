@@ -21,7 +21,7 @@ import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
 import { OAuthEndpoints } from './OAuthEndpoints.ts';
 import { BeyondMcpServer } from './BeyondMcpServer.ts';
 import { APIRouter } from './APIRouter.ts';
-import { StatusEndpoints } from './StatusEndpoints.ts';
+//import { StatusEndpoints } from './StatusEndpoints.ts';
 import { CORSHandler } from './CORSHandler.ts';
 import { ErrorPages } from './ErrorPages.ts';
 import { reconstructOriginalUrl } from '../utils/UrlUtils.ts';
@@ -88,14 +88,14 @@ export class HttpServer {
   // Endpoint handlers (injected)
   private oauthEndpoints: OAuthEndpoints;
   private apiRouter: APIRouter;
-  private statusEndpoints: StatusEndpoints;
+  //private statusEndpoints: StatusEndpoints; // only used in APIRouter
   private corsHandler: CORSHandler;
   private errorPages: ErrorPages;
 
   // Integration components
   private beyondMcpServer: BeyondMcpServer;
   private transportManager: TransportManager;
-  private oauthProvider: OAuthProvider;
+  //private oauthProvider: OAuthProvider; // not passed down anywhere
 
   constructor(dependencies: HttpServerDependencies) {
     this.httpServerConfig = dependencies.httpServerConfig;
@@ -105,14 +105,14 @@ export class HttpServer {
     // Initialize endpoint handlers
     this.oauthEndpoints = new OAuthEndpoints(dependencies);
     this.apiRouter = new APIRouter(this.httpServerConfig.api, dependencies);
-    this.statusEndpoints = new StatusEndpoints(dependencies, this.startTime);
+    //this.statusEndpoints = new StatusEndpoints(dependencies, this.startTime); // only used in APIRouter
     this.corsHandler = new CORSHandler(this.httpServerConfig.cors);
     this.errorPages = new ErrorPages(this.httpServerConfig);
 
     // Integration components
     this.beyondMcpServer = dependencies.beyondMcpServer;
     this.transportManager = dependencies.transportManager;
-    this.oauthProvider = dependencies.oauthProvider;
+    //this.oauthProvider = dependencies.oauthProvider; // not passed down anywhere
 
     this.logger.info('HttpServer: Initialized', {
       hostname: this.httpServerConfig.hostname,

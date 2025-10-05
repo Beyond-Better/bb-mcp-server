@@ -5,7 +5,7 @@
 
 import { assert, assertEquals, assertExists } from '@std/assert';
 import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
-import { assertSpyCalls, spy } from '@std/testing/mock';
+//import { assertSpyCalls, spy } from '@std/testing/mock';
 import { z } from 'zod';
 
 // Import all MCP Server components
@@ -32,7 +32,7 @@ import {
   MockSdkMcpServer,
   SpyAuditLogger,
   SpyLogger,
-  TestData,
+  //TestData,
 } from '../utils/test-helpers.ts';
 
 describe('MCP Server Complete Integration', () => {
@@ -546,7 +546,7 @@ describe('MCP Server Library API Integration', () => {
 
   it('should export all MCP Server types for consumers', async () => {
     // This test verifies type exports by importing and using them
-    const typesModule = await import('../../src/lib/types/BeyondMcpTypes.ts');
+    //const typesModule = await import('../../src/lib/types/BeyondMcpTypes.ts');
 
     // Verify core types are usable by creating objects
     const config = {
