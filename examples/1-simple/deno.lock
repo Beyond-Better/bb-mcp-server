@@ -1,26 +1,28 @@
 {
   "version": "5",
   "specifiers": {
-    "jsr:@std/assert@^1.0.12": "1.0.13",
-    "jsr:@std/assert@^1.0.13": "1.0.13",
+    "jsr:@beyondbetter/bb-mcp-server@*": "0.1.4",
     "jsr:@std/datetime@~0.225.4": "0.225.5",
     "jsr:@std/dotenv@~0.225.3": "0.225.5",
     "jsr:@std/fmt@^1.0.6": "1.0.8",
-    "jsr:@std/internal@^1.0.6": "1.0.10",
-    "jsr:@std/internal@^1.0.8": "1.0.10",
-    "jsr:@std/internal@^1.0.9": "1.0.10",
-    "jsr:@std/path@^1.0.8": "1.1.1",
-    "jsr:@std/testing@^1.0.11": "1.0.14",
-    "npm:@modelcontextprotocol/sdk@1.17.5": "1.17.5_express@5.1.0_zod@3.25.76",
+    "jsr:@std/internal@^1.0.10": "1.0.10",
+    "jsr:@std/path@^1.0.8": "1.1.2",
+    "npm:@modelcontextprotocol/sdk@1.18.2": "1.18.2_express@5.1.0_zod@3.25.76",
     "npm:@types/node@*": "24.2.0",
     "npm:zod-to-json-schema@^3.24.6": "3.24.6_zod@3.25.76",
     "npm:zod@^3.22.4": "3.25.76"
   },
   "jsr": {
-    "@std/assert@1.0.13": {
-      "integrity": "ae0d31e41919b12c656c742b22522c32fb26ed0cba32975cb0de2a273cb68b29",
+    "@beyondbetter/bb-mcp-server@0.1.4": {
+      "integrity": "e3067e3d7a5e04146ff143f6d47cf4c1eaa3abc2670e427804301fed061990a5",
       "dependencies": [
-        "jsr:@std/internal@^1.0.6"
+        "jsr:@std/datetime",
+        "jsr:@std/dotenv",
+        "jsr:@std/fmt",
+        "jsr:@std/path",
+        "npm:@modelcontextprotocol/sdk",
+        "npm:zod",
+        "npm:zod-to-json-schema"
       ]
     },
     "@std/datetime@0.225.5": {
@@ -35,23 +37,16 @@
     "@std/internal@1.0.10": {
       "integrity": "e3be62ce42cab0e177c27698e5d9800122f67b766a0bea6ca4867886cbde8cf7"
     },
-    "@std/path@1.1.1": {
-      "integrity": "fe00026bd3a7e6a27f73709b83c607798be40e20c81dde655ce34052fd82ec76",
+    "@std/path@1.1.2": {
+      "integrity": "c0b13b97dfe06546d5e16bf3966b1cadf92e1cc83e56ba5476ad8b498d9e3038",
       "dependencies": [
-        "jsr:@std/internal@^1.0.9"
-      ]
-    },
-    "@std/testing@1.0.14": {
-      "integrity": "144b3737105b9071cb50c957681f58a1b8ec0f3e5b19ad830f401c5fa931e8f0",
-      "dependencies": [
-        "jsr:@std/assert@^1.0.13",
-        "jsr:@std/internal@^1.0.8"
+        "jsr:@std/internal"
       ]
     }
   },
   "npm": {
-    "@modelcontextprotocol/sdk@1.17.5_express@5.1.0_zod@3.25.76": {
-      "integrity": "sha512-QakrKIGniGuRVfWBdMsDea/dx1PNE739QJ7gCM41s9q+qaCYTHCdsIBXQVVXry3mfWAiaM9kT22Hyz53Uw8mfg==",
+    "@modelcontextprotocol/sdk@1.18.2_express@5.1.0_zod@3.25.76": {
+      "integrity": "sha512-beedclIvFcCnPrYgHsylqiYJVJ/CI47Vyc4tY8no1/Li/O8U4BTlJfy6ZwxkYwx+Mx10nrgwSVrA7VBbhh4slg==",
       "dependencies": [
         "ajv",
         "content-type",
@@ -150,8 +145,8 @@
         "which"
       ]
     },
-    "debug@4.4.1": {
-      "integrity": "sha512-KcKCqiftBJcZr++7ykoDIEwSa3XWowTfNPo92BYxjXiyYEVrUQh2aLyhxBCwww+heortUFxEJYcRzosstTEBYQ==",
+    "debug@4.4.3": {
+      "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",
       "dependencies": [
         "ms"
       ]
@@ -560,32 +555,9 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@std/assert@^1.0.12",
-      "jsr:@std/async@^1.0.12",
-      "jsr:@std/cli@^1.0.16",
-      "jsr:@std/crypto@^1.0.4",
-      "jsr:@std/csv@^1.0.6",
-      "jsr:@std/datetime@~0.225.4",
-      "jsr:@std/dotenv@~0.225.3",
-      "jsr:@std/encoding@^1.0.9",
-      "jsr:@std/fmt@^1.0.6",
-      "jsr:@std/fs@^1.0.16",
-      "jsr:@std/html@^1.0.3",
-      "jsr:@std/http@^1.0.14",
-      "jsr:@std/io@~0.225.2",
-      "jsr:@std/log@~0.224.14",
-      "jsr:@std/media-types@^1.1.0",
-      "jsr:@std/path@^1.0.8",
-      "jsr:@std/regex@^1.0.1",
-      "jsr:@std/semver@^1.0.5",
-      "jsr:@std/streams@^1.0.9",
-      "jsr:@std/testing@^1.0.11",
-      "jsr:@std/toml@^1.0.8",
-      "jsr:@std/ulid@1",
-      "jsr:@std/uuid@^1.0.6",
-      "jsr:@std/yaml@^1.0.5",
-      "npm:@modelcontextprotocol/sdk@1.17.5",
-      "npm:zod-to-json-schema@^3.24.6",
+      "jsr:@beyondbetter/bb-mcp-server@*",
+      "jsr:@std/assert@1",
+      "jsr:@std/testing@1",
       "npm:zod@^3.22.4"
     ]
   }

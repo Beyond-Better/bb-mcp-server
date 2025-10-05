@@ -12,8 +12,8 @@
 import {
   AppServerDependencies,
   type CreateCustomAppServerDependencies,
-  ToolHandlerMode,
-  WorkflowToolNaming,
+  //ToolHandlerMode,
+  //WorkflowToolNaming,
 } from '@beyondbetter/bb-mcp-server';
 
 // 🎯 Consumer-specific imports - business logic components
