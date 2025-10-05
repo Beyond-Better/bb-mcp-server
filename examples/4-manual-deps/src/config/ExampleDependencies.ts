@@ -14,7 +14,7 @@ import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
 import {
   AppServerDependencies,
   AuditLogger,
-  BeyondMcpServerDependencies,
+  //BeyondMcpServerDependencies,
   ConfigManager,
   CreateCustomAppServerDependencies,
   CredentialStore,
@@ -33,9 +33,9 @@ import {
   TransportEventStoreChunkedConfig,
   TransportManager,
   validateConfiguration,
-  WorkflowRegistry,
+  //WorkflowRegistry,
   //type MCPServerDependencies,
-  type WorkflowRegistryConfig,
+  //type WorkflowRegistryConfig,
 } from '@beyondbetter/bb-mcp-server';
 
 // 🎯 Import dependency helpers from the library
@@ -327,11 +327,13 @@ export async function createManualDependencies(
   const queryWorkflow = new ExampleQueryWorkflow({
     apiClient: thirdpartyApiClient,
     logger: logger,
+    oauthConsumer: oauthConsumer,
   });
 
   const operationWorkflow = new ExampleOperationWorkflow({
     apiClient: thirdpartyApiClient,
     logger: logger,
+    oauthConsumer: oauthConsumer,
   });
 
   // Manual registration with complete control
@@ -344,10 +346,7 @@ export async function createManualDependencies(
 
   // 🎯 Initialize library transport manager with minimal config
   const transportConfig = configManager.get<TransportConfig>('transport');
-  const transportManager = new TransportManager({
-    type: transportConfig.type,
-    http: transportConfig.http,
-  }, {
+  const transportManager = new TransportManager(transportConfig, {
     logger,
     kvManager,
     sessionStore,

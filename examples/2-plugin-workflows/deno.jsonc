@@ -55,14 +55,14 @@
   },
 
   // use `importMap` for local testing
-  "importMap": "../import_map.json",
+  // "importMap": "../import_map.json",
   // use `imports` in real app
-  // "imports": {
-  //   "@beyondbetter/bb-mcp-server": "jsr:@beyondbetter/bb-mcp-server",
-  //   "@std/assert": "jsr:@std/assert@^1.0.0",
-  //   "@std/testing": "jsr:@std/testing@^1.0.0",
-  //   "zod": "npm:zod@^3.22.4"
-  // },
+  "imports": {
+    "@beyondbetter/bb-mcp-server": "jsr:@beyondbetter/bb-mcp-server",
+    "@std/assert": "jsr:@std/assert@^1.0.0",
+    "@std/testing": "jsr:@std/testing@^1.0.0",
+    "zod": "npm:zod@^3.22.4"
+  },
 
   "exclude": [
     "data/",

@@ -67,11 +67,11 @@ cp .env.example .env
 
 ```bash
 # STDIO transport (default)
-deno run --allow-read --allow-write --allow-env main.ts
+deno run --allow-read --allow-write --allow-env --unstable-kv main.ts
 
 # HTTP transport
 echo "MCP_TRANSPORT=http" >> .env
-deno run --allow-read --allow-write --allow-env --allow-net main.ts
+deno run --allow-read --allow-write --allow-env --allow-net --unstable-kv main.ts
 ```
 
 ### 4. Test Large Messages

@@ -429,9 +429,18 @@ export class ConfigManager {
    * Returns the nested structure expected by OAuthProvider constructor
    */
   private loadOAuthProviderConfig(): OAuthProviderConfig {
-    const clientId = this.getEnvRequired('OAUTH_PROVIDER_CLIENT_ID');
-    const clientSecret = this.getEnvRequired('OAUTH_PROVIDER_CLIENT_SECRET');
-    const redirectUri = this.getEnvRequired('OAUTH_PROVIDER_REDIRECT_URI');
+    const clientId = this.getEnvOptional('OAUTH_PROVIDER_CLIENT_ID', 'bb-mcp-server');
+    const clientSecret = this.getEnvOptional('OAUTH_PROVIDER_CLIENT_SECRET', 'super-secret');
+    const redirectUri = this.getEnvOptional(
+      'OAUTH_PROVIDER_REDIRECT_URI',
+      'http://localhost:3000/oauth/callback',
+    );
+
+    if (clientId === 'bb-mcp-server' || clientSecret === 'super-secret') {
+      this._logger?.warn(
+        'ConfigManager: Using default values for OAUTH_PROVIDER_CLIENT_ID or OAUTH_PROVIDER_CLIENT_SECRET - change them before deploying to production',
+      );
+    }
 
     return {
       issuer: this.getEnvOptional('OAUTH_PROVIDER_ISSUER', 'http://localhost:3000'),

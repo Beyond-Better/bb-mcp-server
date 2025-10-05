@@ -15,13 +15,19 @@ import {
   AuditLogger,
   BeyondMcpServer,
   ConfigManager,
+  CredentialStore,
   ErrorHandler,
   getToolRegistry,
   getWorkflowRegistry,
   KVManager,
   Logger,
+  OAuthProvider,
+  OAuthProviderConfig,
+  SessionStore,
+  TransportConfig,
   TransportEventStoreChunked,
   TransportEventStoreChunkedConfig,
+  TransportManager,
 } from '@beyondbetter/bb-mcp-server';
 
 /**
@@ -228,6 +234,9 @@ async function main() {
     'transportEventStore',
   );
 
+  const sessionStore = new SessionStore(kvManager, { keyPrefix: ['sessions'] }, logger);
+  const credentialStore = new CredentialStore(kvManager, {}, logger);
+
   // Create chunked event store
   const eventStore = new TransportEventStoreChunked(
     kvManager,
@@ -243,6 +252,23 @@ async function main() {
 
   // Make event store available to tools
   StorageStatsTool.eventStore = eventStore;
+
+  const oauthConfig = configManager.get<OAuthProviderConfig>('oauthProvider');
+  const oauthProvider = new OAuthProvider(oauthConfig, {
+    logger,
+    kvManager,
+    credentialStore,
+  });
+
+  // 🎯 Initialize library transport manager with minimal config
+  const transportConfig = configManager.get<TransportConfig>('transport');
+  const transportManager = new TransportManager(transportConfig, {
+    logger,
+    kvManager,
+    sessionStore,
+    eventStore,
+    oauthProvider,
+  });
 
   // Create MCP server
   const server = new BeyondMcpServer({
@@ -302,12 +328,12 @@ generate_large_message({"size": 2048, "content": "mixed"})
     logger,
     auditLogger,
     kvManager,
-    credentialStore: null as any,
+    transportManager,
+    credentialStore,
     errorHandler,
     workflowRegistry,
     toolRegistry,
-    oauthProvider: undefined,
-    transportManager: null as any,
+    oauthProvider,
   } as any);
 
   // Register demo tools
