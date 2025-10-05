@@ -81,7 +81,7 @@ const eventStore = new TransportEventStore(kv, ['events'], logger);
 **After:**
 ```typescript
 const eventStore = new TransportEventStoreChunked(
-  kv, 
+  kvManager, 
   ['events'], 
   logger, 
   {

@@ -13,6 +13,7 @@
 
 import { assert, assertEquals, assertExists } from '@std/assert';
 import { TransportEventStore } from '../../../src/lib/storage/TransportEventStore.ts';
+import { KVManager } from '../../../src/lib/storage/KVManager.ts';
 import type { Logger } from '../../../src/types/library.types.ts';
 import type { JSONRPCMessage } from 'mcp/types.js';
 
@@ -24,9 +25,16 @@ const mockLogger: Logger = {
   error: () => {},
 };
 
-// Helper function to create test KV instance
-async function createTestKV(): Promise<Deno.Kv> {
-  return await Deno.openKv(':memory:');
+// Helper to create test KV instance
+async function createTestKvManager(): Promise<KVManager> {
+  const kvManager = new KVManager({ kvPath: ':memory:' });
+  await kvManager.initialize();
+  return kvManager;
+}
+
+// Helper function to close kvManager
+async function cleanupTestDependencies(kvManager: KVManager): Promise<void> {
+  await kvManager.close();
 }
 
 // Helper function to create test MCP message
@@ -42,37 +50,37 @@ function createTestMCPMessage(id: number, method: string = 'test/method'): JSONR
 Deno.test({
   name: 'TransportEventStore - Initialize with Default Configuration',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStore(kv, undefined, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
     // Verify store is initialized
     assertExists(eventStore);
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStore - Initialize with Custom Key Prefix',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
     const customPrefix = ['custom', 'oauth', 'events'];
-    const eventStore = new TransportEventStore(kv, customPrefix, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, customPrefix, mockLogger);
 
     assertExists(eventStore);
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStore - Log Transport Event (OAuth Events)',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStore(kv, undefined, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
     const oauthEvent = {
       type: 'oauth_authorization',
@@ -91,6 +99,8 @@ Deno.test({
     // Log OAuth event
     await eventStore.logEvent(oauthEvent);
 
+    const kv = kvManager.getKV();
+
     // Verify event was logged by checking KV storage
     const eventKeys = [];
     for await (
@@ -101,16 +111,16 @@ Deno.test({
 
     assertEquals(eventKeys.length, 1);
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStore - Log Transport Event with Error',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStore(kv, undefined, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
     const errorEvent = {
       type: 'oauth_token_error',
@@ -124,6 +134,8 @@ Deno.test({
 
     // Log error event
     await eventStore.logEvent(errorEvent);
+
+    const kv = kvManager.getKV();
 
     // Verify error event was logged
     const errorEvents = [];
@@ -140,22 +152,24 @@ Deno.test({
     assertEquals(loggedEvent.level, 'error');
     assertExists(loggedEvent.timestamp);
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStore - Store MCP Event',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStore(kv, undefined, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
     const streamId = 'test_stream_123';
     const mcpMessage = createTestMCPMessage(1, 'tools/list');
 
     // Store MCP event
     const eventId = await eventStore.storeEvent(streamId, mcpMessage);
+
+    const kv = kvManager.getKV();
 
     // Verify event ID format
     assertExists(eventId);
@@ -171,16 +185,16 @@ Deno.test({
     assertEquals(eventData.message, mcpMessage);
     assertExists(eventData.timestamp);
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStore - Generate Unique Event IDs',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStore(kv, undefined, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
     const streamId = 'unique_test_stream';
     const eventIds: string[] = [];
@@ -203,16 +217,16 @@ Deno.test({
       assertEquals(parts.length, 3, 'Event ID should have 3 parts (stream, timestamp, random)');
     }
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStore - Replay Events After Last Event ID',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStore(kv, undefined, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
     const streamId = 'replay_test_stream';
     const eventIds: string[] = [];
@@ -249,16 +263,16 @@ Deno.test({
     assertEquals((replayedEvents[1]?.message as any)?.params?.messageId, 4);
     assertEquals((replayedEvents[2]?.message as any)?.params?.messageId, 5);
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStore - Replay with Invalid Last Event ID',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStore(kv, undefined, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
     // Try to replay with invalid event ID format
     const replayResult = await eventStore.replayEventsAfter('invalid_event_id_format', {
@@ -268,16 +282,16 @@ Deno.test({
     // Should return empty string for invalid format
     assertEquals(replayResult, '');
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStore - Replay with Empty Last Event ID',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStore(kv, undefined, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
     // Try to replay with empty event ID
     const replayResult = await eventStore.replayEventsAfter('', {
@@ -287,16 +301,16 @@ Deno.test({
     // Should return empty string for empty event ID
     assertEquals(replayResult, '');
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStore - Get Stream Metadata',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStore(kv, undefined, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
     const streamId = 'metadata_test_stream';
 
@@ -308,6 +322,9 @@ Deno.test({
     const eventId1 = await eventStore.storeEvent(streamId, createTestMCPMessage(1));
     const eventId2 = await eventStore.storeEvent(streamId, createTestMCPMessage(2));
 
+    assertExists(eventId1);
+    assertExists(eventId2);
+
     // Get updated metadata
     const metadata = await eventStore.getStreamMetadata(streamId);
 
@@ -318,16 +335,16 @@ Deno.test({
       assertExists(metadata.createdAt);
     }
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStore - List Streams',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStore(kv, undefined, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
     // Initially no streams
     const initialStreams = await eventStore.listStreams();
@@ -347,16 +364,16 @@ Deno.test({
     assert(streams.includes('stream_b'));
     assert(streams.includes('stream_c'));
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStore - Cleanup Old Events',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStore(kv, undefined, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
     const streamId = 'cleanup_test_stream';
 
@@ -372,6 +389,8 @@ Deno.test({
 
     assertEquals(deletedCount, 5); // Should delete 5 oldest events
 
+    const kv = kvManager.getKV();
+
     // Verify remaining events
     const remainingEvents = [];
     for await (const entry of kv.list({ prefix: ['events', 'stream', streamId] })) {
@@ -382,16 +401,16 @@ Deno.test({
 
     assertEquals(remainingEvents.length, 10);
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStore - Cleanup Old Events with Small Keep Count',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStore(kv, undefined, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
     const streamId = 'small_cleanup_stream';
 
@@ -406,16 +425,16 @@ Deno.test({
     // Should delete 0 events since we have fewer than keepCount
     assertEquals(deletedCount, 0);
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStore - OAuth Event Types Coverage',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStore(kv, undefined, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
     // Test various OAuth event types
     const oauthEvents = [
@@ -461,6 +480,8 @@ Deno.test({
       await eventStore.logEvent(event);
     }
 
+    const kv = kvManager.getKV();
+
     // Verify all event types were logged
     for (const event of oauthEvents) {
       const events = [];
@@ -470,16 +491,16 @@ Deno.test({
       assertEquals(events.length, 1, `Event type ${event.type} should be logged`);
     }
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStore - MCP Session Event Integration',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStore(kv, undefined, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
     const sessionId = 'mcp_session_123';
 
@@ -515,6 +536,8 @@ Deno.test({
       await eventStore.logEvent(event);
     }
 
+    const kv = kvManager.getKV();
+
     // Verify session events were logged
     let totalSessionEvents = 0;
     for (const event of sessionEvents) {
@@ -531,16 +554,16 @@ Deno.test({
 
     assertEquals(totalSessionEvents, 3);
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });
 
 Deno.test({
   name: 'TransportEventStore - Error Handling and Edge Cases',
   async fn() {
-    const kv = await createTestKV();
+    const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStore(kv, undefined, mockLogger);
+    const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
     // Test logging event without optional fields
     const minimalEvent = {
@@ -566,6 +589,6 @@ Deno.test({
     });
     assertEquals(replayResult, 'nonexistent'); // Returns stream ID even if no events found
 
-    await kv.close();
+    cleanupTestDependencies(kvManager);
   },
 });

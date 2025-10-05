@@ -12,7 +12,7 @@ import type { Logger } from '../../types/library.types.ts';
  */
 export interface CORSConfig {
   /** Allowed origin (default: '*') */
-  allowOrigin: string;
+  allowOrigins: string[];
   /** Allowed methods (optional, defaults provided) */
   allowMethods?: string[];
   /** Allowed headers (optional, defaults provided) */
@@ -37,7 +37,7 @@ export class CORSHandler {
 
   // Default CORS configuration for MCP servers
   private static readonly DEFAULT_CONFIG: Required<CORSConfig> = {
-    allowOrigin: '*',
+    allowOrigins: ['*'],
     allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'mcp-session-id', 'MCP-Protocol-Version'],
     exposeHeaders: ['Mcp-Session-Id', 'WWW-Authenticate'],
@@ -54,7 +54,7 @@ export class CORSHandler {
     this.logger = logger;
 
     this.logger?.info('CORSHandler: Initialized', {
-      allowOrigin: this.config.allowOrigin,
+      allowOrigins: this.config.allowOrigins,
       allowMethods: this.config.allowMethods?.length || 0,
       allowHeaders: this.config.allowHeaders?.length || 0,
       maxAge: this.config.maxAge,
@@ -69,7 +69,7 @@ export class CORSHandler {
     const headers = new Headers();
 
     // Basic CORS headers
-    headers.set('Access-Control-Allow-Origin', this.config.allowOrigin);
+    headers.set('Access-Control-Allow-Origin', this.config.allowOrigins.join(', '));
 
     if (this.config.allowMethods) {
       headers.set('Access-Control-Allow-Methods', this.config.allowMethods.join(', '));
@@ -177,13 +177,14 @@ export class CORSHandler {
       return true;
     }
 
-    if (this.config.allowOrigin === '*') {
+    if (this.config.allowOrigins[0] === '*') {
       // Allow all origins
       return true;
     }
 
     // Check exact match
-    return this.config.allowOrigin === origin;
+    //return this.config.allowOrigins === origin;
+    return this.config.allowOrigins.includes(origin.toLowerCase());
   }
 
   /**
@@ -257,7 +258,7 @@ export class CORSHandler {
     };
 
     this.logger?.info('CORSHandler: Configuration updated', {
-      allowOrigin: this.config.allowOrigin,
+      allowOrigins: this.config.allowOrigins,
       allowMethods: this.config.allowMethods?.length || 0,
       allowHeaders: this.config.allowHeaders?.length || 0,
     });
@@ -321,7 +322,7 @@ export class CORSHandler {
    */
   static createDevelopmentConfig(): CORSConfig {
     return {
-      allowOrigin: '*',
+      allowOrigins: ['*'],
       allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
       allowHeaders: [
         'Content-Type',
@@ -342,7 +343,7 @@ export class CORSHandler {
    */
   static createProductionConfig(allowedOrigins: string[]): CORSConfig {
     return {
-      allowOrigin: allowedOrigins.length === 1 ? allowedOrigins[0]! : allowedOrigins.join(','),
+      allowOrigins: allowedOrigins, //allowedOrigins.length === 1 ? allowedOrigins[0]! : allowedOrigins.join(','),
       allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
       allowHeaders: ['Content-Type', 'Authorization', 'mcp-session-id'],
       exposeHeaders: ['Mcp-Session-Id'],

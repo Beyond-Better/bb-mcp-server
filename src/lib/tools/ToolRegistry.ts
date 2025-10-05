@@ -44,12 +44,13 @@ export class ToolRegistry {
 
   private _sdkMcpServer: SdkMcpServer | undefined;
   private logger: Logger;
-  private errorHandler: ErrorHandler;
+  // [TODO] use standard errorHandler
+  //private errorHandler: ErrorHandler;
 
   constructor(dependencies: ToolRegistryDependencies) {
     if (dependencies.sdkMcpServer) this._sdkMcpServer = dependencies.sdkMcpServer;
     this.logger = dependencies.logger;
-    this.errorHandler = dependencies.errorHandler;
+    //this.errorHandler = dependencies.errorHandler;
   }
 
   /**

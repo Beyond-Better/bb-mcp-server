@@ -186,7 +186,7 @@ import { KVManager, Logger, TransportEventStoreChunked } from '@beyondbetter/bb-
 
 const kvManager = new KVManager({ kvPath: './data/my-server.db' }, logger);
 const eventStore = new TransportEventStoreChunked(
-  kvManager.getKV(),
+  kvManager,
   ['events'],
   logger,
   {

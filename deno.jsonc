@@ -86,6 +86,7 @@
     "strict": true,
     "exactOptionalPropertyTypes": true,
     "noImplicitReturns": true,
+    "noUnusedLocals": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "allowUnreachableCode": false,

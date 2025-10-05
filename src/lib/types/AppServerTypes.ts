@@ -8,6 +8,7 @@ import type { AuditLogger } from '../utils/AuditLogger.ts';
 import type { KVManager } from '../storage/KVManager.ts';
 import type { CredentialStore } from '../storage/CredentialStore.ts';
 import type { SessionStore } from '../storage/SessionStore.ts';
+import type { TransportPersistenceStore } from '../storage/TransportPersistenceStore.ts';
 import type { TransportEventStore } from '../storage/TransportEventStore.ts';
 import type { TransportEventStoreChunked } from '../storage/TransportEventStoreChunked.ts';
 import type { ErrorHandler } from '../utils/ErrorHandler.ts';
@@ -20,6 +21,7 @@ import type { HttpServerConfig } from '../server/ServerTypes.ts';
 import type { WorkflowBase } from '../workflows/WorkflowBase.ts';
 import type { ToolRegistration } from '../types/BeyondMcpTypes.ts';
 import type { TransportConfig } from '../transport/TransportTypes.ts';
+import type { AppPlugin } from './PluginTypes.ts';
 
 /**
  * Configuration interface for AppServer
@@ -48,6 +50,7 @@ export interface AppServerDependencies {
   auditLogger: AuditLogger;
   kvManager: KVManager;
   sessionStore: SessionStore;
+  transportPersistenceStore: TransportPersistenceStore;
   eventStore: TransportEventStore | TransportEventStoreChunked;
   credentialStore: CredentialStore;
   errorHandler: ErrorHandler;
@@ -79,6 +82,10 @@ export interface AppServerDependencies {
   // Custom workflows and tools
   customWorkflows?: WorkflowBase[];
   customTools?: ToolRegistration[];
+
+  // Static plugins (for compiled binaries or explicit registration)
+  // If provided, these plugins are registered before discovery runs
+  staticPlugins?: AppPlugin[];
 }
 type AppOnlyKeys = 'sessionStore' | 'eventStore' | 'credentialStore' | 'beyondMcpServer';
 

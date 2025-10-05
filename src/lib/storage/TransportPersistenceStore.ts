@@ -7,22 +7,15 @@
  */
 
 import { StreamableHTTPServerTransport } from 'mcp/server/streamableHttp.js';
+import type { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
 import type { TransportEventStore } from './TransportEventStore.ts';
+import type { KVManager } from './KVManager.ts';
+import type {
+  TransportConfig,
+  //TransportDependencies,
+} from '../transport/TransportTypes.ts';
+import type { Logger } from '../utils/Logger.ts';
 import { toError } from '../utils/Error.ts';
-
-interface Logger {
-  debug(message: string, data?: unknown): void;
-  info(message: string, data?: unknown): void;
-  warn(message: string, data?: unknown): void;
-  error(message: string, error?: Error, data?: unknown): void;
-}
-
-/**
- * Generic interface for MCP servers that support transport restoration
- */
-export interface MCPServerForRestore {
-  getMcpServer(): { connect(transport: StreamableHTTPServerTransport): Promise<void> } | null;
-}
 
 export interface PersistedSessionInfo {
   sessionId: string;
@@ -52,19 +45,20 @@ export interface TransportRestoreResult {
 /**
  * Service for persisting and restoring MCP transport sessions
  */
-export class TransportPersistenceService {
-  private kv: Deno.Kv;
+export class TransportPersistenceStore {
+  private kvManager: KVManager;
+  private logger: Logger;
   private keyPrefix: readonly string[];
-  private logger: Logger | undefined;
 
   constructor(
-    kv: Deno.Kv,
+    kvManager: KVManager,
+    _config: TransportConfig,
+    logger: Logger,
     keyPrefix: readonly string[] = ['transport'],
-    logger?: Logger,
   ) {
-    this.kv = kv;
-    this.keyPrefix = keyPrefix;
+    this.kvManager = kvManager;
     this.logger = logger;
+    this.keyPrefix = keyPrefix;
   }
 
   /**
@@ -98,7 +92,7 @@ export class TransportPersistenceService {
 
     try {
       // Store session info with multiple keys for different access patterns
-      const atomic = this.kv.atomic()
+      const atomic = this.kvManager.getKV().atomic()
         .set([...this.keyPrefix, 'session', sessionId], sessionInfo)
         .set([...this.keyPrefix, 'session_by_user', userId || 'anonymous', sessionId], {
           sessionId,
@@ -111,11 +105,11 @@ export class TransportPersistenceService {
         throw new Error('Failed to persist session in KV transaction');
       }
 
-      this.logger?.info(
-        `TransportPersistenceService: Persisted session ${sessionId} for user ${userId}`,
+      this.logger.info(
+        `TransportPersistenceStore: Persisted session ${sessionId} for user ${userId}`,
       );
     } catch (error) {
-      this.logger?.error('TransportPersistenceService: Failed to persist session', toError(error), {
+      this.logger.error('TransportPersistenceStore: Failed to persist session', toError(error), {
         sessionId,
         userId,
       });
@@ -127,13 +121,14 @@ export class TransportPersistenceService {
    * Update last activity timestamp for a session
    */
   async updateSessionActivity(sessionId: string): Promise<void> {
+    const kv = this.kvManager.getKV();
     try {
       const sessionKey = [...this.keyPrefix, 'session', sessionId];
-      const existing = await this.kv.get<PersistedSessionInfo>(sessionKey);
+      const existing = await kv.get<PersistedSessionInfo>(sessionKey);
 
       if (!existing.value) {
-        this.logger?.warn(
-          'TransportPersistenceService: Attempted to update activity for unknown session',
+        this.logger.warn(
+          'TransportPersistenceStore: Attempted to update activity for unknown session',
           {
             sessionId,
           },
@@ -146,10 +141,10 @@ export class TransportPersistenceService {
         lastActivity: Date.now(),
       };
 
-      await this.kv.set(sessionKey, updated);
+      await kv.set(sessionKey, updated);
     } catch (error) {
-      this.logger?.error(
-        'TransportPersistenceService: Failed to update session activity',
+      this.logger.error(
+        'TransportPersistenceStore: Failed to update session activity',
         toError(error),
         {
           sessionId,
@@ -164,7 +159,7 @@ export class TransportPersistenceService {
   async markSessionInactive(sessionId: string): Promise<void> {
     try {
       const sessionKey = [...this.keyPrefix, 'session', sessionId];
-      const existing = await this.kv.get<PersistedSessionInfo>(sessionKey);
+      const existing = await this.kvManager.getKV().get<PersistedSessionInfo>(sessionKey);
 
       if (!existing.value) {
         return; // Session doesn't exist or already cleaned up
@@ -176,14 +171,14 @@ export class TransportPersistenceService {
         lastActivity: Date.now(),
       };
 
-      await this.kv.set(sessionKey, updated);
+      await this.kvManager.getKV().set(sessionKey, updated);
 
-      this.logger?.info('TransportPersistenceService: Marked session as inactive', {
+      this.logger.info('TransportPersistenceStore: Marked session as inactive', {
         sessionId,
       });
     } catch (error) {
-      this.logger?.error(
-        'TransportPersistenceService: Failed to mark session inactive',
+      this.logger.error(
+        'TransportPersistenceStore: Failed to mark session inactive',
         toError(error),
         {
           sessionId,
@@ -197,15 +192,15 @@ export class TransportPersistenceService {
    */
   async getSessionInfo(sessionId: string): Promise<PersistedSessionInfo | null> {
     try {
-      const result = await this.kv.get<PersistedSessionInfo>([
+      const result = await this.kvManager.getKV().get<PersistedSessionInfo>([
         ...this.keyPrefix,
         'session',
         sessionId,
       ]);
       return result.value;
     } catch (error) {
-      this.logger?.error(
-        'TransportPersistenceService: Failed to get session info',
+      this.logger.error(
+        'TransportPersistenceStore: Failed to get session info',
         toError(error),
         {
           sessionId,
@@ -223,7 +218,7 @@ export class TransportPersistenceService {
       const sessions: PersistedSessionInfo[] = [];
       const prefix = [...this.keyPrefix, 'session_by_user', userId];
 
-      const iter = this.kv.list({ prefix });
+      const iter = this.kvManager.getKV().list({ prefix });
       for await (const entry of iter) {
         const sessionRef = entry.value as { sessionId: string };
         if (sessionRef.sessionId) {
@@ -236,8 +231,8 @@ export class TransportPersistenceService {
 
       return sessions;
     } catch (error) {
-      this.logger?.error(
-        'TransportPersistenceService: Failed to get user sessions',
+      this.logger.error(
+        'TransportPersistenceStore: Failed to get user sessions',
         toError(error),
         {
           userId,
@@ -255,7 +250,7 @@ export class TransportPersistenceService {
       const sessions: PersistedSessionInfo[] = [];
       const prefix = [...this.keyPrefix, 'session'];
 
-      const iter = this.kv.list<PersistedSessionInfo>({ prefix });
+      const iter = this.kvManager.getKV().list<PersistedSessionInfo>({ prefix });
       for await (const entry of iter) {
         if (entry.value && entry.value.isActive) {
           sessions.push(entry.value);
@@ -264,8 +259,8 @@ export class TransportPersistenceService {
 
       return sessions;
     } catch (error) {
-      this.logger?.error(
-        'TransportPersistenceService: Failed to get active sessions',
+      this.logger.error(
+        'TransportPersistenceStore: Failed to get active sessions',
         toError(error),
       );
       return [];
@@ -276,9 +271,13 @@ export class TransportPersistenceService {
    * Restore transports from persisted sessions
    * Note: This creates new transport instances with the same session IDs,
    * but clients will need to reconnect to re-establish the connection.
+   *
+   * @param sdkMcpServer - The MCP SDK server instance to connect transports to
+   * @param transportMap - Map to store restored transport instances
+   * @param eventStore - Event store for transport events
    */
   async restoreTransports(
-    mcpServer: MCPServerForRestore,
+    sdkMcpServer: SdkMcpServer,
     transportMap: Map<string, StreamableHTTPServerTransport>,
     eventStore: TransportEventStore,
   ): Promise<TransportRestoreResult> {
@@ -291,21 +290,21 @@ export class TransportPersistenceService {
     try {
       const activeSessions = await this.getActiveSessions();
 
-      this.logger?.info('TransportPersistenceService: Attempting to restore sessions', {
+      this.logger.info('TransportPersistenceStore: Attempting to restore sessions', {
         sessionCount: activeSessions.length,
       });
 
       for (const sessionInfo of activeSessions) {
         try {
-          await this.restoreSession(mcpServer, transportMap, sessionInfo, eventStore);
+          await this.restoreSession(sdkMcpServer, transportMap, sessionInfo, eventStore);
           result.restoredCount++;
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : 'Unknown error';
           result.failedCount++;
           result.errors.push(`Session ${sessionInfo.sessionId}: ${errorMsg}`);
 
-          this.logger?.error(
-            'TransportPersistenceService: Failed to restore session',
+          this.logger.error(
+            'TransportPersistenceStore: Failed to restore session',
             toError(error),
             {
               sessionId: sessionInfo.sessionId,
@@ -314,15 +313,15 @@ export class TransportPersistenceService {
         }
       }
 
-      this.logger?.info('TransportPersistenceService: Transport restoration completed', {
+      this.logger.info('TransportPersistenceStore: Transport restoration completed', {
         restored: result.restoredCount,
         failed: result.failedCount,
       });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       result.errors.push(`Restoration process failed: ${errorMsg}`);
-      this.logger?.error(
-        'TransportPersistenceService: Transport restoration failed',
+      this.logger.error(
+        'TransportPersistenceStore: Transport restoration failed',
         toError(error),
       );
     }
@@ -332,9 +331,14 @@ export class TransportPersistenceService {
 
   /**
    * Restore a single session
+   *
+   * @param sdkMcpServer - The MCP SDK server instance to connect transport to
+   * @param transportMap - Map to store restored transport instance
+   * @param sessionInfo - Persisted session information
+   * @param eventStore - Event store for transport events
    */
   private async restoreSession(
-    mcpServer: MCPServerForRestore,
+    sdkMcpServer: SdkMcpServer,
     transportMap: Map<string, StreamableHTTPServerTransport>,
     sessionInfo: PersistedSessionInfo,
     eventStore: TransportEventStore,
@@ -343,8 +347,8 @@ export class TransportPersistenceService {
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => sessionInfo.sessionId, // Use existing session ID
       onsessioninitialized: (restoredSessionId) => {
-        transportMap.set(restoredSessionId, transport);
-        this.logger?.info('TransportPersistenceService: Restored MCP session', {
+        // Session re-initialized callback (fires when client reconnects with first request)
+        this.logger.info('TransportPersistenceStore: Restored MCP session re-initialized', {
           sessionId: restoredSessionId,
         });
       },
@@ -357,26 +361,30 @@ export class TransportPersistenceService {
     transport.onclose = () => {
       transportMap.delete(sessionInfo.sessionId);
       this.markSessionInactive(sessionInfo.sessionId).catch((error) => {
-        this.logger?.error(
-          'TransportPersistenceService: Failed to mark restored session inactive',
+        this.logger.error(
+          'TransportPersistenceStore: Failed to mark restored session inactive',
           error,
           {
             sessionId: sessionInfo.sessionId,
           },
         );
       });
-      this.logger?.info('TransportPersistenceService: Restored MCP session closed', {
+      this.logger.info('TransportPersistenceStore: Restored MCP session closed', {
         sessionId: sessionInfo.sessionId,
       });
     };
 
-    // Connect to the MCP server
-    const server = mcpServer.getMcpServer();
-    if (!server) {
-      throw new Error('MCP server not available for session restoration');
-    }
+    // Connect to the MCP SDK server directly
+    await sdkMcpServer.connect(transport);
 
-    await server.connect(transport);
+    // CRITICAL: Add transport to map immediately after connection
+    // The onsessioninitialized callback only fires when the client sends the first request,
+    // so we need to register the transport now to make it available for reconnection
+    transportMap.set(sessionInfo.sessionId, transport);
+
+    this.logger.info('TransportPersistenceStore: Restored MCP session', {
+      sessionId: sessionInfo.sessionId,
+    });
 
     // Update last activity to mark as recently restored
     await this.updateSessionActivity(sessionInfo.sessionId);
@@ -389,9 +397,10 @@ export class TransportPersistenceService {
     try {
       const cutoffTime = Date.now() - maxAgeMs;
       let deletedCount = 0;
+      const kv = this.kvManager.getKV();
 
       const prefix = [...this.keyPrefix, 'session'];
-      const iter = this.kv.list<PersistedSessionInfo>({ prefix });
+      const iter = kv.list<PersistedSessionInfo>({ prefix });
 
       const sessionsToDelete: string[] = [];
 
@@ -410,7 +419,7 @@ export class TransportPersistenceService {
       for (let i = 0; i < sessionsToDelete.length; i += batchSize) {
         const batch = sessionsToDelete.slice(i, i + batchSize);
 
-        const atomic = this.kv.atomic();
+        const atomic = kv.atomic();
         for (const sessionId of batch) {
           // Get session info to find userId for cleanup
           const sessionInfo = await this.getSessionInfo(sessionId);
@@ -428,22 +437,22 @@ export class TransportPersistenceService {
         if (result.ok) {
           deletedCount += batch.length;
         } else {
-          this.logger?.warn('TransportPersistenceService: Failed to delete batch of old sessions', {
+          this.logger.warn('TransportPersistenceStore: Failed to delete batch of old sessions', {
             batchStart: i,
             batchSize: batch.length,
           });
         }
       }
 
-      this.logger?.info('TransportPersistenceService: Cleaned up old sessions', {
+      this.logger.info('TransportPersistenceStore: Cleaned up old sessions', {
         deletedCount,
         maxAgeMs,
       });
 
       return deletedCount;
     } catch (error) {
-      this.logger?.error(
-        'TransportPersistenceService: Failed to cleanup old sessions',
+      this.logger.error(
+        'TransportPersistenceStore: Failed to cleanup old sessions',
         toError(error),
       );
       return 0;
@@ -468,7 +477,7 @@ export class TransportPersistenceService {
       let newestTime: number | null = null;
 
       const prefix = [...this.keyPrefix, 'session'];
-      const iter = this.kv.list<PersistedSessionInfo>({ prefix });
+      const iter = this.kvManager.getKV().list<PersistedSessionInfo>({ prefix });
 
       for await (const entry of iter) {
         const session = entry.value;
@@ -499,8 +508,8 @@ export class TransportPersistenceService {
         newestSession: newestTime,
       };
     } catch (error) {
-      this.logger?.error(
-        'TransportPersistenceService: Failed to get session stats',
+      this.logger.error(
+        'TransportPersistenceStore: Failed to get session stats',
         toError(error),
       );
       return {

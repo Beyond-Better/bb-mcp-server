@@ -132,9 +132,9 @@ export class OAuthProvider {
     // Initialize OAuth components
     this.tokenManager = new TokenManager(
       {
-        accessTokenExpiryMs: config.tokens.accessTokenExpiryMs,
-        refreshTokenExpiryMs: config.tokens.refreshTokenExpiryMs,
-        authorizationCodeExpiryMs: config.tokens.authorizationCodeExpiryMs,
+        accessTokenExpiryMs: this.config.tokens.accessTokenExpiryMs,
+        refreshTokenExpiryMs: this.config.tokens.refreshTokenExpiryMs,
+        authorizationCodeExpiryMs: this.config.tokens.authorizationCodeExpiryMs,
       },
       {
         kvManager: this.kvManager,
@@ -146,9 +146,9 @@ export class OAuthProvider {
 
     this.clientRegistry = new ClientRegistry(
       {
-        enableDynamicRegistration: config.clients.enableDynamicRegistration,
-        requireHTTPS: config.clients.requireHTTPS,
-        allowedRedirectHosts: config.clients.allowedRedirectHosts,
+        enableDynamicRegistration: this.config.clients.enableDynamicRegistration,
+        requireHTTPS: this.config.clients.requireHTTPS,
+        allowedRedirectHosts: this.config.clients.allowedRedirectHosts,
       },
       {
         kvManager: this.kvManager,
@@ -158,12 +158,12 @@ export class OAuthProvider {
 
     this.authorizationHandler = new AuthorizationHandler(
       {
-        supportedGrantTypes: config.authorization.supportedGrantTypes,
-        supportedResponseTypes: config.authorization.supportedResponseTypes,
-        supportedScopes: config.authorization.supportedScopes,
-        enablePKCE: config.authorization.enablePKCE,
-        requirePKCE: config.authorization.requirePKCE,
-        issuer: config.issuer,
+        supportedGrantTypes: this.config.authorization.supportedGrantTypes,
+        supportedResponseTypes: this.config.authorization.supportedResponseTypes,
+        supportedScopes: this.config.authorization.supportedScopes,
+        enablePKCE: this.config.authorization.enablePKCE,
+        requirePKCE: this.config.authorization.requirePKCE,
+        issuer: this.config.issuer,
       },
       {
         kvManager: this.kvManager,
@@ -174,15 +174,15 @@ export class OAuthProvider {
       },
     );
 
-    this.metadataHandler = OAuthMetadata.fromProviderConfig(config, this.logger);
+    this.metadataHandler = OAuthMetadata.fromProviderConfig(this.config, this.logger);
 
     this.logger?.info('OAuthProvider: Initialized OAuth 2.0 Authorization Server', {
-      issuer: config.issuer,
+      issuer: this.config.issuer,
       features: {
-        pkce: config.authorization.enablePKCE,
-        dynamicRegistration: config.clients.enableDynamicRegistration,
-        supportedGrantTypes: config.authorization.supportedGrantTypes.length,
-        supportedScopes: config.authorization.supportedScopes.length,
+        pkce: this.config.authorization.enablePKCE,
+        dynamicRegistration: this.config.clients.enableDynamicRegistration,
+        supportedGrantTypes: this.config.authorization.supportedGrantTypes.length,
+        supportedScopes: this.config.authorization.supportedScopes.length,
       },
     });
   }

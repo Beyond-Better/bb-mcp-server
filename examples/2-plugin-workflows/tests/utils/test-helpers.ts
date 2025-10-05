@@ -350,7 +350,7 @@ export class MockConfigManager {
       'MCP_TRANSPORT': 'stdio',
       'PLUGINS_DISCOVERY_PATHS': './src/plugins',
       'PLUGINS_AUTOLOAD': 'true',
-      'DENO_KV_PATH': ':memory:', // In-memory database for tests
+      'STORAGE_DENO_KV_PATH': ':memory:', // In-memory database for tests
       'DEV_MODE': 'true',
     };
 

@@ -407,7 +407,7 @@ Error: Failed to store OAuth tokens
 **Solution:**
 
 - Check Deno KV database path is writable
-- Verify `DENO_KV_PATH` environment variable
+- Verify `STORAGE_DENO_KV_PATH` environment variable
 - Ensure sufficient disk space
 - Check file permissions
 

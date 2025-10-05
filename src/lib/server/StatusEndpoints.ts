@@ -27,10 +27,10 @@ export class StatusEndpoints {
   constructor(dependencies: HttpServerDependencies, startTime: Date) {
     this.dependencies = dependencies;
     this.startTime = startTime;
-    this.logger = dependencies.logger;
-    this.httpServerConfig = dependencies.httpServerConfig;
-    this.workflowRegistry = dependencies.workflowRegistry;
-    this.transportManager = dependencies.transportManager;
+    this.logger = this.dependencies.logger;
+    this.httpServerConfig = this.dependencies.httpServerConfig;
+    this.workflowRegistry = this.dependencies.workflowRegistry;
+    this.transportManager = this.dependencies.transportManager;
 
     this.logger.info('StatusEndpoints: Initialized', {
       serverName: this.httpServerConfig.name,

@@ -33,13 +33,14 @@ export class WorkflowRegistry {
   private logger: Logger | undefined;
   private config: WorkflowRegistryConfig;
   private validCategories: Set<string>;
-  private errorHandler: ErrorHandler;
+  // [TODO] use standard errorHandler
+  // private errorHandler: ErrorHandler;
 
   private constructor(
     dependencies: { logger: Logger; config?: WorkflowRegistryConfig; errorHandler: ErrorHandler },
   ) {
     this.logger = dependencies.logger;
-    this.errorHandler = dependencies.errorHandler;
+    // this.errorHandler = dependencies.errorHandler;
     this.config = dependencies.config || {};
     this.validCategories = this.initializeValidCategories();
     this.initializeCategories();

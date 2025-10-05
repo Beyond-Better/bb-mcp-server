@@ -149,7 +149,7 @@ export class AppServer {
 
     // Log successful initialization
     resolvedDependencies.logger.info(
-      `${
+      `AppServer: ${
         resolvedDependencies.serverConfig?.title
           ? resolvedDependencies.serverConfig?.title
           : 'Custom'

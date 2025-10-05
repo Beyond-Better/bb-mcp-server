@@ -4,20 +4,20 @@
  */
 
 import { assert, assertEquals, assertExists } from '@std/assert';
-import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
+import { beforeEach, describe, it } from '@std/testing/bdd';
 import { assertSpyCalls, spy } from '@std/testing/mock';
 import { z } from 'zod';
 
 // Import components
 import { ToolBase, type ToolContext } from '../../../src/lib/tools/ToolBase.ts';
-import { ToolRegistry } from '../../../src/lib/tools/ToolRegistry.ts';
-import type { Logger } from '../../../src/lib/utils/Logger.ts';
-import type { AuditLogger } from '../../../src/lib/utils/AuditLogger.ts';
+//import { ToolRegistry } from '../../../src/lib/tools/ToolRegistry.ts';
+//import type { Logger } from '../../../src/lib/utils/Logger.ts';
+//import type { AuditLogger } from '../../../src/lib/utils/AuditLogger.ts';
 
 // Import test helpers and mocks
 import {
-  createMockAuditLogger,
-  createMockLogger,
+  //createMockAuditLogger,
+  //createMockLogger,
   createMockToolRegistry,
   SpyAuditLogger,
   SpyLogger,

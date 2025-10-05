@@ -151,7 +151,7 @@ THIRD_PARTY_OAUTH_URL=https://api.thirdparty.com/oauth
 THIRD_PARTY_TOKEN_URL=https://api.thirdparty.com/token
 
 # Storage Configuration
-DENO_KV_PATH=./mcp-server.db
+STORAGE_DENO_KV_PATH=./mcp-server.db
 
 # Logging Configuration
 LOG_LEVEL=info|debug|warn|error

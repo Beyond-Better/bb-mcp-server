@@ -15,26 +15,26 @@ import { KVManager } from '../../../src/lib/storage/KVManager.ts';
 import { SessionStore } from '../../../src/lib/storage/SessionStore.ts';
 import { TransportEventStore } from '../../../src/lib/storage/TransportEventStore.ts';
 import type {
-  BeyondMcpAuthContext,
+  //BeyondMcpAuthContext,
   HttpTransportConfig,
   TransportDependencies,
 } from '../../../src/lib/transport/TransportTypes.ts';
-import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
-import { createTestBeyondMcpServer, TestBeyondMcpServer } from '../../utils/test-helpers.ts';
+//import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
+import { createTestBeyondMcpServer } from '../../utils/test-helpers.ts';
 
-// Simple test MCP Server that provides the interface HttpTransport expects
-class TestSdkMcpServer {
-  private connected = false;
-
-  async connect(transport: any): Promise<void> {
-    this.connected = true;
-    return Promise.resolve();
-  }
-  async close(): Promise<void> {
-    this.connected = false;
-    return Promise.resolve();
-  }
-}
+// // Simple test MCP Server that provides the interface HttpTransport expects
+// class TestSdkMcpServer {
+//   private connected = false;
+//
+//   async connect(transport: any): Promise<void> {
+//     this.connected = true;
+//     return Promise.resolve();
+//   }
+//   async close(): Promise<void> {
+//     this.connected = false;
+//     return Promise.resolve();
+//   }
+// }
 
 // Test helper functions
 function createTestHttpTransportConfig(): HttpTransportConfig {
@@ -47,9 +47,14 @@ function createTestHttpTransportConfig(): HttpTransportConfig {
     sessionCleanupInterval: 5 * 60 * 1000,
     requestTimeout: 30 * 1000,
     maxRequestSize: 1024 * 1024,
-    enableCORS: true,
-    corsOrigins: ['*'],
+    cors: {
+      enabled: true,
+      origins: ['*'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE'],
+      headers: [],
+    },
     preserveCompatibilityMode: true, // 🚨 CRITICAL
+    allowInsecure: false,
   };
 }
 
@@ -65,7 +70,7 @@ async function createMockTransportDependencies(): Promise<
 
   // Disable auto-cleanup to prevent interval leak
   const sessionStore = new SessionStore(kvManager, { enableAutoCleanup: false }, logger);
-  const eventStore = new TransportEventStore(kv, ['test_events'], logger);
+  const eventStore = new TransportEventStore(kvManager, ['test_events'], logger);
 
   const cleanup = async () => {
     // Stop any cleanup intervals
@@ -99,14 +104,14 @@ function createMCPInitializeRequest() {
   };
 }
 
-function createTestAuthContext(): BeyondMcpAuthContext {
-  return {
-    authenticatedUserId: 'test-user-123',
-    clientId: 'test-client-456',
-    scopes: ['read', 'write'],
-    requestId: 'test-request-789',
-  };
-}
+//function createTestAuthContext(): BeyondMcpAuthContext {
+//  return {
+//    authenticatedUserId: 'test-user-123',
+//    clientId: 'test-client-456',
+//    scopes: ['read', 'write'],
+//    requestId: 'test-request-789',
+//  };
+//}
 
 // 🚨 CRITICAL COMPATIBILITY TESTS
 Deno.test('HttpTransport - Deno→Node compatibility preservation', async () => {
@@ -115,7 +120,7 @@ Deno.test('HttpTransport - Deno→Node compatibility preservation', async () => 
   const httpTransport = new HttpTransport(config, dependencies);
   const testBeyondMcpServer = await createTestBeyondMcpServer();
 
-  await httpTransport.start();
+  await httpTransport.start(testBeyondMcpServer.getSdkMcpServer());
 
   try {
     // Test MCP initialization request (most critical compatibility path)
@@ -129,7 +134,7 @@ Deno.test('HttpTransport - Deno→Node compatibility preservation', async () => 
       body: JSON.stringify(initRequest),
     });
 
-    const authContext = createTestAuthContext();
+    //const authContext = createTestAuthContext();
 
     // This tests the critical compatibility layer:
     // - createNodeStyleRequest() conversion
@@ -174,7 +179,7 @@ Deno.test('HttpTransport - session management integration', async () => {
   const httpTransport = new HttpTransport(config, dependencies);
   const testBeyondMcpServer = await createTestBeyondMcpServer();
 
-  await httpTransport.start();
+  await httpTransport.start(testBeyondMcpServer.getSdkMcpServer());
 
   try {
     // Test session creation through MCP initialization
@@ -188,7 +193,7 @@ Deno.test('HttpTransport - session management integration', async () => {
       body: JSON.stringify(initRequest),
     });
 
-    const authContext = createTestAuthContext();
+    //const authContext = createTestAuthContext();
     const response = await httpTransport.handleHttpRequest(
       httpRequest,
       testBeyondMcpServer.getSdkMcpServer(),
@@ -222,7 +227,7 @@ Deno.test('HttpTransport - error handling compatibility', async () => {
   const httpTransport = new HttpTransport(config, dependencies);
   const testBeyondMcpServer = await createTestBeyondMcpServer();
 
-  await httpTransport.start();
+  await httpTransport.start(testBeyondMcpServer.getSdkMcpServer());
 
   try {
     // Test invalid JSON request (should trigger compatibility error handling)
@@ -235,7 +240,7 @@ Deno.test('HttpTransport - error handling compatibility', async () => {
       body: 'invalid-json-content',
     });
 
-    const authContext = createTestAuthContext();
+    // const authContext = createTestAuthContext();
     const response = await httpTransport.handleHttpRequest(
       httpRequest,
       testBeyondMcpServer.getSdkMcpServer(),
@@ -269,8 +274,9 @@ Deno.test('HttpTransport - transport metrics functionality', async () => {
   const config = createTestHttpTransportConfig();
   const dependencies = await createMockTransportDependencies();
   const httpTransport = new HttpTransport(config, dependencies);
+  const testBeyondMcpServer = await createTestBeyondMcpServer();
 
-  await httpTransport.start();
+  await httpTransport.start(testBeyondMcpServer.getSdkMcpServer());
 
   try {
     const metrics = httpTransport.getMetrics();

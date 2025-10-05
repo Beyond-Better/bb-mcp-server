@@ -233,7 +233,7 @@ HTTP_PORT=3000
 HTTP_HOST=localhost
 
 # Storage Configuration
-DENO_KV_PATH=./examples/3-plugin-api-auth/data/oauth-tokens.db
+STORAGE_DENO_KV_PATH=./examples/3-plugin-api-auth/data/oauth-tokens.db
 
 # API Client Configuration
 THIRDPARTY_API_TIMEOUT=30000

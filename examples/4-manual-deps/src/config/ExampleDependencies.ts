@@ -27,6 +27,7 @@ import {
   OAuthProvider,
   performHealthChecks,
   SessionStore,
+  type TransportConfig,
   TransportEventStore,
   TransportEventStoreChunked,
   TransportEventStoreChunkedConfig,
@@ -83,7 +84,7 @@ export async function createManualDependencies(
 
   // 🎯 Initialize library KV storage using ConfigManager
   const kvPath = configManager.get(
-    'DENO_KV_PATH',
+    'STORAGE_DENO_KV_PATH',
     './example/data/examplecorp-mcp-server.db',
   );
   logger.info('ExampleCorp: Configuring KV storage', {
@@ -121,7 +122,7 @@ export async function createManualDependencies(
 
   const eventStore = useChunkedStorage
     ? new TransportEventStoreChunked(
-      kvManager.getKV(),
+      kvManager,
       ['events'],
       logger,
       {
@@ -132,7 +133,7 @@ export async function createManualDependencies(
       },
     )
     : new TransportEventStore(
-      kvManager.getKV(),
+      kvManager,
       ['events'],
       logger,
     );
@@ -342,24 +343,10 @@ export async function createManualDependencies(
   });
 
   // 🎯 Initialize library transport manager with minimal config
+  const transportConfig = configManager.get<TransportConfig>('transport');
   const transportManager = new TransportManager({
-    type: configManager.get('MCP_TRANSPORT', 'stdio') as 'stdio' | 'http',
-    http: {
-      hostname: configManager.get('HTTP_HOST', 'localhost'),
-      port: parseInt(configManager.get('HTTP_PORT', '3000'), 10),
-      sessionTimeout: 30 * 60 * 1000, // 30 minutes
-      maxConcurrentSessions: 1000,
-      enableSessionPersistence: true,
-      sessionCleanupInterval: 5 * 60 * 1000, // 5 minutes
-      requestTimeout: 30 * 1000, // 30 seconds
-      maxRequestSize: 1024 * 1024, // 1MB
-      enableCORS: configManager.get('HTTP_CORS_ENABLED', 'true') === 'true',
-      corsOrigins: (() => {
-        const origins = configManager.get('HTTP_CORS_ORIGINS', '*');
-        return typeof origins === 'string' ? origins.split(',') : origins;
-      })(),
-      preserveCompatibilityMode: true,
-    },
+    type: transportConfig.type,
+    http: transportConfig.http,
   }, {
     logger,
     kvManager,

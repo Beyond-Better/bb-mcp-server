@@ -322,7 +322,7 @@ PLUGINS_DISCOVERY_PATHS=./src/plugins
 PLUGINS_AUTOLOAD=true
 
 # Storage
-DENO_KV_PATH=./data/simple-mcp-server.db
+STORAGE_DENO_KV_PATH=./data/simple-mcp-server.db
 ```
 
 ### Development vs Production

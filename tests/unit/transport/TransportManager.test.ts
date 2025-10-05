@@ -19,8 +19,8 @@ import { SessionStore } from '../../../src/lib/storage/SessionStore.ts';
 import { SessionManager } from '../../../src/lib/transport/SessionManager.ts';
 import type { Logger } from '../../../src/lib/utils/Logger.ts';
 import type {
-  BeyondMcpAuthContext,
-  SessionData,
+  //BeyondMcpAuthContext,
+  //SessionData,
   TransportConfig,
   TransportDependencies,
 } from '../../../src/lib/transport/TransportTypes.ts';
@@ -47,10 +47,16 @@ const mockSdkMcpServer = {
   listTools: async () => ({ tools: [] }),
 } as any;
 
+const corsConfig = {
+  enabled: true,
+  origins: ['*'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  headers: [],
+};
+
 // Helper function to create test dependencies
 async function createTestDependencies(): Promise<
   TransportDependencies & {
-    eventStoreKv: Deno.Kv;
     sessionManager: SessionManager;
     beyondMcpServer: TestBeyondMcpServer;
   }
@@ -58,8 +64,7 @@ async function createTestDependencies(): Promise<
   const kvManager = new KVManager({ kvPath: ':memory:' });
   await kvManager.initialize();
 
-  const eventStoreKv = await Deno.openKv(':memory:');
-  const eventStore = new TransportEventStore(eventStoreKv, undefined, mockLogger);
+  const eventStore = new TransportEventStore(kvManager, undefined, mockLogger);
 
   // Note: SessionManager constructor expects (config, sessionStore, logger)
   // but we need to import SessionStore for this
@@ -82,7 +87,6 @@ async function createTestDependencies(): Promise<
     eventStore,
     sessionStore,
     logger: mockLogger,
-    eventStoreKv,
     sessionManager,
     beyondMcpServer,
   };
@@ -90,13 +94,10 @@ async function createTestDependencies(): Promise<
 
 // Helper function to clean up test dependencies
 async function cleanupTestDependencies(
-  dependencies: TransportDependencies & { eventStoreKv: Deno.Kv; sessionManager: SessionManager },
+  dependencies: TransportDependencies & { sessionManager: SessionManager },
 ): Promise<void> {
   // Close KV manager
   await dependencies.kvManager.close();
-
-  // Close the eventStore KV instance
-  dependencies.eventStoreKv.close();
 
   // Close the session store (which will stop any auto-cleanup intervals)
   await dependencies.sessionStore.close();
@@ -143,9 +144,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['http://localhost:3000'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -190,8 +191,7 @@ Deno.test({
       http: {
         hostname: 'localhost',
         port: 3001,
-        corsOrigins: ['*'],
-        enableCORS: true,
+        cors: corsConfig,
         sessionTimeout: 30 * 60 * 1000,
         maxConcurrentSessions: 1000,
         enableSessionPersistence: true,
@@ -199,6 +199,7 @@ Deno.test({
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -232,9 +233,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -268,9 +269,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
         port: 3003,
       },
     };
@@ -291,13 +292,13 @@ Deno.test({
       }),
     });
 
-    // Create OAuth auth context
-    const authContext: BeyondMcpAuthContext = {
-      authenticatedUserId: 'oauth_user_123',
-      clientId: 'oauth_client_456',
-      scopes: ['read', 'write'],
-      requestId: 'test_request_123',
-    };
+    // // Create OAuth auth context
+    // const authContext: BeyondMcpAuthContext = {
+    //   authenticatedUserId: 'oauth_user_123',
+    //   clientId: 'oauth_client_456',
+    //   scopes: ['read', 'write'],
+    //   requestId: 'test_request_123',
+    // };
 
     const beyondMcpServer = await createTestBeyondMcpServer();
 
@@ -367,9 +368,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -410,9 +411,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -447,9 +448,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -483,9 +484,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -504,9 +505,10 @@ Deno.test({
     assertExists(sessionId);
 
     // Test session retrieval
-    const retrievedSession = await transportManager.getSession(sessionId);
+    //const retrievedSession = await transportManager.getSession(sessionId);
     // May return null due to mock implementation
-    // assertEquals(retrievedSession?.userId, 'session_user_123');
+    //assertExists(retrievedSession);
+    //assertEquals(retrievedSession?.userId, 'session_user_123');
 
     // Test session count
     const sessionCount = transportManager.getSessionCount();
@@ -583,9 +585,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -670,9 +672,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -713,9 +715,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -749,9 +751,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 
@@ -786,9 +788,9 @@ Deno.test({
         sessionCleanupInterval: 5 * 60 * 1000,
         requestTimeout: 30 * 1000,
         maxRequestSize: 1024 * 1024,
-        enableCORS: true,
-        corsOrigins: ['*'],
+        cors: corsConfig,
         preserveCompatibilityMode: true,
+        allowInsecure: false,
       },
     };
 

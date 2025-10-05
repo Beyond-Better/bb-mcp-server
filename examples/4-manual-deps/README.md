@@ -79,7 +79,7 @@ const auditLogger = new AuditLogger({
 }, logger);
 
 const kvManager = new KVManager({
-  kvPath: configManager.get('DENO_KV_PATH', './data/manual-deps.db'),
+  kvPath: configManager.get('STORAGE_DENO_KV_PATH', './data/manual-deps.db'),
 }, logger);
 
 const oauthProvider = new OAuthProvider({
@@ -259,7 +259,7 @@ AUDIT_LOG_ALL_API_CALLS=true
 AUDIT_RETENTION_DAYS=90
 
 # Storage Configuration (manual setup)
-DENO_KV_PATH=./examples/4-manual-deps/data/manual-mcp-server.db
+STORAGE_DENO_KV_PATH=./examples/4-manual-deps/data/manual-mcp-server.db
 ```
 
 #### OAuth Provider Configuration (Manual Setup)
@@ -370,7 +370,7 @@ logger.info('Manually registered workflows:', {
 ```typescript
 // Manual creation of all infrastructure components
 const kvManager = new KVManager({
-  kvPath: configManager.get('DENO_KV_PATH', './data/manual-deps.db'),
+  kvPath: configManager.get('STORAGE_DENO_KV_PATH', './data/manual-deps.db'),
 }, logger);
 
 // Initialize KV connection manually
@@ -388,7 +388,7 @@ const sessionStore = new SessionStore(
 
 // Manual event store setup
 const eventStore = new TransportEventStore(
-  kvManager.getKV(),
+  kvManager),
   ['events'],
   logger,
 );

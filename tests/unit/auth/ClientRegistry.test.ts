@@ -18,8 +18,8 @@ import { KVManager } from '../../../src/lib/storage/KVManager.ts';
 import type { Logger } from '../../../src/types/library.types.ts';
 import type {
   ClientRegistrationRequest,
-  ClientRegistrationResponse,
-  OAuthClient,
+  //ClientRegistrationResponse,
+  //OAuthClient,
 } from '../../../src/lib/auth/OAuthTypes.ts';
 
 // Mock logger for testing
@@ -375,6 +375,10 @@ Deno.test({
       redirect_uris: ['http://localhost:3000/callback3'],
       client_name: 'Client 3',
     });
+
+    assertExists(client1);
+    assertExists(client2);
+    assertExists(client3);
 
     // Get statistics
     const stats = await clientRegistry.getClientStats();

@@ -13,11 +13,11 @@
  * - Endpoint access control validation
  */
 
-import { assert, assertEquals, assertExists, assertRejects } from '@std/assert';
+import { assert, assertEquals, assertExists } from '@std/assert';
 import { AuthenticationMiddleware } from '../../../src/lib/transport/AuthenticationMiddleware.ts';
 import type {
   AuthenticationConfig,
-  AuthenticationContext,
+  //AuthenticationContext,
   AuthenticationDependencies,
   AuthenticationResult,
 } from '../../../src/lib/transport/AuthenticationMiddleware.ts';

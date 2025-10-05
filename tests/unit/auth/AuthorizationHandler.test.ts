@@ -12,7 +12,7 @@
  * - Error handling and edge cases
  */
 
-import { assert, assertEquals, assertExists } from '@std/assert';
+import { assertEquals, assertExists } from '@std/assert';
 import { AuthorizationHandler } from '../../../src/lib/auth/AuthorizationHandler.ts';
 import { KVManager } from '../../../src/lib/storage/KVManager.ts';
 import { PKCEHandler } from '../../../src/lib/auth/PKCEHandler.ts';

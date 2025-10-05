@@ -13,7 +13,7 @@ export { CredentialStore } from './lib/storage/CredentialStore.ts';
 export { SessionStore } from './lib/storage/SessionStore.ts';
 export { TransportEventStore } from './lib/storage/TransportEventStore.ts';
 export { TransportEventStoreChunked } from './lib/storage/TransportEventStoreChunked.ts';
-export { TransportPersistenceService } from './lib/storage/TransportPersistenceService.ts';
+export { TransportPersistenceStore } from './lib/storage/TransportPersistenceStore.ts';
 
 // Configuration exports
 export { ConfigManager } from './lib/config/ConfigManager.ts';
@@ -89,6 +89,7 @@ export {
   getToolRegistry,
   getTransportEventStore,
   getTransportManager,
+  getTransportPersistenceStore,
   getWorkflowRegistry,
   performHealthChecks,
   validateConfiguration,

@@ -31,8 +31,8 @@ export interface StorageConfig {
  */
 export interface LoggingConfig {
   level: 'debug' | 'info' | 'warn' | 'error';
-  format?: 'text' | 'json';
-  file?: string;
+  format: 'text' | 'json';
+  //file?: string;
 }
 
 /**
@@ -41,19 +41,15 @@ export interface LoggingConfig {
 export interface AuditConfig {
   enabled: boolean;
   logAllApiCalls: boolean;
-  logFile?: string;
-  retentionDays?: number;
+  logFile: string;
+  retentionDays: number;
 }
 
 /**
  * Rate limiting configuration
  */
-export interface RateLimitConfig {
-  enabled: boolean;
-  requestsPerMinute: number;
-  burstLimit?: number;
-  windowMs?: number;
-}
+import type { RateLimitConfig } from '../types/RateLimitTypes.ts';
+export type { RateLimitConfig };
 
 /**
  * Rate limiting configuration
@@ -66,6 +62,13 @@ export interface ThirdPartyApiConfig {
   retryAttempts?: number;
   retryDelayMs?: number;
 }
+
+/**
+ * OAuth Provider configuration (when MCP server acts as OAuth provider)
+ * @see ../auth/OAuthTypes.ts for full type definition
+ */
+import type { PluginDiscoveryOptions as PluginManagerConfig } from '../types/PluginTypes.ts';
+export type { PluginManagerConfig };
 
 /**
  * Transport Event Store configuration (event store for MCP Server)
@@ -109,40 +112,13 @@ export interface SessionConfig {
 /**
  * Transport-specific configuration
  */
+import type { HttpTransportConfig, StdioTransportConfig } from '../transport/TransportTypes.ts';
+export type { HttpTransportConfig, StdioTransportConfig };
+
 export interface TransportConfig {
   type: 'stdio' | 'http';
-  http?: {
-    hostname: string; // Changed from 'host' to 'hostname'
-    port: number;
-    // Session management configuration (production critical)
-    sessionTimeout: number; // Session timeout in milliseconds
-    sessionCleanupInterval: number; // Cleanup interval in milliseconds
-    maxConcurrentSessions: number;
-    enableSessionPersistence: boolean;
-    enableSessionRestore?: boolean;
-    requestTimeout: number;
-    maxRequestSize: number;
-    enableCORS: boolean;
-    corsOrigins: string[];
-    preserveCompatibilityMode: boolean;
-    allowInsecure: boolean; // Allow HTTP transport without OAuth provider (development only)
-    // Optional transport persistence settings
-    enableTransportPersistence?: boolean;
-    cors?: {
-      enabled: boolean;
-      origins: string[];
-      methods: string[];
-      headers: string[];
-    };
-    rateLimit?: RateLimitConfig;
-    enableDnsRebindingProtection?: boolean;
-    allowedHosts?: string[];
-  };
-  stdio?: {
-    enableLogging: boolean; // Added missing property
-    bufferSize: number;
-    encoding: string;
-  };
+  http?: HttpTransportConfig;
+  stdio?: StdioTransportConfig;
   session?: SessionConfig; // Added session configuration
 }
 
@@ -154,6 +130,14 @@ export interface WorkflowConfig {
   pluginDirectory?: string;
   maxConcurrentWorkflows?: number;
   defaultTimeout?: number;
+}
+
+/**
+ * MCP Server Instructions configuration
+ */
+export interface McpServerInstructionsConfig {
+  instructionsContent: string;
+  instructionsFilePath: string;
 }
 
 /**
@@ -194,6 +178,7 @@ export interface AppConfig {
   storage: StorageConfig;
   logging: LoggingConfig;
   audit: AuditConfig;
+  pluginManager: PluginManagerConfig;
   rateLimit: RateLimitConfig;
   oauthProvider?: OAuthProviderConfig;
   oauthConsumer?: OAuthConsumerConfig;

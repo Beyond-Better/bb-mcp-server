@@ -15,8 +15,10 @@ import type {
   ConfigValidationResult,
   //EnvironmentMapping,
   LoggingConfig,
+  McpServerInstructionsConfig,
   OAuthConsumerConfig,
   OAuthProviderConfig,
+  PluginManagerConfig,
   RateLimitConfig,
   ServerConfig,
   StorageConfig,
@@ -69,6 +71,8 @@ export class ConfigManager {
         server: this.loadServerConfig(),
         transport: this.loadTransportConfig(),
         storage: this.loadStorageConfig(),
+        pluginManager: this.loadPluginsConfig(),
+        mcpServerInstructionsConfig: this.loadMcpServerInstructionsConfig(),
         //transportEventStore: this.loadTransportEventStoreConfig(),
         transportEventStore: this.loadTransportEventStoreChunkedConfig(),
         logging: this.loadLoggingConfig(),
@@ -101,7 +105,7 @@ export class ConfigManager {
         }
 
         if (validation.warnings.length > 0) {
-          this._logger?.warn('Configuration warnings:', validation.warnings);
+          this._logger?.warn('ConfigManager: Configuration warnings:', validation.warnings);
         }
       }
 
@@ -243,7 +247,7 @@ export class ConfigManager {
    */
   private loadTransportConfig(): TransportConfig {
     const transport = this.getEnvOptional('MCP_TRANSPORT', 'stdio') as 'stdio' | 'http';
-    this._logger?.debug('Transport Config loaded:', transport);
+    this._logger?.debug('ConfigManager: Transport Config loaded:', transport);
 
     const config: TransportConfig = {
       type: transport,
@@ -254,27 +258,38 @@ export class ConfigManager {
         hostname: this.getEnvOptional('HTTP_HOST', 'localhost'),
         port: parseInt(this.getEnvOptional('HTTP_PORT', '3000')),
         // Session configuration for HTTP transport (primary environment variables)
-        sessionTimeout: parseInt(this.getEnvOptional('MCP_SESSION_TIMEOUT', '1800000')), // 30 minutes default
+        sessionTimeout: parseInt(this.getEnvOptional('MCP_SESSION_TIMEOUT', '1800000')), // 30 * 60 * 1000 = 30 minutes default
         sessionCleanupInterval: parseInt(
-          this.getEnvOptional('MCP_SESSION_CLEANUP_INTERVAL', '300000'),
+          this.getEnvOptional('MCP_SESSION_CLEANUP_INTERVAL', '300000'), //5 * 60 * 1000 = 5 minutes
         ), // 5 minutes default
         maxConcurrentSessions: parseInt(this.getEnvOptional('MCP_MAX_CONCURRENT_SESSIONS', '1000')),
         enableSessionPersistence: this.getEnvBoolean('MCP_SESSION_PERSISTENCE_ENABLED', true),
         enableSessionRestore: this.getEnvBoolean('MCP_SESSION_RESTORE_ENABLED', true),
         requestTimeout: parseInt(this.getEnvOptional('MCP_REQUEST_TIMEOUT', '30000')), // 30 seconds default
-        maxRequestSize: parseInt(this.getEnvOptional('MCP_MAX_REQUEST_SIZE', '1048576')), // 1MB default
-        enableCORS: this.getEnvBoolean('HTTP_CORS_ENABLED', true),
-        corsOrigins: this.getEnvArray('HTTP_CORS_ORIGINS', ['*']),
+        maxRequestSize: parseInt(this.getEnvOptional('MCP_MAX_REQUEST_SIZE', '1048576')), // 1024 * 1024 = 1MB default
+        cors: {
+          enabled: this.getEnvBoolean('HTTP_CORS_ENABLED', true),
+          origins: this.getEnvArray('HTTP_CORS_ORIGINS', ['*']),
+          methods: this.getEnvArray('HTTP_CORS_METHODS', ['GET', 'POST', 'PUT', 'DELETE']),
+          headers: this.getEnvArray('HTTP_CORS_HEADERS', []),
+        },
         preserveCompatibilityMode: this.getEnvBoolean('PRESERVE_COMPATIBILITY_MODE', true),
         allowInsecure: this.getEnvBoolean('HTTP_ALLOW_INSECURE', false),
         // Optional transport persistence settings (for compatibility)
         enableTransportPersistence: this.getEnvBoolean('MCP_TRANSPORT_PERSISTENCE_ENABLED', false),
+        // 🔒 NEW: Authentication configuration from environment
+        enableAuthentication: this.get('MCP_AUTH_HTTP_ENABLED', 'true') === 'true',
+        skipAuthentication: (this.get('MCP_AUTH_HTTP_SKIP', 'false') as string) === 'true',
+        requireAuthentication: this.get('MCP_AUTH_HTTP_REQUIRE', 'true') === 'true',
       };
     } else {
       config.stdio = {
         enableLogging: this.getEnvBoolean('STDIO_LOGGING_ENABLED', true),
         bufferSize: parseInt(this.getEnvOptional('STDIO_BUFFER_SIZE', '8192')),
         encoding: this.getEnvOptional('STDIO_ENCODING', 'utf8'),
+        // 🔒 STDIO authentication (discouraged by MCP spec)
+        enableAuthentication: this.getEnvBoolean('MCP_AUTH_STDIO_ENABLED', false),
+        skipAuthentication: this.getEnvBoolean('MCP_AUTH_STDIO_SKIP', false),
       };
     }
 
@@ -294,9 +309,19 @@ export class ConfigManager {
    */
   private loadStorageConfig(): StorageConfig {
     return {
-      denoKvPath: this.getEnvOptional('DENO_KV_PATH', './data/mcp-server.db'),
+      denoKvPath: this.getEnvOptional('STORAGE_DENO_KV_PATH', './data/mcp-server.db'),
       enablePersistence: this.getEnvBoolean('STORAGE_PERSISTENCE_ENABLED', true),
       cleanupInterval: parseInt(this.getEnvOptional('STORAGE_CLEANUP_INTERVAL', '3600000')), // 1 hour
+    };
+  }
+
+  /**
+   * MCP Server Instructions configuration from environment
+   */
+  private loadMcpServerInstructionsConfig(): McpServerInstructionsConfig {
+    return {
+      instructionsContent: this.getEnvOptional('MCP_SERVER_INSTRUCTIONS', ''),
+      instructionsFilePath: this.getEnvOptional('MCP_INSTRUCTIONS_FILE', ''),
     };
   }
 
@@ -369,11 +394,9 @@ export class ConfigManager {
    * Load logging configuration from environment
    */
   private loadLoggingConfig(): LoggingConfig {
-    const file = Deno.env.get(`${this.options.envPrefix}LOG_FILE`);
     return {
       level: this.getEnvOptional('LOG_LEVEL', 'info') as 'debug' | 'info' | 'warn' | 'error',
       format: this.getEnvOptional('LOG_FORMAT', 'text') as 'text' | 'json',
-      ...(file && { file }),
     };
   }
 
@@ -381,11 +404,10 @@ export class ConfigManager {
    * Load audit configuration from environment
    */
   private loadAuditConfig(): AuditConfig {
-    const logFile = Deno.env.get(`${this.options.envPrefix}AUDIT_LOG_FILE`);
     return {
       enabled: this.getEnvBoolean('AUDIT_ENABLED', true),
       logAllApiCalls: this.getEnvBoolean('AUDIT_LOG_ALL_API_CALLS', true),
-      ...(logFile && { logFile }),
+      logFile: this.getEnvOptional('AUDIT_LOG_FILE', './logs/audit.log'),
       retentionDays: parseInt(this.getEnvOptional('AUDIT_RETENTION_DAYS', '90')),
     };
   }
@@ -520,15 +542,9 @@ export class ConfigManager {
   /**
    * Load plugins configuration from environment
    */
-  loadPluginsConfig(): {
-    paths: string[];
-    autoload: boolean;
-    watchForChanges: boolean;
-    allowedPlugins?: string[];
-    blockedPlugins?: string[];
-  } {
+  loadPluginsConfig(): PluginManagerConfig {
     return {
-      paths: this.getEnvArray('PLUGINS_DISCOVERY_PATHS', ['./plugins', './workflows']),
+      paths: this.getEnvArray('PLUGINS_DISCOVERY_PATHS', ['./plugins']),
       autoload: this.getEnvBoolean('PLUGINS_AUTOLOAD', true),
       watchForChanges: this.getEnvBoolean('PLUGINS_WATCH_CHANGES', false),
       allowedPlugins:
@@ -686,6 +702,7 @@ export class ConfigManager {
    *
    * Usage: `CONFIG={"debug":"true","timeout":"5000"}`
    */
+  /*
   private getEnvRecordJSON(
     key: string,
     defaultValue: Record<string, string> = {},
@@ -699,4 +716,5 @@ export class ConfigManager {
       return defaultValue;
     }
   }
+   */
 }
