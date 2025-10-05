@@ -1,5 +1,10 @@
 # Beyond MCP Server
 
+[![JSR](https://jsr.io/badges/@beyondbetter/bb-mcp-server)](https://jsr.io/@beyondbetter/bb-mcp-server)
+[![JSR Score](https://jsr.io/badges/@beyondbetter/bb-mcp-server/score)](https://jsr.io/@beyondbetter/bb-mcp-server)
+[![JSR Scope](https://jsr.io/badges/@beyondbetter)](https://jsr.io/@beyondbetter)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A comprehensive library for building Deno-based MCP (Model Context Protocol) servers with OAuth and workflow capabilities.
 
 ## 🚀 Quick Start for Users
