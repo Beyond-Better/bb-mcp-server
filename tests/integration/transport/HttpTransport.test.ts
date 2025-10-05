@@ -120,7 +120,7 @@ Deno.test('HttpTransport - Deno→Node compatibility preservation', async () => 
   const httpTransport = new HttpTransport(config, dependencies);
   const testBeyondMcpServer = await createTestBeyondMcpServer();
 
-  await httpTransport.start();
+  await httpTransport.start(testBeyondMcpServer.getSdkMcpServer());
 
   try {
     // Test MCP initialization request (most critical compatibility path)
@@ -179,7 +179,7 @@ Deno.test('HttpTransport - session management integration', async () => {
   const httpTransport = new HttpTransport(config, dependencies);
   const testBeyondMcpServer = await createTestBeyondMcpServer();
 
-  await httpTransport.start();
+  await httpTransport.start(testBeyondMcpServer.getSdkMcpServer());
 
   try {
     // Test session creation through MCP initialization
@@ -227,7 +227,7 @@ Deno.test('HttpTransport - error handling compatibility', async () => {
   const httpTransport = new HttpTransport(config, dependencies);
   const testBeyondMcpServer = await createTestBeyondMcpServer();
 
-  await httpTransport.start();
+  await httpTransport.start(testBeyondMcpServer.getSdkMcpServer());
 
   try {
     // Test invalid JSON request (should trigger compatibility error handling)
@@ -274,8 +274,9 @@ Deno.test('HttpTransport - transport metrics functionality', async () => {
   const config = createTestHttpTransportConfig();
   const dependencies = await createMockTransportDependencies();
   const httpTransport = new HttpTransport(config, dependencies);
+  const testBeyondMcpServer = await createTestBeyondMcpServer();
 
-  await httpTransport.start();
+  await httpTransport.start(testBeyondMcpServer.getSdkMcpServer());
 
   try {
     const metrics = httpTransport.getMetrics();

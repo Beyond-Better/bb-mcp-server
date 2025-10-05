@@ -5,7 +5,7 @@
  * Handles standard input/output communication for traditional MCP clients
  */
 
-import { McpServer } from 'mcp/server/mcp.js';
+import type { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
 import { StdioServerTransport } from 'mcp/server/stdio.js';
 import type {
   StdioTransportConfig,
@@ -29,7 +29,7 @@ export class StdioTransport implements Transport {
   private logger: Logger;
 
   // MCP SDK components
-  private mcpServer?: McpServer;
+  private sdkMcpServer?: SdkMcpServer;
   private stdioServerTransport: StdioServerTransport;
 
   // Metrics tracking
@@ -54,7 +54,7 @@ export class StdioTransport implements Transport {
     this.stdioServerTransport = new StdioServerTransport();
   }
 
-  async start(): Promise<void> {
+  async start(_sdkMcpServer: SdkMcpServer): Promise<void> {
     this.logger.info('StdioTransport: Starting STDIO transport', {
       enableLogging: this.config.enableLogging,
       bufferSize: this.config.bufferSize,
@@ -75,17 +75,17 @@ export class StdioTransport implements Transport {
   /**
    * Connect MCP server to STDIO transport
    */
-  async connect(mcpServer: McpServer): Promise<void> {
+  async connect(sdkMcpServer: SdkMcpServer): Promise<void> {
     if (this.connected) {
       this.logger.warn('StdioTransport: Already connected');
       return;
     }
 
-    this.mcpServer = mcpServer;
+    this.sdkMcpServer = sdkMcpServer;
 
     try {
       // Connect using official MCP SDK
-      await mcpServer.connect(this.stdioServerTransport);
+      await sdkMcpServer.connect(this.stdioServerTransport);
       this.connected = true;
 
       this.logger.info('StdioTransport: STDIO transport connected successfully');
@@ -122,14 +122,14 @@ export class StdioTransport implements Transport {
    * Disconnect STDIO transport
    */
   async disconnect(): Promise<void> {
-    if (!this.connected || !this.mcpServer) {
+    if (!this.connected || !this.sdkMcpServer) {
       return;
     }
 
     try {
-      await this.mcpServer.close();
+      await this.sdkMcpServer.close();
       this.connected = false;
-      delete this.mcpServer;
+      delete this.sdkMcpServer;
 
       this.logger.info('StdioTransport: STDIO transport disconnected successfully');
 
@@ -148,7 +148,7 @@ export class StdioTransport implements Transport {
 
       // Force cleanup even on error
       this.connected = false;
-      delete this.mcpServer;
+      delete this.sdkMcpServer;
 
       throw error;
     }
@@ -158,14 +158,14 @@ export class StdioTransport implements Transport {
    * Check if transport is connected
    */
   isConnected(): boolean {
-    return this.connected && !!this.mcpServer;
+    return this.connected && !!this.sdkMcpServer;
   }
 
   /**
    * Get MCP server instance (if connected)
    */
-  getMcpServer(): McpServer | undefined {
-    return this.mcpServer;
+  getSdkMcpServer(): SdkMcpServer | undefined {
+    return this.sdkMcpServer;
   }
 
   /**

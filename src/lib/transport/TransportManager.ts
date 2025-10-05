@@ -275,6 +275,12 @@ export class TransportManager {
       return;
     }
 
+    if (!this.sdkMcpServer) {
+      throw new Error(
+        'Cannot switch TransportManager - SDK MCP server not set. Call initialize() first.',
+      );
+    }
+
     this.logger.info('TransportManager: Switching transport', {
       from: this.config.type,
       to: newType,

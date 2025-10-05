@@ -3,7 +3,7 @@
  * Comprehensive type definitions for transport layer
  */
 
-//import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
+import type { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
 import type { Logger } from '../utils/Logger.ts';
 import type { KVManager } from '../storage/KVManager.ts';
 import type { SessionStore } from '../storage/SessionStore.ts';
@@ -15,7 +15,7 @@ import type { RateLimitConfig } from '../types/RateLimitTypes.ts';
 // Core transport interfaces
 export interface Transport {
   readonly type: TransportType;
-  start(): Promise<void>;
+  start(sdkMcpServer: SdkMcpServer): Promise<void>;
   stop(): Promise<void>;
   cleanup(): Promise<void>;
   getMetrics(): TransportMetrics;

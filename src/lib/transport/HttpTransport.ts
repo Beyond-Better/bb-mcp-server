@@ -458,7 +458,6 @@ export class HttpTransport implements Transport {
         };
 
         // 🚨 PRESERVED MCP SERVER CONNECTION - DO NOT MODIFY
-        //await sdkMcpServer.getMcpServer()!.connect(transport);
         await sdkMcpServer.connect(transport);
         this.logger.info('HttpTransport: MCP server connected to new transport');
       } else {
