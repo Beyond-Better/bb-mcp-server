@@ -35,7 +35,7 @@ cd bb-mcp-server/examples/1-simple
 cp .env.example .env
 
 # Run the MCP server
-deno run --allow-all main.ts
+deno run --allow-all --unstable-kv main.ts
 ```
 
 **✨ What you get out of the box:**
@@ -86,19 +86,19 @@ You can run any example directly without cloning the repository:
 
 ```bash
 # Run the simple example
-deno run --allow-all jsr:@beyondbetter/bb-mcp-server@0.1.4/examples/1-simple
+deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/1-simple
 
 # Run the plugin-workflows example
-deno run --allow-all jsr:@beyondbetter/bb-mcp-server@0.1.4/examples/2-plugin-workflows
+deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/2-plugin-workflows
 
 # Run the OAuth example
-deno run --allow-all jsr:@beyondbetter/bb-mcp-server@0.1.4/examples/3-plugin-api-auth
+deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/3-plugin-api-auth
 
 # Run the manual dependencies example
-deno run --allow-all jsr:@beyondbetter/bb-mcp-server@0.1.4/examples/4-manual-deps
+deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/4-manual-deps
 
 # Run the chunked storage demo
-deno run --allow-all jsr:@beyondbetter/bb-mcp-server@0.1.4/examples/chunked-storage-demo
+deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/chunked-storage-demo
 ```
 
 **Note**: Examples may require environment configuration (`.env` file) for full functionality.
