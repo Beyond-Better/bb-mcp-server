@@ -294,7 +294,6 @@ export interface TransportDependencies {
   oauthProvider?: any; // OAuthProvider for MCP token validation
   oauthConsumer?: any; // OAuthConsumer for third-party authentication
   thirdPartyApiClient?: any; // Third-party API client for token refresh
-
 }
 
 // Authentication result (from OAuth integration)

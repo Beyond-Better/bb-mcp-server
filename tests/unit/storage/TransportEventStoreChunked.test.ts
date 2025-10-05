@@ -31,10 +31,9 @@ async function createTestKvManager(): Promise<KVManager> {
 }
 
 // Helper function to close kvManager
-async function cleanupTestDependencies(  kvManager: KVManager): Promise<void> {
+async function cleanupTestDependencies(kvManager: KVManager): Promise<void> {
   await kvManager.close();
 }
-
 
 // Helper to create test config that avoids hanging promises
 function getTestConfig() {
@@ -91,7 +90,12 @@ Deno.test({
   async fn() {
     const kvManager = await createTestKvManager();
 
-    const eventStore = new TransportEventStoreChunked(kvManager, undefined, mockLogger, getTestConfig());
+    const eventStore = new TransportEventStoreChunked(
+      kvManager,
+      undefined,
+      mockLogger,
+      getTestConfig(),
+    );
 
     // Verify store is initialized
     assertExists(eventStore);
@@ -114,7 +118,12 @@ Deno.test({
       maxMessageSize: 5 * 1024 * 1024, // 5MB
     };
 
-    const eventStore = new TransportEventStoreChunked(kvManager, ['test_events'], mockLogger, config);
+    const eventStore = new TransportEventStoreChunked(
+      kvManager,
+      ['test_events'],
+      mockLogger,
+      config,
+    );
 
     assertExists(eventStore);
 
@@ -126,7 +135,12 @@ Deno.test({
   name: 'TransportEventStoreChunked - Store Small Message (No Chunking)',
   async fn() {
     const kvManager = await createTestKvManager();
-    const eventStore = new TransportEventStoreChunked(kvManager, ['test'], mockLogger, getTestConfig());
+    const eventStore = new TransportEventStoreChunked(
+      kvManager,
+      ['test'],
+      mockLogger,
+      getTestConfig(),
+    );
 
     const message: JSONRPCMessage = {
       jsonrpc: '2.0',
@@ -471,7 +485,7 @@ Deno.test({
     const message = createLargeMessage(50);
     const eventId = await eventStore.storeEvent('test-stream-corrupt', message);
 
-	const kv = kvManager.getKV();
+    const kv = kvManager.getKV();
 
     // Manually corrupt a chunk by writing invalid data
     const corruptChunkKey = ['test', 'stream', 'test-stream-corrupt', 'chunks', eventId, 0];

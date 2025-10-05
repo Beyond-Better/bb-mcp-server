@@ -514,7 +514,10 @@ export async function validateConfiguration(
 
     if (!oauthConsumerConfig) {
       const error = 'OAuth consumer is configured but OAuth consumer configuration is missing';
-      logger.error('DependencyHelper: OAuth consumer configuration validation failed', new Error(error));
+      logger.error(
+        'DependencyHelper: OAuth consumer configuration validation failed',
+        new Error(error),
+      );
       throw new Error(error);
     }
 
@@ -538,16 +541,22 @@ export async function validateConfiguration(
       const error = `Missing or invalid OAuth consumer configuration: ${
         formatFieldErrors(missingFields)
       }`;
-      logger.error('DependencyHelper: OAuth consumer configuration validation failed', new Error(error), {
-        missingFields,
-        envVars: missingFields.map((f) => getEnvVarForField(f)),
-      });
+      logger.error(
+        'DependencyHelper: OAuth consumer configuration validation failed',
+        new Error(error),
+        {
+          missingFields,
+          envVars: missingFields.map((f) => getEnvVarForField(f)),
+        },
+      );
       throw new Error(error);
     }
 
     logger.debug('DependencyHelper: OAuth consumer configuration validation passed');
   } else {
-    logger.debug('DependencyHelper: OAuth consumer not configured - skipping OAuth consumer validation');
+    logger.debug(
+      'DependencyHelper: OAuth consumer not configured - skipping OAuth consumer validation',
+    );
   }
 
   // Validate OAuth provider configuration if HTTP transport is used
@@ -561,13 +570,16 @@ export async function validateConfiguration(
       const allowInsecureHttp = transportConfig.http?.allowInsecure === true;
 
       if (allowInsecureHttp) {
-        logger.warn('DependencyHelper: 🚨 SECURITY WARNING: Running HTTP transport without OAuth provider', {
-          security: 'INSECURE',
-          transport: 'http',
-          reason: 'HTTP_ALLOW_INSECURE=true',
-          recommendation: 'Configure OAuth provider for production use',
-          environment: configManager.get('environment', 'development'),
-        });
+        logger.warn(
+          'DependencyHelper: 🚨 SECURITY WARNING: Running HTTP transport without OAuth provider',
+          {
+            security: 'INSECURE',
+            transport: 'http',
+            reason: 'HTTP_ALLOW_INSECURE=true',
+            recommendation: 'Configure OAuth provider for production use',
+            environment: configManager.get('environment', 'development'),
+          },
+        );
         logger.warn(
           'DependencyHelper: 🔓 HTTP server will accept unauthenticated requests - suitable for development only',
         );
@@ -581,9 +593,13 @@ export async function validateConfiguration(
 
         const error =
           `Missing OAuth provider configuration for HTTP transport. Set HTTP_ALLOW_INSECURE=true to allow insecure HTTP mode.`;
-        logger.error('DependencyHelper: OAuth provider configuration validation failed', new Error(error), {
-          allowInsecureHint: 'Set HTTP_ALLOW_INSECURE=true to bypass this requirement',
-        });
+        logger.error(
+          'DependencyHelper: OAuth provider configuration validation failed',
+          new Error(error),
+          {
+            allowInsecureHint: 'Set HTTP_ALLOW_INSECURE=true to bypass this requirement',
+          },
+        );
         throw new Error(error);
       }
     } else {
@@ -603,10 +619,14 @@ export async function validateConfiguration(
         const error = `Missing or invalid OAuth provider configuration: ${
           formatFieldErrors(missingProviderFields.map((f) => `provider.${f}`))
         }`;
-        logger.error('DependencyHelper: OAuth provider configuration validation failed', new Error(error), {
-          missingProviderFields,
-          envVars: missingProviderFields.map((f) => getEnvVarForField(`provider.${f}`)),
-        });
+        logger.error(
+          'DependencyHelper: OAuth provider configuration validation failed',
+          new Error(error),
+          {
+            missingProviderFields,
+            envVars: missingProviderFields.map((f) => getEnvVarForField(`provider.${f}`)),
+          },
+        );
         throw new Error(error);
       }
 
@@ -743,9 +763,12 @@ export async function performHealthChecks(
   // Warn if any non-critical dependencies are unhealthy
   const unhealthyDeps = results.filter((r) => !r.healthy);
   if (unhealthyDeps.length > 0) {
-    logger.warn('DependencyHelper: Some dependencies are unhealthy - server may have limited functionality', {
-      unhealthyDependencies: unhealthyDeps.map((d) => d.name),
-    });
+    logger.warn(
+      'DependencyHelper: Some dependencies are unhealthy - server may have limited functionality',
+      {
+        unhealthyDependencies: unhealthyDeps.map((d) => d.name),
+      },
+    );
   }
 }
 

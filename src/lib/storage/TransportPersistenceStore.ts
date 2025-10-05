@@ -397,7 +397,7 @@ export class TransportPersistenceStore {
     try {
       const cutoffTime = Date.now() - maxAgeMs;
       let deletedCount = 0;
-const kv = this.kvManager.getKV();
+      const kv = this.kvManager.getKV();
 
       const prefix = [...this.keyPrefix, 'session'];
       const iter = kv.list<PersistedSessionInfo>({ prefix });

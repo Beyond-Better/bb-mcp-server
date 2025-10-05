@@ -19,7 +19,7 @@ import { TransportEventStore } from '../../../src/lib/storage/TransportEventStor
 //import type { Logger } from '../../../src/types/library.types.ts';
 import type { TransportConfig } from '../../../src/lib/transport/TransportTypes.ts';
 import type { PersistedSessionInfo } from '../../../src/lib/storage/TransportPersistenceStore.ts';
-import { MockSdkMcpServer ,  SpyLogger} from '../../utils/test-helpers.ts';
+import { MockSdkMcpServer, SpyLogger } from '../../utils/test-helpers.ts';
 import { StreamableHTTPServerTransport } from 'mcp/server/streamableHttp.js';
 
 // Helper function to create test dependencies
@@ -27,7 +27,7 @@ async function createTestDependencies() {
   const kvManager = new KVManager({ kvPath: ':memory:' });
   await kvManager.initialize();
 
-const spyLogger = new SpyLogger();
+  const spyLogger = new SpyLogger();
   const eventStore = new TransportEventStore(kvManager, undefined, spyLogger);
 
   const transportConfig: TransportConfig = {
