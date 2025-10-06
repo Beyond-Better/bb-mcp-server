@@ -573,7 +573,7 @@ export class OAuthEndpoints {
         // RFC 9728: If this is a resource-specific metadata request, add the resource field
         if (isProtectedResourceMetadata && path.startsWith('oauth-protected-resource/')) {
           const resourcePath = '/' + path.substring('oauth-protected-resource/'.length);
-          const url = new URL(request.url);
+          const url = reconstructOriginalUrl(request);
           const resourceUrl = `${url.protocol}//${url.host}${resourcePath}`;
 
           // Add resource field to metadata for RFC 9728 compliance
