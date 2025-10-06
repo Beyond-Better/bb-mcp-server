@@ -411,7 +411,8 @@ export class ConfigManager {
       logCalls: {
         api: this.getEnvBoolean('AUDIT_LOG_CALLS_API', true),
         auth: this.getEnvBoolean('AUDIT_LOG_CALLS_AUTH', true),
-        workflow: this.getEnvBoolean('AUDIT_LOG_CALLS_WORKFLOW', true),
+        workflow_execution: this.getEnvBoolean('AUDIT_LOG_CALLS_WORKFLOW_EXECUTION', true),
+        workflow_operation: this.getEnvBoolean('AUDIT_LOG_CALLS_WORKFLOW_OPERATION', true),
         tools: this.getEnvBoolean('AUDIT_LOG_CALLS_TOOLS', true),
         system: this.getEnvBoolean('AUDIT_LOG_CALLS_SYSTEM', true),
         custom: this.getEnvBoolean('AUDIT_LOG_CALLS_CUSTOM', true),

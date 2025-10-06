@@ -9,12 +9,19 @@
  */
 
 // 🎯 Library imports - API client base class, logging, and types
-import { BaseApiClient, type BaseApiClientConfig } from '@beyondbetter/bb-mcp-server';
-import { Logger } from '@beyondbetter/bb-mcp-server';
-import type { ThirdPartyApiHealthStatus, ThirdPartyApiInfo } from '@beyondbetter/bb-mcp-server';
+import {
+  BaseApiClient,
+  type BaseApiClientConfig,
+} from "@beyondbetter/bb-mcp-server";
+import { Logger } from "@beyondbetter/bb-mcp-server";
+import type {
+  AuditLogger,
+  ThirdPartyApiHealthStatus,
+  ThirdPartyApiInfo,
+} from "@beyondbetter/bb-mcp-server";
 
 // 🎯 Consumer-specific imports
-import { ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts';
+import { ExampleOAuthConsumer } from "../auth/ExampleOAuthConsumer.ts";
 
 /**
  * Configuration for ExampleCorp API client
@@ -50,8 +57,8 @@ export interface Customer {
     zipCode: string;
     country: string;
   };
-  customerType: 'individual' | 'business';
-  status: 'active' | 'inactive' | 'suspended';
+  customerType: "individual" | "business";
+  status: "active" | "inactive" | "suspended";
   createdAt: string;
   updatedAt: string;
 }
@@ -61,8 +68,8 @@ export interface Order {
   customerId: string;
   items: OrderItem[];
   totalAmount: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  shippingMethod: 'standard' | 'expedited' | 'overnight';
+  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+  shippingMethod: "standard" | "expedited" | "overnight";
   trackingNumber?: string;
   estimatedDelivery?: string;
   createdAt: string;
@@ -102,8 +109,9 @@ export class ExampleApiClient extends BaseApiClient {
     config: ExampleApiClientConfig,
     oauthConsumer: ExampleOAuthConsumer,
     logger: Logger,
+    auditLogger: AuditLogger,
   ) {
-    super(config, logger);
+    super(config, logger, auditLogger);
     this.oauthConsumer = oauthConsumer;
   }
 
@@ -123,25 +131,25 @@ export class ExampleApiClient extends BaseApiClient {
         const post = await response.json();
         return {
           healthy: !!post,
-          version: 'jsonplaceholder-v1',
+          version: "jsonplaceholder-v1",
           uptime: Date.now(), // Mock uptime
           services: {
-            api: 'healthy',
-            posts: 'healthy',
-            users: 'healthy',
-            todos: 'healthy',
+            api: "healthy",
+            posts: "healthy",
+            users: "healthy",
+            todos: "healthy",
           },
         };
       } else {
         throw new Error(`Health check failed: ${response.status}`);
       }
     } catch (error) {
-      this.getLogger().warn('ExampleCorp health check failed', {});
+      this.getLogger().warn("ExampleCorp health check failed", {});
       return {
         healthy: false,
-        version: 'unknown',
+        version: "unknown",
         uptime: 0,
-        services: { api: 'down' },
+        services: { api: "down" },
       };
     }
   }
@@ -154,27 +162,28 @@ export class ExampleApiClient extends BaseApiClient {
       // For JSONPlaceholder demo, return static API info
       // In a real implementation, this would query the API's info endpoint
       return {
-        name: 'ExampleCorp API',
-        version: 'v1.0',
-        description: 'Demonstration API using JSONPlaceholder for MCP server integration patterns',
+        name: "ExampleCorp API",
+        version: "v1.0",
+        description:
+          "Demonstration API using JSONPlaceholder for MCP server integration patterns",
         capabilities: [
-          'customer-management',
-          'order-processing',
-          'product-catalog',
-          'inventory-tracking',
-          'analytics-reporting',
-          'refund-processing',
-          'data-migration',
+          "customer-management",
+          "order-processing",
+          "product-catalog",
+          "inventory-tracking",
+          "analytics-reporting",
+          "refund-processing",
+          "data-migration",
         ],
-        documentationUrl: 'https://jsonplaceholder.typicode.com/',
+        documentationUrl: "https://jsonplaceholder.typicode.com/",
         rateLimits: {
           requestsPerMinute: 60,
           requestsPerHour: 3600,
           requestsPerDay: 86400,
         },
-        statusPageUrl: 'https://jsonplaceholder.typicode.com/',
+        statusPageUrl: "https://jsonplaceholder.typicode.com/",
         metadata: {
-          provider: 'JSONPlaceholder',
+          provider: "JSONPlaceholder",
           baseUrl: this.getConfig().baseUrl,
           apiVersion: this.getConfig().apiVersion,
           timeout: this.getConfig().timeout,
@@ -183,10 +192,10 @@ export class ExampleApiClient extends BaseApiClient {
       };
     } catch (error) {
       this.getLogger().error(
-        'Failed to get API info',
+        "Failed to get API info",
         error instanceof Error ? error : new Error(String(error)),
       );
-      throw new Error('Failed to retrieve API information');
+      throw new Error("Failed to retrieve API information");
     }
   }
 
@@ -208,7 +217,7 @@ export class ExampleApiClient extends BaseApiClient {
       page: number;
       limit: number;
       sortBy?: string;
-      sortOrder?: 'asc' | 'desc';
+      sortOrder?: "asc" | "desc";
     };
     userId: string;
   }): Promise<{ items: Customer[]; totalCount: number; pagination: any }> {
@@ -228,10 +237,10 @@ export class ExampleApiClient extends BaseApiClient {
           city: user.address.city,
           state: user.address.zipcode, // Mock state with zipcode
           zipCode: user.address.zipcode,
-          country: 'US', // Mock country
+          country: "US", // Mock country
         },
-        customerType: 'individual' as const,
-        status: 'active' as const,
+        customerType: "individual" as const,
+        status: "active" as const,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }));
@@ -263,7 +272,7 @@ export class ExampleApiClient extends BaseApiClient {
       };
     } catch (error) {
       this.getLogger().error(
-        'Failed to query customers',
+        "Failed to query customers",
         error instanceof Error ? error : new Error(String(error)),
       );
       return { items: [], totalCount: 0, pagination: {} };
@@ -275,15 +284,15 @@ export class ExampleApiClient extends BaseApiClient {
    */
   async createCustomer(
     _accessToken: string | null,
-    customerData: Omit<Customer, 'id' | 'status' | 'createdAt' | 'updatedAt'>,
+    customerData: Omit<Customer, "id" | "status" | "createdAt" | "updatedAt">,
     userId: string,
   ): Promise<Customer> {
     try {
       // Use JSONPlaceholder POST /users endpoint
       const response = await fetch(`${this.config.baseUrl}/users`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           name: customerData.name,
@@ -301,28 +310,28 @@ export class ExampleApiClient extends BaseApiClient {
 
       // Transform JSONPlaceholder response to Customer format
       const customer: Customer = {
-        id: createdUser.id?.toString() || '101', // JSONPlaceholder returns id: 11 for new posts
+        id: createdUser.id?.toString() || "101", // JSONPlaceholder returns id: 11 for new posts
         name: customerData.name,
         email: customerData.email,
-        phone: customerData.phone || '',
+        phone: customerData.phone || "",
         address: customerData.address,
         customerType: customerData.customerType,
-        status: 'active',
+        status: "active",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
-      this.getLogger().info('Customer created successfully', {
+      this.getLogger().info("Customer created successfully", {
         customerId: customer.id,
         name: customer.name,
       });
       return customer;
     } catch (error) {
       this.getLogger().error(
-        'Failed to create customer',
+        "Failed to create customer",
         error instanceof Error ? error : new Error(String(error)),
       );
-      throw new Error('Failed to create customer');
+      throw new Error("Failed to create customer");
     }
   }
 
@@ -334,7 +343,7 @@ export class ExampleApiClient extends BaseApiClient {
     customerId: string,
   ): Promise<void> {
     await this.makeRequest(
-      'DELETE',
+      "DELETE",
       `/customers/${customerId}`,
       { requireAuth: true },
     );
@@ -360,7 +369,7 @@ export class ExampleApiClient extends BaseApiClient {
       page: number;
       limit: number;
       sortBy?: string;
-      sortOrder?: 'asc' | 'desc';
+      sortOrder?: "asc" | "desc";
     };
     userId: string;
   }): Promise<{ items: Order[]; totalCount: number; pagination: any }> {
@@ -384,17 +393,17 @@ export class ExampleApiClient extends BaseApiClient {
         ],
         totalAmount: Math.floor(Math.random() * 500) + 50,
         status: [
-          'pending',
-          'processing',
-          'shipped',
-          'delivered',
-        ][post.id % 4] as Order['status'],
+          "pending",
+          "processing",
+          "shipped",
+          "delivered",
+        ][post.id % 4] as Order["status"],
         shippingMethod: [
-          'standard',
-          'expedited',
-          'overnight',
-        ][post.id % 3] as Order['shippingMethod'],
-        trackingNumber: `TRACK-${post.id.toString().padStart(6, '0')}`,
+          "standard",
+          "expedited",
+          "overnight",
+        ][post.id % 3] as Order["shippingMethod"],
+        trackingNumber: `TRACK-${post.id.toString().padStart(6, "0")}`,
         estimatedDelivery: new Date(
           Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000,
         )
@@ -430,7 +439,7 @@ export class ExampleApiClient extends BaseApiClient {
       };
     } catch (error) {
       this.getLogger().error(
-        'Failed to query orders',
+        "Failed to query orders",
         error instanceof Error ? error : new Error(String(error)),
       );
       return { items: [], totalCount: 0, pagination: {} };
@@ -447,12 +456,12 @@ export class ExampleApiClient extends BaseApiClient {
       quantity: number;
       unitPrice: number;
     }>;
-    shippingMethod?: 'standard' | 'expedited' | 'overnight';
+    shippingMethod?: "standard" | "expedited" | "overnight";
     notes?: string;
   }, userId: string): Promise<Order> {
     const response = await this.makeRequest<Order>(
-      'POST',
-      '/orders',
+      "POST",
+      "/orders",
       {
         body: orderData,
         userId,
@@ -460,7 +469,7 @@ export class ExampleApiClient extends BaseApiClient {
     );
 
     if (!response.data) {
-      throw new Error('Failed to create order: No data returned');
+      throw new Error("Failed to create order: No data returned");
     }
 
     return response.data;
@@ -475,10 +484,10 @@ export class ExampleApiClient extends BaseApiClient {
     userId: string;
   }): Promise<any> {
     const queryParams = new URLSearchParams();
-    if (params.includeHistory) queryParams.set('includeHistory', 'true');
+    if (params.includeHistory) queryParams.set("includeHistory", "true");
 
     const response = await this.makeRequest(
-      'GET',
+      "GET",
       `/orders/${params.orderId}/status?${queryParams.toString()}`,
       { userId: params.userId },
     );
@@ -494,7 +503,7 @@ export class ExampleApiClient extends BaseApiClient {
     orderId: string,
   ): Promise<void> {
     await this.makeRequest(
-      'POST',
+      "POST",
       `/orders/${orderId}/cancel`,
       { requireAuth: true },
     );
@@ -516,33 +525,33 @@ export class ExampleApiClient extends BaseApiClient {
       page: number;
       limit: number;
       sortBy?: string;
-      sortOrder?: 'asc' | 'desc';
+      sortOrder?: "asc" | "desc";
     };
     userId: string;
   }): Promise<{ items: Product[]; totalCount: number; pagination: any }> {
     const queryParams = new URLSearchParams();
 
-    if (params.search) queryParams.set('search', params.search);
+    if (params.search) queryParams.set("search", params.search);
     if (params.filters?.category) {
-      queryParams.set('category', params.filters.category);
+      queryParams.set("category", params.filters.category);
     }
     if (params.pagination?.page) {
-      queryParams.set('page', params.pagination.page.toString());
+      queryParams.set("page", params.pagination.page.toString());
     }
     if (params.pagination?.limit) {
-      queryParams.set('limit', params.pagination.limit.toString());
+      queryParams.set("limit", params.pagination.limit.toString());
     }
     if (params.pagination?.sortBy) {
-      queryParams.set('sortBy', params.pagination.sortBy);
+      queryParams.set("sortBy", params.pagination.sortBy);
     }
     if (params.pagination?.sortOrder) {
-      queryParams.set('sortOrder', params.pagination.sortOrder);
+      queryParams.set("sortOrder", params.pagination.sortOrder);
     }
 
     const response = await this.makeRequest<
       { items: Product[]; totalCount: number; pagination: any }
     >(
-      'GET',
+      "GET",
       `/products?${queryParams.toString()}`,
       { userId: params.userId },
     );
@@ -559,8 +568,8 @@ export class ExampleApiClient extends BaseApiClient {
     userId: string,
   ): Promise<Record<string, number>> {
     const response = await this.makeRequest<Record<string, number>>(
-      'POST',
-      '/inventory/levels',
+      "POST",
+      "/inventory/levels",
       {
         body: { productIds },
         userId,
@@ -577,13 +586,13 @@ export class ExampleApiClient extends BaseApiClient {
     updates: Array<{
       productId: string;
       quantity: number;
-      operation: 'set' | 'add' | 'subtract';
+      operation: "set" | "add" | "subtract";
     }>;
     reason: string;
   }, userId: string): Promise<any> {
     const response = await this.makeRequest(
-      'POST',
-      '/inventory/bulk-update',
+      "POST",
+      "/inventory/bulk-update",
       {
         body: updateData,
         userId,
@@ -601,8 +610,8 @@ export class ExampleApiClient extends BaseApiClient {
     inventory: Record<string, number>,
   ): Promise<void> {
     await this.makeRequest(
-      'POST',
-      '/inventory/restore',
+      "POST",
+      "/inventory/restore",
       {
         body: { inventory },
         requireAuth: true,
@@ -629,14 +638,14 @@ export class ExampleApiClient extends BaseApiClient {
     const queryParams = new URLSearchParams();
 
     if (params.filters?.dateRange?.startDate) {
-      queryParams.set('startDate', params.filters.dateRange.startDate);
+      queryParams.set("startDate", params.filters.dateRange.startDate);
     }
     if (params.filters?.dateRange?.endDate) {
-      queryParams.set('endDate', params.filters.dateRange.endDate);
+      queryParams.set("endDate", params.filters.dateRange.endDate);
     }
 
     const response = await this.makeRequest(
-      'GET',
+      "GET",
       `/analytics?${queryParams.toString()}`,
       { userId: params.userId },
     );
@@ -662,8 +671,8 @@ export class ExampleApiClient extends BaseApiClient {
     reason: string;
   }, userId: string): Promise<any> {
     const response = await this.makeRequest(
-      'POST',
-      '/refunds',
+      "POST",
+      "/refunds",
       {
         body: refundData,
         userId,
@@ -687,8 +696,8 @@ export class ExampleApiClient extends BaseApiClient {
     batchSize: number;
   }, userId: string): Promise<any> {
     const response = await this.makeRequest(
-      'POST',
-      '/migration/validate',
+      "POST",
+      "/migration/validate",
       {
         body: migrationData,
         userId,
@@ -708,8 +717,8 @@ export class ExampleApiClient extends BaseApiClient {
     batchSize: number;
   }, userId: string): Promise<any> {
     const response = await this.makeRequest(
-      'POST',
-      '/migration/execute',
+      "POST",
+      "/migration/execute",
       {
         body: migrationData,
         userId,
@@ -727,7 +736,7 @@ export class ExampleApiClient extends BaseApiClient {
    * Disconnect from ExampleCorp API
    */
   async disconnect(): Promise<void> {
-    this.getLogger().info('ExampleCorp API client disconnected');
+    this.getLogger().info("ExampleCorp API client disconnected");
   }
 
   // =============================================================================
@@ -738,7 +747,7 @@ export class ExampleApiClient extends BaseApiClient {
    * Make authenticated HTTP request to ExampleCorp API
    */
   private async makeRequest<T = any>(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    method: "GET" | "POST" | "PUT" | "DELETE",
     endpoint: string,
     options: {
       body?: any;
@@ -761,16 +770,16 @@ export class ExampleApiClient extends BaseApiClient {
 
       // Build request headers
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': this.config.userAgent || 'ExampleCorp-MCP-Client/1.0',
-        'X-API-Version': this.config.apiVersion,
-        'X-Request-ID': requestId,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": this.config.userAgent || "ExampleCorp-MCP-Client/1.0",
+        "X-API-Version": this.config.apiVersion,
+        "X-Request-ID": requestId,
         ...options.headers,
       };
 
       if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
+        headers["Authorization"] = `Bearer ${accessToken}`;
       }
 
       // Make HTTP request with retry logic
@@ -784,7 +793,7 @@ export class ExampleApiClient extends BaseApiClient {
       // Parse response
       const responseData = await response.json() as ApiResponse<T>;
 
-      this.getLogger().debug('ExampleCorp API request completed', {
+      this.getLogger().debug("ExampleCorp API request completed", {
         method,
         endpoint,
         status: response.status,
@@ -795,7 +804,7 @@ export class ExampleApiClient extends BaseApiClient {
       return responseData;
     } catch (error) {
       this.getLogger().error(
-        'ExampleCorp API request failed',
+        "ExampleCorp API request failed",
         error instanceof Error ? error : new Error(String(error)),
         {
           method,
@@ -826,16 +835,16 @@ export class ExampleApiClient extends BaseApiClient {
 
       // Handle specific error statuses
       if (response.status === 401) {
-        throw new Error('Authentication failed - invalid or expired token');
+        throw new Error("Authentication failed - invalid or expired token");
       }
       if (response.status === 403) {
-        throw new Error('Forbidden - insufficient permissions');
+        throw new Error("Forbidden - insufficient permissions");
       }
       if (response.status === 404) {
-        throw new Error('Resource not found');
+        throw new Error("Resource not found");
       }
       if (response.status === 429) {
-        throw new Error('Rate limit exceeded - please retry later');
+        throw new Error("Rate limit exceeded - please retry later");
       }
 
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -843,17 +852,17 @@ export class ExampleApiClient extends BaseApiClient {
       // Retry on network errors or 5xx server errors
       const shouldRetry = attempt < this.config.retryAttempts &&
         (error instanceof Error && (
-          error.name === 'TimeoutError' ||
-          error.message.includes('network') ||
-          error.message.includes('5')
+          error.name === "TimeoutError" ||
+          error.message.includes("network") ||
+          error.message.includes("5")
         ));
 
       if (shouldRetry) {
-        this.getLogger().warn('ExampleCorp API request failed, retrying', {
+        this.getLogger().warn("ExampleCorp API request failed, retrying", {
           url,
           attempt,
           maxAttempts: this.config.retryAttempts,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? error.message : "Unknown error",
         });
 
         // Exponential backoff delay

@@ -42,14 +42,15 @@ import {
   assertAuthenticatedCall,
   assertAuthenticationError,
   createMockApiClient,
-  createMockAuthLogger,
+  createMockLogger,
+  createMockAuditLogger,
   createMockOAuthConsumer,
   generateAuthenticatedToolTestParams,
   generateOAuthFailureScenarios,
   MockApiClient,
-  MockAuthLogger,
   MockOAuthConsumer,
 } from '../utils/test-helpers.ts';
+import type { AuditLogger, Logger } from '@beyondbetter/bb-mcp-server';
 
 /**
  * ExampleTools OAuth Authentication Tests
@@ -60,7 +61,8 @@ import {
 describe('ExampleTools - Manual Registration', () => {
   let mockOAuth: MockOAuthConsumer;
   let mockApiClient: MockApiClient;
-  let mockLogger: MockAuthLogger;
+  let mockLogger: Logger;
+  let mockAuditLogger: AuditLogger;
   let exampleTools: ExampleTools;
   let toolRegistrations: any[];
 
@@ -68,14 +70,15 @@ describe('ExampleTools - Manual Registration', () => {
     // Set up OAuth and API mocks
     mockOAuth = createMockOAuthConsumer();
     mockApiClient = createMockApiClient();
-    mockLogger = createMockAuthLogger();
+    mockLogger = createMockLogger();
+    mockAuditLogger = createMockAuditLogger();
 
     // Create ExampleTools instance directly (no plugin in manual-deps)
     exampleTools = new ExampleTools({
       apiClient: mockApiClient as any,
       oauthConsumer: mockOAuth as any,
       logger: mockLogger as any,
-      auditLogger: mockLogger as any,
+      auditLogger: mockAuditLogger as any,
     });
 
     // Get tool registrations directly from ExampleTools

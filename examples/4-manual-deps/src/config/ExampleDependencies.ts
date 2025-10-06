@@ -224,6 +224,7 @@ export async function createManualDependencies(
     apiClientConfig,
     oauthConsumer,
     logger,
+    auditLogger,
   );
 
   // 📝 Step 4: Manual tool and workflow registration (NO plugin discovery)

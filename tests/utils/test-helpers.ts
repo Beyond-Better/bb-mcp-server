@@ -24,15 +24,17 @@ import { ToolRegistry } from '../../src/lib/tools/ToolRegistry.ts';
 
 /**
  * Create mock logger for testing
+ * Returns SpyLogger for access to test-specific methods like debugCalls, infoCalls, etc.
  */
-export function createMockLogger(): Logger {
+export function createMockLogger(): SpyLogger {
   return new SpyLogger();
 }
 
 /**
  * Create mock audit logger for testing
+ * Returns SpyAuditLogger for access to test-specific methods like getApiCallCount, getAuthEventsByType, etc.
  */
-export function createMockAuditLogger(): AuditLogger {
+export function createMockAuditLogger(): SpyAuditLogger {
   return new SpyAuditLogger();
 }
 
@@ -402,17 +404,71 @@ export class SpyLogger extends Logger {
  * Create spy audit logger that captures audit events
  */
 export class SpyAuditLogger extends AuditLogger {
-  public systemEvents: AuditEvent[] = [];
+  public apiCalls: any[] = [];
+  public authEvents: any[] = [];
+  public workflowExecutions: any[] = [];
   public workflowOperations: any[] = [];
-  public securityEvents: any[] = [];
-  public performanceEvents: any[] = [];
+  public toolCalls: any[] = [];
+  public systemEvents: AuditEvent[] = [];
+  public customEvents: any[] = [];
 
   constructor() {
     // Initialize with disabled configuration for testing
     super(
-      { enabled: false, logAllApiCalls: false },
+      {
+        enabled: false,
+        logCalls: {
+          api: true,
+          auth: true,
+          workflow_execution: true,
+          workflow_operation: true,
+          tools: true,
+          system: true,
+          custom: true,
+        },
+      },
       new SpyLogger(),
     );
+  }
+
+  override async logApiCall(entry: any) {
+    this.apiCalls.push({
+      ...entry,
+      timestamp: new Date().toISOString(),
+    });
+    // Don't call super to avoid file operations during tests
+  }
+
+  override async logAuthEvent(entry: any) {
+    this.authEvents.push({
+      ...entry,
+      timestamp: new Date().toISOString(),
+    });
+    // Don't call super to avoid file operations during tests
+  }
+
+  override async logWorkflowExecution(entry: any) {
+    this.workflowExecutions.push({
+      ...entry,
+      timestamp: new Date().toISOString(),
+    });
+    // Don't call super to avoid file operations during tests
+  }
+
+  override async logWorkflowOperation(entry: any) {
+    this.workflowOperations.push({
+      ...entry,
+      timestamp: new Date().toISOString(),
+    });
+    // Don't call super to avoid file operations during tests
+  }
+
+  override async logToolCall(entry: any) {
+    this.toolCalls.push({
+      ...entry,
+      timestamp: new Date().toISOString(),
+    });
+    // Don't call super to avoid file operations during tests
   }
 
   override async logSystemEvent(event: Omit<AuditEvent, 'timestamp'>) {
@@ -423,40 +479,110 @@ export class SpyAuditLogger extends AuditLogger {
     // Don't call super to avoid file operations during tests
   }
 
-  override async logWorkflowOperation(operation: any) {
-    this.workflowOperations.push(operation);
+  override async logCustomEvent(type: string, entry: any) {
+    this.customEvents.push({
+      type,
+      ...entry,
+      timestamp: new Date().toISOString(),
+    });
     // Don't call super to avoid file operations during tests
-  }
-
-  // Add method to match AuditLogger interface
-  override async logAuthEvent(event: any) {
-    this.securityEvents.push(event);
-    // Don't call super to avoid file operations during tests
-  }
-
-  // Add method to match expected test usage
-  async logSecurityEvent(event: any) {
-    this.securityEvents.push(event);
-  }
-
-  async logPerformanceEvent(event: any) {
-    this.performanceEvents.push(event);
   }
 
   reset() {
-    this.systemEvents = [];
+    this.apiCalls = [];
+    this.authEvents = [];
+    this.workflowExecutions = [];
     this.workflowOperations = [];
-    this.securityEvents = [];
-    this.performanceEvents = [];
+    this.toolCalls = [];
+    this.systemEvents = [];
+    this.customEvents = [];
   }
 
   getAllEvents() {
     return {
+      api: this.apiCalls,
+      auth: this.authEvents,
+      workflowExecutions: this.workflowExecutions,
+      workflowOperations: this.workflowOperations,
+      tools: this.toolCalls,
       system: this.systemEvents,
-      workflow: this.workflowOperations,
-      security: this.securityEvents,
-      performance: this.performanceEvents,
+      custom: this.customEvents,
     };
+  }
+
+  // Helper methods for test assertions
+  getApiCallCount(): number {
+    return this.apiCalls.length;
+  }
+
+  getAuthEventCount(): number {
+    return this.authEvents.length;
+  }
+
+  getWorkflowExecutionCount(): number {
+    return this.workflowExecutions.length;
+  }
+
+  getWorkflowOperationCount(): number {
+    return this.workflowOperations.length;
+  }
+
+  getToolCallCount(): number {
+    return this.toolCalls.length;
+  }
+
+  getSystemEventCount(): number {
+    return this.systemEvents.length;
+  }
+
+  getCustomEventCount(): number {
+    return this.customEvents.length;
+  }
+
+  // Get specific events by filter
+  getApiCallsByEndpoint(endpoint: string): any[] {
+    return this.apiCalls.filter(call => call.endpoint === endpoint);
+  }
+
+  getAuthEventsByType(eventType: string): any[] {
+    return this.authEvents.filter(event => event.event === eventType);
+  }
+
+  getToolCallsByName(toolName: string): any[] {
+    return this.toolCalls.filter(call => call.toolName === toolName);
+  }
+
+  getWorkflowExecutionsByName(workflowName: string): any[] {
+    return this.workflowExecutions.filter(exec => exec.workflowName === workflowName);
+  }
+
+  getWorkflowOperationsByName(workflowName: string, operation?: string): any[] {
+    let filtered = this.workflowOperations.filter(op => op.workflowName === workflowName);
+    if (operation) {
+      filtered = filtered.filter(op => op.operation === operation);
+    }
+    return filtered;
+  }
+
+  // Get failed events
+  getFailedApiCalls(): any[] {
+    return this.apiCalls.filter(call => !call.success || call.statusCode >= 400);
+  }
+
+  getFailedAuthEvents(): any[] {
+    return this.authEvents.filter(event => !event.success);
+  }
+
+  getFailedWorkflowExecutions(): any[] {
+    return this.workflowExecutions.filter(exec => !exec.success);
+  }
+
+  getFailedWorkflowOperations(): any[] {
+    return this.workflowOperations.filter(op => !op.success);
+  }
+
+  getFailedToolCalls(): any[] {
+    return this.toolCalls.filter(call => !call.success);
   }
 }
 

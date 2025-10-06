@@ -28,7 +28,7 @@ export interface ExampleToolsDependencies {
   apiClient: ExampleApiClient;
   oauthConsumer: ExampleOAuthConsumer;
   logger: Logger;
-  auditLogger?: AuditLogger;
+  auditLogger: AuditLogger;
 }
 
 /**
@@ -56,11 +56,7 @@ export class ExampleTools extends ToolBase {
     this.apiClient = dependencies.apiClient;
     this.oauthConsumer = dependencies.oauthConsumer;
     this.logger = dependencies.logger;
-    this.auditLogger = dependencies.auditLogger ||
-      new AuditLogger(
-        { enabled: false, logAllApiCalls: false },
-        dependencies.logger,
-      );
+    this.auditLogger = dependencies.auditLogger;
   }
 
   /**

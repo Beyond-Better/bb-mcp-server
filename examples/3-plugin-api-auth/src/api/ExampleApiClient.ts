@@ -102,7 +102,7 @@ export class ExampleApiClient extends BaseApiClient {
     config: ExampleApiClientConfig,
     oauthConsumer: ExampleOAuthConsumer,
     logger: Logger,
-    auditLogger?: AuditLogger,
+    auditLogger: AuditLogger,
   ) {
     super(config, logger, auditLogger);
     this.oauthConsumer = oauthConsumer;

@@ -27,6 +27,11 @@
  */
 
 import { assertEquals, assertExists } from '@std/assert';
+import {
+  createMockAuditLogger,
+  createMockLogger,
+} from '@beyondbetter/bb-mcp-server/testing';
+export { createMockAuditLogger, createMockLogger };
 
 /**
  * Mock OAuth Consumer Implementation
@@ -816,8 +821,8 @@ export class MockApiClient {
 }
 
 /**
- * Enhanced Mock Logger with OAuth-specific logging
- * Implements both Logger and AuditLogger interfaces for comprehensive mocking
+ * DEPRECATED: Use createMockLogger() and createMockAuditLogger() instead
+ * This class is kept for backward compatibility but should not be used in new tests
  */
 export class MockAuthLogger {
   public infoCalls: Array<[string, any?]> = [];
@@ -1062,6 +1067,10 @@ export function createConnectedMocks(): {
   return { oauthConsumer, apiClient };
 }
 
+/**
+ * DEPRECATED: Import from @beyondbetter/bb-mcp-server/testing instead
+ * @deprecated Use createMockLogger() and createMockAuditLogger() from library
+ */
 export function createMockAuthLogger(): MockAuthLogger {
   return new MockAuthLogger();
 }
@@ -1072,7 +1081,8 @@ export function createMockAuthLogger(): MockAuthLogger {
 export function createAuthenticatedToolContext(overrides: any = {}): any {
   const mockOAuth = createMockOAuthConsumer();
   const mockApiClient = createMockApiClient();
-  const mockLogger = createMockAuthLogger();
+  const mockLogger = createMockLogger();
+  const mockAuditLogger = createMockAuditLogger();
 
   return {
     userId: 'test-user',
@@ -1080,6 +1090,7 @@ export function createAuthenticatedToolContext(overrides: any = {}): any {
     clientId: 'test-client',
     startTime: new Date(),
     logger: mockLogger,
+    auditLogger: mockAuditLogger,
     oauthConsumer: mockOAuth,
     apiClient: mockApiClient,
     authenticated: true,
@@ -1293,29 +1304,6 @@ export function assertApiClientCall(
     actualCallCount,
     expectedCallCount,
     `Expected ${expectedCallCount} calls to ${method}, but got ${actualCallCount}`,
-  );
-}
-
-/**
- * Assert that proper audit logging occurred
- */
-export function assertAuditLogging(
-  mockLogger: MockAuthLogger,
-  userId: string,
-  operation: string,
-): void {
-  const authEvents = mockLogger.getAuthEventsForUser(userId);
-  assertEquals(
-    authEvents.length > 0,
-    true,
-    `Should have auth events for user: ${userId}`,
-  );
-
-  const hasOperation = authEvents.some((event) => event.event.includes(operation));
-  assertEquals(
-    hasOperation,
-    true,
-    `Should have logged operation: ${operation}`,
   );
 }
 

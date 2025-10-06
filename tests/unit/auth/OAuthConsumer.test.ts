@@ -20,7 +20,6 @@ import {
 } from '../../../src/lib/auth/OAuthConsumer.ts';
 import { KVManager } from '../../../src/lib/storage/KVManager.ts';
 import { CredentialStore } from '../../../src/lib/storage/CredentialStore.ts';
-import type { Logger } from '../../../src/types/library.types.ts';
 import type {
   //AuthCallbackResult,
   //AuthFlowResult,
@@ -28,14 +27,13 @@ import type {
   OAuthCredentials,
   TokenResult,
 } from '../../../src/lib/auth/OAuthTypes.ts';
+import {
+  createMockAuditLogger,
+  createMockLogger,
+} from '../../utils/test-helpers.ts';
 
 // Mock logger for testing
-const mockLogger: Logger = {
-  debug: () => {},
-  info: () => {},
-  warn: () => {},
-  error: () => {},
-};
+const mockLogger = createMockLogger();
 
 // Test OAuth Consumer implementation
 class TestOAuthConsumer extends OAuthConsumer {
@@ -132,6 +130,7 @@ function createTestConsumer(config: Partial<OAuthConsumerConfig> = {}) {
   const kvManager = new KVManager({ kvPath: ':memory:' });
   // Use the same token refresh buffer for CredentialStore as for OAuthConsumer
   const tokenRefreshBufferMinutes = config.tokenRefreshBufferMinutes ?? 5;
+  const auditLogger = createMockAuditLogger();
   const credentialStore = new CredentialStore(kvManager, {
     tokenRefreshBuffer: tokenRefreshBufferMinutes * 60 * 1000, // Convert to milliseconds
   }, mockLogger);
@@ -150,7 +149,12 @@ function createTestConsumer(config: Partial<OAuthConsumerConfig> = {}) {
   };
 
   return {
-    consumer: new TestOAuthConsumer(fullConfig, { logger: mockLogger, kvManager, credentialStore }),
+    consumer: new TestOAuthConsumer(fullConfig, {
+      logger: mockLogger,
+      auditLogger,
+      kvManager,
+      credentialStore,
+    }),
     kvManager,
     credentialStore,
     config: fullConfig,

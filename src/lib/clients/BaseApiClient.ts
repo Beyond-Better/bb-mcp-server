@@ -37,9 +37,9 @@ export interface BaseApiClientConfig {
 export abstract class BaseApiClient {
   protected config: BaseApiClientConfig;
   protected logger: Logger;
-  protected auditLogger?: AuditLogger;
+  protected auditLogger: AuditLogger;
 
-  constructor(config: BaseApiClientConfig, logger: Logger, auditLogger?: AuditLogger) {
+  constructor(config: BaseApiClientConfig, logger: Logger, auditLogger: AuditLogger) {
     this.config = config;
     this.logger = logger;
     this.auditLogger = auditLogger;

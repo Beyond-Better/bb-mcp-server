@@ -35,11 +35,12 @@ import { ExampleQueryWorkflow } from '../../src/plugins/workflows/ExampleQueryWo
 import {
   createAuthenticatedWorkflowContext,
   createConnectedMocks,
-  createMockAuthLogger,
+  createMockLogger,
+  createMockAuditLogger,
   MockApiClient,
-  MockAuthLogger,
   MockOAuthConsumer,
 } from '../utils/test-helpers.ts';
+import { SpyLogger, SpyAuditLogger } from '@beyondbetter/bb-mcp-server/testing';
 import { getResultData } from '../utils/type-helpers.ts';
 
 type WorkflowContext = any;
@@ -53,7 +54,8 @@ type WorkflowContext = any;
 describe('ExampleQueryWorkflow - OAuth Integration', () => {
   let mockOAuth: MockOAuthConsumer;
   let mockApiClient: MockApiClient;
-  let mockLogger: MockAuthLogger;
+  let mockLogger: SpyLogger;
+  let mockAuditLogger: SpyAuditLogger;
   let workflow: ExampleQueryWorkflow;
   let context: WorkflowContext;
   let logSpy: Spy;
@@ -64,7 +66,8 @@ describe('ExampleQueryWorkflow - OAuth Integration', () => {
     const mocks = createConnectedMocks();
     mockOAuth = mocks.oauthConsumer;
     mockApiClient = mocks.apiClient;
-    mockLogger = createMockAuthLogger();
+    mockLogger = createMockLogger();
+    mockAuditLogger = createMockAuditLogger();
 
     // Set up logging spy
     logSpy = spy(mockLogger, 'info');
@@ -74,7 +77,7 @@ describe('ExampleQueryWorkflow - OAuth Integration', () => {
       thirdpartyApiClient: mockApiClient,
       oauthConsumer: mockOAuth,
       logger: mockLogger,
-      auditLogger: mockLogger,
+      auditLogger: mockAuditLogger,
     } as any);
 
     // Find the query workflow

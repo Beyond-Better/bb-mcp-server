@@ -26,6 +26,7 @@ import type {
 import type { TransportConfig } from '../transport/TransportTypes.ts';
 import {
   getAllDependencies,
+  getAuditLogger,
   getConfigManager,
   getCredentialStore,
   getKvManager,
@@ -76,7 +77,7 @@ export class AppServer {
     dependenciesOrFunction?:
       | Partial<AppServerDependencies>
       | ((
-        { configManager, logger, kvManager }: CreateCustomAppServerDependencies,
+        { configManager, logger, auditLogger, kvManager }: CreateCustomAppServerDependencies,
       ) => Promise<Partial<AppServerDependencies>>),
   ): Promise<AppServer> {
     // =============================================================================
@@ -89,6 +90,7 @@ export class AppServer {
     if (typeof dependenciesOrFunction === 'function') {
       const configManager = await getConfigManager();
       const logger = getLogger(configManager);
+      const auditLogger = getAuditLogger(configManager, logger);
       const kvManager = await getKvManager(configManager, logger);
       const credentialStore = getCredentialStore(kvManager, logger);
       // logger.info('AppServer: Calling client dependencies function', {
@@ -98,6 +100,7 @@ export class AppServer {
       appDependencies = await dependenciesOrFunction({
         configManager,
         logger,
+        auditLogger,
         kvManager,
         credentialStore,
       });

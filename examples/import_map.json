@@ -2,6 +2,8 @@
   "imports": {
     "@beyondbetter/bb-mcp-server": "../src/mod.ts",
     "@beyondbetter/bb-mcp-server/": "../src/",
+    "@beyondbetter/bb-mcp-server/testing": "../tests/mod.ts",
+    "@beyondbetter/bb-mcp-server/testing/": "../tests/",
     "mcp": "npm:@modelcontextprotocol/sdk@1.17.5",
     "mcp/client/": "npm:@modelcontextprotocol/sdk@1.17.5/client/",
     "mcp/client/index.js": "npm:@modelcontextprotocol/sdk@1.17.5/client/index.js",

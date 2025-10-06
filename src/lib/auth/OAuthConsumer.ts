@@ -39,7 +39,7 @@ export interface OAuthConsumerDependencies {
   /** Logger for security event logging */
   logger: Logger;
   /** Audit logger for authentication event tracking */
-  auditLogger?: AuditLogger;
+  auditLogger: AuditLogger;
 }
 
 /**
@@ -65,7 +65,7 @@ export interface OAuthConsumerDependencies {
 export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> {
   protected config: T;
   protected logger: Logger;
-  protected auditLogger?: AuditLogger;
+  protected auditLogger: AuditLogger;
 
   // Dependencies
   protected kvManager: KVManager;
