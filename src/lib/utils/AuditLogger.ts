@@ -17,7 +17,8 @@ export interface AuditConfig {
   logCalls: {
     api: boolean;
     auth: boolean;
-    workflow: boolean;
+    workflow_execution: boolean;
+    workflow_operation: boolean;
     tools: boolean;
     system: boolean;
     custom: boolean;
@@ -46,6 +47,21 @@ export interface ApiAuditEntry extends BaseAuditEntry {
 export interface WorkflowAuditEntry extends BaseAuditEntry {
   workflowName: string;
   operation: string;
+  success: boolean;
+  durationMs: number;
+  inputParams?: unknown;
+  outputResult?: unknown;
+  error?: string;
+  requestSize?: number;
+  responseSize?: number;
+  ipAddress?: string;
+}
+
+export interface ToolAuditEntry extends BaseAuditEntry {
+  toolName: string;
+  toolClass: string;
+  version: string;
+  category: string;
   success: boolean;
   durationMs: number;
   inputParams?: unknown;
@@ -198,10 +214,31 @@ export class AuditLogger {
   }
 
   /**
-   * Log workflow operation
+   * Log workflow execution (top-level workflow run)
+   */
+  async logWorkflowExecution(entry: Omit<WorkflowAuditEntry, 'timestamp'>): Promise<void> {
+    if (!this.config.enabled || (!this.config.logCalls.workflow_execution && !entry.error)) {
+      return;
+    }
+
+    try {
+      const logEntry = {
+        type: 'workflow_execution',
+        timestamp: new Date().toISOString(),
+        ...entry,
+      };
+
+      await this.writeLogEntry(logEntry);
+    } catch (error) {
+      this.logger?.error('AuditLogger: Failed to log workflow execution', toError(error));
+    }
+  }
+
+  /**
+   * Log workflow operation (individual operation within a workflow)
    */
   async logWorkflowOperation(entry: Omit<WorkflowAuditEntry, 'timestamp'>): Promise<void> {
-    if (!this.config.enabled || (!this.config.logCalls.workflow && !entry.error)) {
+    if (!this.config.enabled || (!this.config.logCalls.workflow_operation && !entry.error)) {
       return;
     }
 
@@ -215,6 +252,27 @@ export class AuditLogger {
       await this.writeLogEntry(logEntry);
     } catch (error) {
       this.logger?.error('AuditLogger: Failed to log workflow operation', toError(error));
+    }
+  }
+
+  /**
+   * Log tool call
+   */
+  async logToolCall(entry: Omit<ToolAuditEntry, 'timestamp'>): Promise<void> {
+    if (!this.config.enabled || (!this.config.logCalls.tools && !entry.error)) {
+      return;
+    }
+
+    try {
+      const logEntry = {
+        type: 'tool_call',
+        timestamp: new Date().toISOString(),
+        ...entry,
+      };
+
+      await this.writeLogEntry(logEntry);
+    } catch (error) {
+      this.logger?.error('AuditLogger: Failed to log tool call', toError(error));
     }
   }
 
