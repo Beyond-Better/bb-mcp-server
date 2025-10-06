@@ -213,18 +213,18 @@ export class MockSdkMcpServer {
   public instructions?: string;
 
   // MCP SDK required properties
-  public _registeredResources = new Map();
-  public _registeredResourceTemplates = new Map();
-  public _registeredTools = new Map<string, any>();
-  public _registeredPrompts = new Map();
-  public _handlerMap = new Map();
+  public _registeredResources: Map<string, any> = new Map();
+  public _registeredResourceTemplates: Map<string, any> = new Map();
+  public _registeredTools: Map<string, any> = new Map<string, any>();
+  public _registeredPrompts: Map<string, any> = new Map();
+  public _handlerMap: Map<string, any> = new Map();
   public _onRequest: any;
   public _onNotification: any;
   public _onOpen: any;
   public _onClose: any;
   public _onError: any;
-  public _requestHandlers = new Map();
-  public _notificationHandlers = new Map();
+  public _requestHandlers: Map<string, any> = new Map();
+  public _notificationHandlers: Map<string, any> = new Map();
   public _transport: any = null;
   public _isConnected = false;
 
@@ -241,11 +241,11 @@ export class MockSdkMcpServer {
     this._registeredTools.set(name, { name, definition, handler });
   }
 
-  getRegisteredTool(name: string) {
+  getRegisteredTool(name: string): { name: string; definition: any; handler: any } | undefined {
     return this._registeredTools.get(name);
   }
 
-  getRegisteredTools() {
+  getRegisteredTools(): Array<{ name: string; definition: any; handler: any }> {
     return Array.from(this._registeredTools.values());
   }
 
@@ -274,11 +274,11 @@ export class MockSdkMcpServer {
     this._notificationHandlers.set(method, handler);
   }
 
-  request(params: any) {
+  request(params: any): Promise<{ result: string }> {
     return Promise.resolve({ result: 'mock-response' });
   }
 
-  notification(params: any) {
+  notification(params: any): Promise<void> {
     return Promise.resolve();
   }
 
@@ -305,7 +305,11 @@ export class MockSdkMcpServer {
   // Mock server for MCP SDK integration
 
   server = {
-    createMessage: async (request: any) => {
+    createMessage: async (request: any): Promise<{
+      content: Array<{ type: string; text: string }>;
+      model: string;
+      usage: { inputTokens: number; outputTokens: number };
+    }> => {
       if (!this._isConnected) {
         throw new Error('Not connected');
       }
@@ -318,7 +322,10 @@ export class MockSdkMcpServer {
         usage: { inputTokens: 10, outputTokens: 15 },
       };
     },
-    elicitInput: async (request: any) => {
+    elicitInput: async (request: any): Promise<{
+      action: 'accept';
+      content: { mockResponse: boolean; message: any };
+    }> => {
       if (!this._isConnected) {
         throw new Error('Not connected');
       }
@@ -389,7 +396,13 @@ export class SpyLogger extends Logger {
     this.logCalls = [];
   }
 
-  getAllCalls() {
+  getAllCalls(): {
+    debug: any[][];
+    info: any[][];
+    warn: any[][];
+    error: any[][];
+    log: any[][];
+  } {
     return {
       debug: this.debugCalls,
       info: this.infoCalls,
@@ -498,7 +511,15 @@ export class SpyAuditLogger extends AuditLogger {
     this.customEvents = [];
   }
 
-  getAllEvents() {
+  getAllEvents(): {
+    api: any[];
+    auth: any[];
+    workflowExecutions: any[];
+    workflowOperations: any[];
+    tools: any[];
+    system: AuditEvent[];
+    custom: any[];
+  } {
     return {
       api: this.apiCalls,
       auth: this.authEvents,
@@ -718,7 +739,14 @@ export const TestData = {
   /**
    * Generate test tool definition
    */
-  toolDefinition: (name: string, overrides: any = {}) => ({
+  toolDefinition: (name: string, overrides: any = {}): {
+    title: string;
+    description: string;
+    category: string;
+    tags: string[];
+    inputSchema: { message: { type: string } };
+    [key: string]: any;
+  } => ({
     title: `Test ${name}`,
     description: `Test tool: ${name}`,
     category: 'testing',
@@ -732,7 +760,7 @@ export const TestData = {
   /**
    * Generate test request context
    */
-  requestContext: (overrides: Partial<BeyondMcpRequestContext> = {}) => ({
+  requestContext: (overrides: Partial<BeyondMcpRequestContext> = {}): BeyondMcpRequestContext => ({
     authenticatedUserId: 'test-user-' + Math.random().toString(36).substr(2, 8),
     clientId: 'test-client-' + Math.random().toString(36).substr(2, 8),
     scopes: ['read', 'write'],
@@ -745,7 +773,9 @@ export const TestData = {
   /**
    * Generate test MCP server config
    */
-  mcpServerConfig: (overrides: Partial<BeyondMcpServerConfig> = {}) => ({
+  mcpServerConfig: (
+    overrides: Partial<BeyondMcpServerConfig> = {},
+  ): Partial<BeyondMcpServerConfig> => ({
     server: {
       name: 'test-server-' + Math.random().toString(36).substr(2, 8),
       version: '1.0.0',
