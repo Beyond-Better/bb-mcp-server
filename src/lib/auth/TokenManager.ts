@@ -15,6 +15,7 @@
 
 import type { Logger } from '../../types/library.types.ts';
 import type { KVManager } from '../storage/KVManager.ts';
+import type { AuditLogger } from '../utils/AuditLogger.ts';
 import { toError } from '../utils/Error.ts';
 
 /**
@@ -129,6 +130,8 @@ export interface TokenManagerDependencies {
   kvManager: KVManager;
   /** Logger for security event logging */
   logger?: Logger | undefined;
+  /** Audit logger for authentication event tracking */
+  auditLogger?: AuditLogger | undefined;
 }
 
 /**
@@ -147,6 +150,7 @@ export interface TokenManagerDependencies {
 export class TokenManager {
   private kvManager: KVManager;
   private logger: Logger | undefined;
+  private auditLogger: AuditLogger | undefined;
   private config: TokenConfig;
 
   // 🔒 SECURITY-CRITICAL: KV key prefixes - preserves exact structure from OAuthClientService.ts
@@ -157,6 +161,7 @@ export class TokenManager {
   constructor(config: TokenConfig, dependencies: TokenManagerDependencies) {
     this.kvManager = dependencies.kvManager;
     this.logger = dependencies.logger;
+    this.auditLogger = dependencies.auditLogger;
     // Apply defaults for missing values
     this.config = {
       accessTokenExpiryMs: config.accessTokenExpiryMs ?? 3600 * 1000, // 1 hour
@@ -255,6 +260,18 @@ export class TokenManager {
       //   expiresAt: new Date(tokenData.expires_at).toISOString(),
       //   hasRefreshToken: !!tokenData.refresh_token,
       // });
+
+      // Log token generation for audit
+      await this.auditLogger?.logAuthEvent({
+        event: 'token_refresh',
+        success: true,
+        userId,
+        details: {
+          clientId,
+          hasRefreshToken: !!tokenData.refresh_token,
+          scope: tokenData.scope,
+        },
+      });
 
       return tokenData;
     } catch (error) {
@@ -617,8 +634,26 @@ export class TokenManager {
       //   hasNewRefreshToken: !!newAccessToken.refresh_token,
       // });
 
+      // Log successful token refresh for audit
+      await this.auditLogger?.logAuthEvent({
+        event: 'token_refresh',
+        success: true,
+        userId: refreshTokenData.user_id,
+        details: {
+          clientId: refreshTokenData.client_id,
+        },
+      });
+
       return { success: true, accessToken: newAccessToken };
     } catch (error) {
+      // Log failed token refresh for audit
+      await this.auditLogger?.logAuthEvent({
+        event: 'token_refresh',
+        success: false,
+        details: {
+          error: error instanceof Error ? error.message : 'Token refresh failed',
+        },
+      });
       this.logger?.error(
         `TokenManager: Failed to exchange refresh token [${exchangeId}]:`,
         toError(error),
