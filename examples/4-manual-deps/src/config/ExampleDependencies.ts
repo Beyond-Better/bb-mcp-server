@@ -24,6 +24,8 @@ import {
   getLogger,
   KVManager,
   Logger,
+  type LoggingConfig,
+  type McpServerInstructionsConfig,
   OAuthProvider,
   performHealthChecks,
   SessionStore,
@@ -47,6 +49,7 @@ import { ExampleApiClient, type ExampleApiClientConfig } from '../api/ExampleApi
 import { ExampleTools } from '../tools/ExampleTools.ts';
 import { ExampleQueryWorkflow } from '../workflows/ExampleQueryWorkflow.ts';
 import { ExampleOperationWorkflow } from '../workflows/ExampleOperationWorkflow.ts';
+import { loadInstructions, validateInstructions } from '../utils/InstructionsLoader.ts';
 
 /**
  * Create ExampleCorp dependencies using library infrastructure
@@ -64,38 +67,29 @@ export async function createManualDependencies(
   // =============================================================================
 
   // 🎯 Initialize library logger with ExampleCorp configuration
+  const loggingConfig = configManager?.get<LoggingConfig>('logging');
   const logger = new Logger({
-    level: configManager.get('LOG_LEVEL', 'info'),
-    format: configManager.get('LOG_FORMAT', 'json'),
+    level: loggingConfig.level,
+    format: loggingConfig.format,
   });
 
   logger.info('Initializing ExampleCorp MCP server dependencies...');
 
   // 🎯 Initialize library audit logger
-  const auditLogger = new AuditLogger({
-    enabled: configManager.get('AUDIT_ENABLED', 'true') === 'true',
-    logAllApiCalls: configManager.get('AUDIT_LOG_ALL_API_CALLS', 'true') === 'true',
-    logFile: configManager.get('AUDIT_LOG_FILE'),
-    retentionDays: parseInt(
-      configManager.get('AUDIT_RETENTION_DAYS', '90'),
-      10,
-    ),
-  }, logger);
+  const auditConfig = configManager?.get<AuditConfig>('audit');
+  const auditLogger = new AuditLogger(auditConfig, logger);
 
   // 🎯 Initialize library KV storage using ConfigManager
-  const kvPath = configManager.get(
-    'STORAGE_DENO_KV_PATH',
-    './example/data/examplecorp-mcp-server.db',
-  );
+  const storageConfig = configManager?.get<StorageConfig>('storage');
+  const kvPath = storageConfig.denoKvPath;
+  const kvManager = new KVManager({ kvPath }, logger);
   logger.info('ExampleCorp: Configuring KV storage', {
     kvPath,
     resolvedPath: new URL(kvPath, `file://${Deno.cwd()}/`).pathname,
     currentWorkingDirectory: Deno.cwd(),
   });
 
-  const kvManager = new KVManager({
-    kvPath,
-  }, logger);
+  const kvManager = new KVManager({ kvPath }, logger);
 
   // Initialize KV connection before using it
   await kvManager.initialize();
@@ -142,53 +136,8 @@ export async function createManualDependencies(
   const errorHandler = new ErrorHandler();
 
   // 🎯 Initialize library OAuth provider (MCP server as OAuth provider)
-  const oauthProvider = new OAuthProvider({
-    issuer: configManager.get('OAUTH_PROVIDER_ISSUER', 'http://localhost:3000'),
-    clientId: configManager.get('OAUTH_PROVIDER_CLIENT_ID', 'example-client'),
-    clientSecret: configManager.get(
-      'OAUTH_PROVIDER_CLIENT_SECRET',
-      'example-secret',
-    ),
-    redirectUri: configManager.get(
-      'OAUTH_PROVIDER_REDIRECT_URI',
-      'http://localhost:3000/oauth/callback',
-    ),
-    tokens: {
-      accessTokenExpiryMs: parseInt(
-        configManager.get('OAUTH_PROVIDER_TOKEN_EXPIRATION', '3600000'),
-        10,
-      ),
-      refreshTokenExpiryMs: parseInt(
-        configManager.get(
-          'OAUTH_PROVIDER_REFRESH_TOKEN_EXPIRATION',
-          '2592000000',
-        ),
-        10,
-      ),
-      authorizationCodeExpiryMs: parseInt(
-        configManager.get('OAUTH_PROVIDER_CODE_EXPIRATION', '600000'),
-        10,
-      ),
-    },
-    clients: {
-      enableDynamicRegistration: configManager.get('OAUTH_PROVIDER_DYNAMIC_CLIENT_REG') === 'true',
-      requireHTTPS: configManager.get('OAUTH_PROVIDER_REQUIRE_HTTPS') === 'true',
-      allowedRedirectHosts: (() => {
-        const hosts = configManager.get(
-          'OAUTH_PROVIDER_ALLOWED_HOSTS',
-          'localhost',
-        );
-        return typeof hosts === 'string' ? hosts.split(',') : hosts;
-      })(),
-    },
-    authorization: {
-      supportedGrantTypes: ['authorization_code', 'refresh_token'],
-      supportedResponseTypes: ['code'],
-      supportedScopes: ['read', 'write', 'admin'],
-      enablePKCE: true,
-      requirePKCE: false,
-    },
-  }, {
+  const oauthConfig = configManager.get<OAuthProviderConfig>('oauthProvider');
+  const oauthProvider = new OAuthProvider(oauthConfig, {
     logger,
     kvManager,
     credentialStore,
@@ -250,10 +199,7 @@ export async function createManualDependencies(
 
   // 🎯 Create ExampleCorp API client configuration using standard config keys
   const apiClientConfig: ExampleApiClientConfig = {
-    baseUrl: configManager.get(
-      'THIRDPARTY_API_BASE_URL',
-      'https://jsonplaceholder.typicode.com',
-    ),
+    baseUrl: apiBaseUrl,
     apiVersion: configManager.get('THIRDPARTY_API_VERSION', 'v1'),
     timeout: configManager.get('THIRDPARTY_API_TIMEOUT', 30000),
     retryAttempts: configManager.get('THIRDPARTY_API_RETRY_ATTEMPTS', 3),
@@ -266,6 +212,7 @@ export async function createManualDependencies(
     apiClientConfig,
     oauthConsumer,
     logger,
+    auditLogger,
   );
 
   // 📝 Step 4: Manual tool and workflow registration (NO plugin discovery)
@@ -274,7 +221,26 @@ export async function createManualDependencies(
 
   const toolRegistry = await getToolRegistry(logger, errorHandler);
 
-  const instructions = await Deno.readTextFile('instructions.md');
+  const mcpServerInstructionsConfig = configManager.get<
+    McpServerInstructionsConfig
+  >(
+    'mcpServerInstructionsConfig',
+  );
+  const instructions = await loadInstructions({
+    logger,
+    instructionsContent: mcpServerInstructionsConfig.instructionsContent,
+    instructionsFilePath: mcpServerInstructionsConfig.instructionsFilePath,
+    defaultFileName: 'mcp_server_instructions.md',
+    basePath: Deno.cwd(),
+  });
+
+  // Validate the loaded instructions
+  if (!validateInstructions(instructions, logger)) {
+    logger.warn(
+      'DependencyHelper: Loaded instructions failed validation but will be used anyway',
+    );
+  }
+
   const serverOptions: {
     capabilities?: {
       tools?: {};

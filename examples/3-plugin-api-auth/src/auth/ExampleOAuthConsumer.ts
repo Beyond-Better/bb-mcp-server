@@ -59,6 +59,7 @@ export class ExampleOAuthConsumer extends OAuthConsumer {
       },
       {
         logger: dependencies.logger,
+        auditLogger: dependencies.auditLogger,
         kvManager: dependencies.kvManager,
         credentialStore: dependencies.credentialStore,
       },

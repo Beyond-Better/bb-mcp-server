@@ -9,7 +9,7 @@
  */
 
 // 🎯 Library imports - API client base class, logging, and types
-import { BaseApiClient, type BaseApiClientConfig } from '@beyondbetter/bb-mcp-server';
+import { AuditLogger, BaseApiClient, type BaseApiClientConfig } from '@beyondbetter/bb-mcp-server';
 import { Logger } from '@beyondbetter/bb-mcp-server';
 import type { ThirdPartyApiHealthStatus, ThirdPartyApiInfo } from '@beyondbetter/bb-mcp-server';
 
@@ -102,8 +102,9 @@ export class ExampleApiClient extends BaseApiClient {
     config: ExampleApiClientConfig,
     oauthConsumer: ExampleOAuthConsumer,
     logger: Logger,
+    auditLogger: AuditLogger,
   ) {
-    super(config, logger);
+    super(config, logger, auditLogger);
     this.oauthConsumer = oauthConsumer;
   }
 
@@ -750,6 +751,7 @@ export class ExampleApiClient extends BaseApiClient {
   ): Promise<ApiResponse<T>> {
     const url = `${this.config.baseUrl}${endpoint}`;
     const requestId = crypto.randomUUID();
+    const startTime = performance.now();
 
     try {
       // 🎯 Get OAuth access token if authentication required
@@ -783,17 +785,31 @@ export class ExampleApiClient extends BaseApiClient {
 
       // Parse response
       const responseData = await response.json() as ApiResponse<T>;
+      const durationMs = performance.now() - startTime;
 
       this.getLogger().debug('ExampleCorp API request completed', {
         method,
         endpoint,
         status: response.status,
         requestId,
-        duration: performance.now(), // Would need to track start time
+        duration: durationMs,
       });
+
+      // Log API call for audit
+      await this.logApiCall(
+        method,
+        endpoint,
+        response.status,
+        durationMs,
+        options.userId,
+        requestId,
+      );
 
       return responseData;
     } catch (error) {
+      const durationMs = performance.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
       this.getLogger().error(
         'ExampleCorp API request failed',
         error instanceof Error ? error : new Error(String(error)),
@@ -802,6 +818,17 @@ export class ExampleApiClient extends BaseApiClient {
           endpoint,
           requestId,
         },
+      );
+
+      // Log failed API call for audit
+      await this.logApiCall(
+        method,
+        endpoint,
+        0, // Unknown status code for errors
+        durationMs,
+        options.userId,
+        requestId,
+        errorMessage,
       );
 
       throw error;

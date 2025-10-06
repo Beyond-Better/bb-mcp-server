@@ -436,15 +436,13 @@ describe('ToolBase Execution Wrapper', () => {
       { logger: mockLogger, auditLogger: mockAuditLogger },
     );
 
-    assertEquals(mockAuditLogger.systemEvents.length, 1);
-    const auditEvent = mockAuditLogger.systemEvents[0];
+    assertEquals(mockAuditLogger.toolCalls.length, 1);
+    const auditEvent = mockAuditLogger.toolCalls[0];
     assertExists(auditEvent);
-    assertEquals(auditEvent.event, 'tool_execution');
-    assertEquals(auditEvent.severity, 'info');
-    assertEquals(auditEvent.details.tool, 'audited-operation');
-    assertEquals(auditEvent.details.result, 'success');
-    assertEquals(auditEvent.details.toolClass, 'mock_tool');
-    assert(typeof auditEvent.details.executionTime === 'number');
+    assertEquals(auditEvent.toolName, 'audited-operation');
+    assertEquals(auditEvent.success, true);
+    assertEquals(auditEvent.toolClass, 'mock_tool');
+    assert(typeof auditEvent.durationMs === 'number');
   });
 
   it('should handle execution errors gracefully', async () => {
@@ -472,11 +470,10 @@ describe('ToolBase Execution Wrapper', () => {
     );
 
     // Should create failure audit entry
-    assertEquals(mockAuditLogger.systemEvents.length, 1);
-    const failureEvent = mockAuditLogger.systemEvents[0];
+    assertEquals(mockAuditLogger.toolCalls.length, 1);
+    const failureEvent = mockAuditLogger.toolCalls[0];
     assertExists(failureEvent);
-    assertEquals(failureEvent.details.result, 'failure');
-    assertEquals(failureEvent.severity, 'error');
+    assertEquals(failureEvent.success, false);
   });
 
   it('should handle non-Error exceptions', async () => {

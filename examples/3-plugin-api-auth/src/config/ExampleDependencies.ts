@@ -28,7 +28,8 @@ import { ExampleApiClient, type ExampleApiClientConfig } from '../api/ExampleApi
  * 🎯 Consumer provides: API client, custom OAuth consumer, business config
  */
 export async function createExampleDependencies(
-  { configManager, logger, kvManager, credentialStore }: CreateCustomAppServerDependencies,
+  { configManager, logger, auditLogger, kvManager, credentialStore }:
+    CreateCustomAppServerDependencies,
 ): Promise<Partial<AppServerDependencies>> {
   // =============================================================================
   // LIBRARY COMPONENT INITIALIZATION
@@ -110,6 +111,7 @@ export async function createExampleDependencies(
     apiClientConfig,
     oauthConsumer,
     logger,
+    auditLogger,
   );
 
   // =============================================================================

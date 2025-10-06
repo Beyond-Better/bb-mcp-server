@@ -10,11 +10,19 @@ import { toError } from './Error.ts';
 
 export interface AuditConfig {
   enabled: boolean;
-  logAllApiCalls: boolean;
   logFile?: string;
   retentionDays?: number;
   bufferSize?: number;
   flushInterval?: number;
+  logCalls: {
+    api: boolean;
+    auth: boolean;
+    workflow_execution: boolean;
+    workflow_operation: boolean;
+    tools: boolean;
+    system: boolean;
+    custom: boolean;
+  };
 }
 
 export interface BaseAuditEntry {
@@ -39,6 +47,21 @@ export interface ApiAuditEntry extends BaseAuditEntry {
 export interface WorkflowAuditEntry extends BaseAuditEntry {
   workflowName: string;
   operation: string;
+  success: boolean;
+  durationMs: number;
+  inputParams?: unknown;
+  outputResult?: unknown;
+  error?: string;
+  requestSize?: number;
+  responseSize?: number;
+  ipAddress?: string;
+}
+
+export interface ToolAuditEntry extends BaseAuditEntry {
+  toolName: string;
+  toolClass: string;
+  version: string;
+  category: string;
   success: boolean;
   durationMs: number;
   inputParams?: unknown;
@@ -173,7 +196,7 @@ export class AuditLogger {
    * Log API call
    */
   async logApiCall(entry: Omit<ApiAuditEntry, 'timestamp'>): Promise<void> {
-    if (!this.config.enabled || (!this.config.logAllApiCalls && !entry.error)) {
+    if (!this.config.enabled || (!this.config.logCalls.api && !entry.error)) {
       return;
     }
 
@@ -191,10 +214,31 @@ export class AuditLogger {
   }
 
   /**
-   * Log workflow operation
+   * Log workflow execution (top-level workflow run)
+   */
+  async logWorkflowExecution(entry: Omit<WorkflowAuditEntry, 'timestamp'>): Promise<void> {
+    if (!this.config.enabled || (!this.config.logCalls.workflow_execution && !entry.error)) {
+      return;
+    }
+
+    try {
+      const logEntry = {
+        type: 'workflow_execution',
+        timestamp: new Date().toISOString(),
+        ...entry,
+      };
+
+      await this.writeLogEntry(logEntry);
+    } catch (error) {
+      this.logger?.error('AuditLogger: Failed to log workflow execution', toError(error));
+    }
+  }
+
+  /**
+   * Log workflow operation (individual operation within a workflow)
    */
   async logWorkflowOperation(entry: Omit<WorkflowAuditEntry, 'timestamp'>): Promise<void> {
-    if (!this.config.enabled) {
+    if (!this.config.enabled || (!this.config.logCalls.workflow_operation && !entry.error)) {
       return;
     }
 
@@ -212,10 +256,31 @@ export class AuditLogger {
   }
 
   /**
+   * Log tool call
+   */
+  async logToolCall(entry: Omit<ToolAuditEntry, 'timestamp'>): Promise<void> {
+    if (!this.config.enabled || (!this.config.logCalls.tools && !entry.error)) {
+      return;
+    }
+
+    try {
+      const logEntry = {
+        type: 'tool_call',
+        timestamp: new Date().toISOString(),
+        ...entry,
+      };
+
+      await this.writeLogEntry(logEntry);
+    } catch (error) {
+      this.logger?.error('AuditLogger: Failed to log tool call', toError(error));
+    }
+  }
+
+  /**
    * Log authentication event
    */
   async logAuthEvent(entry: Omit<AuthAuditEntry, 'timestamp'>): Promise<void> {
-    if (!this.config.enabled) {
+    if (!this.config.enabled || (!this.config.logCalls.auth && !entry.error)) {
       return;
     }
 
@@ -236,7 +301,7 @@ export class AuditLogger {
    * Log system event
    */
   async logSystemEvent(entry: Omit<SystemAuditEntry, 'timestamp'>): Promise<void> {
-    if (!this.config.enabled) {
+    if (!this.config.enabled || (!this.config.logCalls.system && !entry.error)) {
       return;
     }
 
@@ -257,7 +322,7 @@ export class AuditLogger {
    * Log custom audit entry
    */
   async logCustomEvent(type: string, entry: Omit<BaseAuditEntry, 'timestamp'>): Promise<void> {
-    if (!this.config.enabled) {
+    if (!this.config.enabled || (!this.config.logCalls.custom && !entry.error)) {
       return;
     }
 

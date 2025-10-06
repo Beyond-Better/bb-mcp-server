@@ -210,7 +210,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## 🔗 Related Projects
 
 - [Model Context Protocol](https://github.com/modelcontextprotocol/typescript-sdk) - Official MCP TypeScript SDK
-- [Beyond Better](https://github.com/beyond-better) - AI-powered development tools
+- [Beyond Better](https://beyondbetter.app) - AI-powered development tools
 
 ---
 

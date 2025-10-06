@@ -1,11 +1,12 @@
 {
   "name": "@beyondbetter/bb-mcp-server",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Comprehensive library for building Deno-based MCP servers",
   "license": "MIT",
   "copyright": "2025 - Beyond Better <charlie@beyondbetter.app>",
   "exports": {
     ".": "./src/mod.ts",
+    "./testing": "./tests/mod.ts",
     "./examples/1-simple": "./examples/1-simple/main.ts",
     "./examples/2-plugin-workflows": "./examples/2-plugin-workflows/main.ts",
     "./examples/3-plugin-api-auth": "./examples/3-plugin-api-auth/main.ts",

@@ -26,107 +26,12 @@
  */
 
 import { assertEquals, assertExists } from '@std/assert';
-
-/**
- * Mock Logger Implementation
- *
- * Provides a logger that captures all log calls for verification
- * while maintaining the same interface as the real logger.
- */
-export class SpyLogger {
-  public infoCalls: Array<[string, any?]> = [];
-  public warnCalls: Array<[string, any?]> = [];
-  public errorCalls: Array<[string, Error | undefined, any?]> = [];
-  public debugCalls: Array<[string, any?]> = [];
-
-  info(message: string, data?: any): void {
-    this.infoCalls.push([message, data]);
-  }
-
-  warn(message: string, data?: any): void {
-    this.warnCalls.push([message, data]);
-  }
-
-  error(message: string, error?: Error, data?: any): void {
-    this.errorCalls.push([message, error, data]);
-  }
-
-  debug(message: string, data?: any): void {
-    this.debugCalls.push([message, data]);
-  }
-
-  // Additional methods that real Logger might have
-  dir(obj: any): void {
-    this.debugCalls.push(['dir', obj]);
-  }
-
-  child(): SpyLogger {
-    return new SpyLogger();
-  }
-
-  // Properties that real Logger has
-  currentLogLevel = 'info';
-  config = { level: 'info', format: 'text' };
-
-  shouldLog(): boolean {
-    return true;
-  }
-
-  formatMessage(): string {
-    return '';
-  }
-
-  colorMessage(): string {
-    return '';
-  }
-
-  writeToOutput(): void {
-    // Mock implementation
-  }
-
-  // Test helper methods
-  clear(): void {
-    this.infoCalls = [];
-    this.warnCalls = [];
-    this.errorCalls = [];
-    this.debugCalls = [];
-  }
-
-  getAllCalls(): Array<[string, string, any?]> {
-    return [
-      ...this.infoCalls.map(([msg, data]) => ['info', msg, data] as [string, string, any]),
-      ...this.warnCalls.map(([msg, data]) => ['warn', msg, data] as [string, string, any]),
-      ...this.errorCalls.map(([msg, error, data]) =>
-        ['error', msg, { error, data }] as [string, string, any]
-      ),
-      ...this.debugCalls.map(([msg, data]) => ['debug', msg, data] as [string, string, any]),
-    ];
-  }
-
-  getCallCount(): number {
-    return this.infoCalls.length + this.warnCalls.length + this.errorCalls.length +
-      this.debugCalls.length;
-  }
-
-  hasErrorCalls(): boolean {
-    return this.errorCalls.length > 0;
-  }
-
-  hasLogLevel(level: string): boolean {
-    switch (level) {
-      case 'info':
-        return this.infoCalls.length > 0;
-      case 'warn':
-        return this.warnCalls.length > 0;
-      case 'error':
-        return this.errorCalls.length > 0;
-      case 'debug':
-        return this.debugCalls.length > 0;
-      default:
-        return false;
-    }
-  }
-}
+import {
+  createMockAuditLogger,
+  createMockLogger,
+  //createMockToolRegistry
+} from '@beyondbetter/bb-mcp-server/testing';
+export { createMockAuditLogger, createMockLogger };
 
 /**
  * Mock Tool Registry Implementation
@@ -162,7 +67,9 @@ export class MockToolRegistry {
     return this.tools.size;
   }
 
-  getAllRegisteredTools(): Array<{ name: string; definition: any; handler: Function }> {
+  getAllRegisteredTools(): Array<
+    { name: string; definition: any; handler: Function }
+  > {
     return Array.from(this.tools.values());
   }
 
@@ -189,7 +96,10 @@ export class MockToolRegistry {
       }
       if (expectedDefinition.tags) {
         for (const tag of expectedDefinition.tags) {
-          assertExists(tool.definition.tags.includes(tag), `Tool should have tag '${tag}'`);
+          assertExists(
+            tool.definition.tags.includes(tag),
+            `Tool should have tag '${tag}'`,
+          );
         }
       }
     }
@@ -205,68 +115,6 @@ export class MockToolRegistry {
 }
 
 /**
- * Mock Audit Logger Implementation
- *
- * Provides audit logging functionality for testing.
- */
-export class SpyAuditLogger {
-  public systemEvents: Array<any> = [];
-  public toolExecutions: Array<any> = [];
-  public apiCalls: Array<any> = [];
-
-  logSystemEvent(event: string, severity: string, details: any): void {
-    this.systemEvents.push({
-      event,
-      severity,
-      details,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  logToolExecution(toolName: string, result: string, details: any): void {
-    this.toolExecutions.push({
-      tool: toolName,
-      result,
-      details,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  logApiCall(method: string, endpoint: string, status: number, details?: any): void {
-    this.apiCalls.push({
-      method,
-      endpoint,
-      status,
-      details,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  // Test helper methods
-  clear(): void {
-    this.systemEvents = [];
-    this.toolExecutions = [];
-    this.apiCalls = [];
-  }
-
-  getEventCount(): number {
-    return this.systemEvents.length + this.toolExecutions.length + this.apiCalls.length;
-  }
-
-  hasSystemEvent(event: string): boolean {
-    return this.systemEvents.some((e) => e.event === event);
-  }
-
-  hasToolExecution(toolName: string): boolean {
-    return this.toolExecutions.some((e) => e.tool === toolName);
-  }
-
-  hasApiCall(method: string, endpoint: string): boolean {
-    return this.apiCalls.some((e) => e.method === method && e.endpoint === endpoint);
-  }
-}
-
-/**
  * Helper Functions for Creating Mock Objects
  *
  * These factory functions create properly configured mock objects
@@ -274,24 +122,10 @@ export class SpyAuditLogger {
  */
 
 /**
- * Create a mock logger with spy functionality
- */
-export function createMockLogger(): SpyLogger {
-  return new SpyLogger();
-}
-
-/**
  * Create a mock tool registry for isolated testing
  */
 export function createMockToolRegistry(): MockToolRegistry {
   return new MockToolRegistry();
-}
-
-/**
- * Create a mock audit logger with spy functionality
- */
-export function createMockAuditLogger(): SpyAuditLogger {
-  return new SpyAuditLogger();
 }
 
 /**
@@ -380,7 +214,9 @@ export class MockConfigManager {
 /**
  * Create a mock configuration manager with test-friendly defaults
  */
-export function createMockConfigManager(config: Record<string, any> = {}): MockConfigManager {
+export function createMockConfigManager(
+  config: Record<string, any> = {},
+): MockConfigManager {
   return new MockConfigManager(config);
 }
 
@@ -503,14 +339,26 @@ export function generateJsonValidationTestParams(): Array<{
 export function assertValidMcpResponse(response: any, toolName?: string): void {
   assertExists(response, 'Response should exist');
   assertExists(response.content, 'Response should have content');
-  assertEquals(Array.isArray(response.content), true, 'Content should be an array');
-  assertEquals(response.content.length > 0, true, 'Content should not be empty');
+  assertEquals(
+    Array.isArray(response.content),
+    true,
+    'Content should be an array',
+  );
+  assertEquals(
+    response.content.length > 0,
+    true,
+    'Content should not be empty',
+  );
   assertEquals(response.content[0].type, 'text', 'Content type should be text');
   assertExists(response.content[0].text, 'Content should have text');
 
   if (toolName) {
     assertExists(response.metadata, 'Response should have metadata');
-    assertEquals(response.metadata.tool, toolName, `Metadata should identify tool as ${toolName}`);
+    assertEquals(
+      response.metadata.tool,
+      toolName,
+      `Metadata should identify tool as ${toolName}`,
+    );
   }
 }
 
@@ -533,7 +381,10 @@ export function assertValidJsonResponse(response: any): any {
 /**
  * Assert that a response indicates an error condition
  */
-export function assertErrorResponse(response: any, expectedErrorText?: string): void {
+export function assertErrorResponse(
+  response: any,
+  expectedErrorText?: string,
+): void {
   assertEquals(response.isError, true, 'Response should indicate error');
   assertExists(response.content, 'Error response should have content');
 

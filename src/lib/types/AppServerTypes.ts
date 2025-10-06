@@ -94,6 +94,7 @@ export type AppServerDependenciesPartial = Omit<AppServerDependencies, AppOnlyKe
 export interface CreateCustomAppServerDependencies {
   configManager: ConfigManager;
   logger: Logger;
+  auditLogger: AuditLogger;
   kvManager: KVManager;
   credentialStore: CredentialStore;
 }

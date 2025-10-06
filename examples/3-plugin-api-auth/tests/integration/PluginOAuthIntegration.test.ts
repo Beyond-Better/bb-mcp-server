@@ -30,11 +30,12 @@ import createPlugin from '../../src/plugins/ExamplePlugin.ts';
 import {
   createAuthenticatedWorkflowContext,
   createConnectedMocks,
-  createMockAuthLogger,
+  createMockAuditLogger,
+  createMockLogger,
   MockApiClient,
-  MockAuthLogger,
   MockOAuthConsumer,
 } from '../utils/test-helpers.ts';
+import { SpyAuditLogger, SpyLogger } from '@beyondbetter/bb-mcp-server/testing';
 
 /**
  * Plugin OAuth Integration Tests
@@ -45,23 +46,27 @@ import {
 describe('Plugin OAuth Integration', () => {
   let mockOAuth: MockOAuthConsumer;
   let mockApiClient: MockApiClient;
-  let mockLogger: MockAuthLogger;
+  let mockLogger: SpyLogger;
+  let mockAuditLogger: SpyAuditLogger;
   let plugin: any;
   let dependencies: any;
 
   beforeEach(() => {
+    // Set up logger and audit logger first
+    mockLogger = createMockLogger();
+    mockAuditLogger = createMockAuditLogger();
+
     // Set up comprehensive OAuth and API mocks with proper wiring
-    const mocks = createConnectedMocks();
+    const mocks = createConnectedMocks(mockAuditLogger);
     mockOAuth = mocks.oauthConsumer;
     mockApiClient = mocks.apiClient;
-    mockLogger = createMockAuthLogger();
 
     // Create complete dependency set
     dependencies = {
       thirdpartyApiClient: mockApiClient,
       oauthConsumer: mockOAuth,
       logger: mockLogger,
-      auditLogger: mockLogger,
+      auditLogger: mockAuditLogger,
     };
 
     // Create plugin with dependencies
@@ -400,7 +405,7 @@ describe('Plugin OAuth Integration', () => {
       );
 
       // Verify consistent authentication failure handling
-      const authEvents = mockLogger.getAuthEventsForUser(userId);
+      const authEvents = mockAuditLogger.getAuthEventsByType('auth_failure');
       assert(authEvents.length > 0, 'Should have logged authentication events');
     });
   });

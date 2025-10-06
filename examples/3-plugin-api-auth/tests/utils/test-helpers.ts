@@ -27,6 +27,8 @@
  */
 
 import { assertEquals, assertExists } from '@std/assert';
+import { createMockAuditLogger, createMockLogger } from '@beyondbetter/bb-mcp-server/testing';
+export { createMockAuditLogger, createMockLogger };
 
 /**
  * Mock OAuth Consumer Implementation
@@ -37,6 +39,7 @@ import { assertEquals, assertExists } from '@std/assert';
 export class MockOAuthConsumer {
   private tokens = new Map<string, any>();
   private authFailures = new Set<string>();
+  private auditLogger: any = null;
 
   // Properties to match ExampleOAuthConsumer interface
   exampleConfig: any = {};
@@ -63,7 +66,9 @@ export class MockOAuthConsumer {
   protected kvManager: any = null;
   protected logger: any = null;
 
-  constructor() {
+  constructor(auditLogger?: any) {
+    this.auditLogger = auditLogger;
+
     // Set up default test tokens for multiple test users
     const defaultToken = {
       access_token: 'mock_access_token_12345',
@@ -102,6 +107,15 @@ export class MockOAuthConsumer {
 
   async getAccessToken(userId: string): Promise<string> {
     if (this.authFailures.has(userId)) {
+      // Log auth failure event
+      if (this.auditLogger) {
+        await this.auditLogger.logAuthEvent({
+          event: 'auth_failure',
+          success: false,
+          userId,
+          details: { reason: 'Invalid or expired credentials' },
+        });
+      }
       throw new Error(
         'OAuth authentication failed: Invalid or expired credentials',
       );
@@ -134,6 +148,15 @@ export class MockOAuthConsumer {
 
   async refreshAccessToken(userId: string): Promise<any> {
     if (this.authFailures.has(userId)) {
+      // Log auth failure event
+      if (this.auditLogger) {
+        await this.auditLogger.logAuthEvent({
+          event: 'token_refresh',
+          success: false,
+          userId,
+          details: { reason: 'Invalid or expired credentials' },
+        });
+      }
       throw new Error(
         'OAuth authentication failed: Invalid or expired credentials',
       );
@@ -816,233 +839,11 @@ export class MockApiClient {
 }
 
 /**
- * Enhanced Mock Logger with OAuth-specific logging
- * Implements both Logger and AuditLogger interfaces for comprehensive mocking
- */
-export class MockAuthLogger {
-  public infoCalls: Array<[string, any?]> = [];
-  public warnCalls: Array<[string, any?]> = [];
-  public errorCalls: Array<[string, Error | undefined, any?]> = [];
-  public debugCalls: Array<[string, any?]> = [];
-  public authEvents: Array<{ event: string; userId: string; timestamp: Date }> = [];
-
-  // Properties to match Logger interface
-  private currentLogLevel: string = 'debug';
-  private config: any = {
-    level: 'debug',
-    format: 'text',
-    includeTimestamp: true,
-    includeSource: true,
-    colorize: false,
-  };
-
-  // Properties to match AuditLogger interface
-  //private logger: any = null;
-  //private auditFile: any = null;
-  // private buffer: string[] = [];
-  private flushTimer?: number;
-
-  info(message: string, data?: any): void {
-    this.infoCalls.push([message, data]);
-    this.logAuthEventPrivate(message, data);
-  }
-
-  warn(message: string, data?: any): void {
-    this.warnCalls.push([message, data]);
-    this.logAuthEventPrivate(message, data);
-  }
-
-  error(message: string, error?: Error, data?: any): void {
-    this.errorCalls.push([message, error, data]);
-    this.logAuthEventPrivate(message, data);
-  }
-
-  debug(message: string, data?: any): void {
-    this.debugCalls.push([message, data]);
-  }
-
-  // Additional methods to match Logger interface
-  dir(arg: unknown): void {
-    this.debugCalls.push(['Debug object', arg]);
-  }
-
-  child(context: Record<string, unknown>): MockAuthLogger {
-    const childLogger = new MockAuthLogger();
-    childLogger.config = { ...this.config, ...context };
-    return childLogger;
-  }
-
-  setLevel(level: string): void {
-    this.currentLogLevel = level;
-    this.config.level = level;
-  }
-
-  getLevel(): string {
-    return this.currentLogLevel;
-  }
-
-  // Methods to match AuditLogger interface
-  async initialize(): Promise<MockAuthLogger> {
-    return this;
-  }
-
-  async close(): Promise<void> {
-    if (this.flushTimer) {
-      clearInterval(this.flushTimer);
-    }
-  }
-
-  async logApiCall(entry: any): Promise<void> {
-    this.info('API Call', entry);
-  }
-
-  async logWorkflowOperation(entry: any): Promise<void> {
-    this.info('Workflow Operation', entry);
-  }
-
-  async logAuthEvent(entry: any): Promise<void> {
-    this.info('Auth Event', entry);
-  }
-
-  async logSystemEvent(entry: any): Promise<void> {
-    this.info('System Event', entry);
-  }
-
-  async logCustomEvent(type: string, entry: any): Promise<void> {
-    this.info(`Custom Event: ${type}`, entry);
-  }
-
-  async searchLogs(options: any = {}): Promise<Array<Record<string, unknown>>> {
-    return [];
-  }
-
-  async getAuditStats(): Promise<any> {
-    return {
-      totalEntries: 0,
-      entriesByType: {},
-      entriesByUser: {},
-      recentActivity: [],
-    };
-  }
-
-  async cleanupOldLogs(): Promise<number> {
-    return 0;
-  }
-
-  isEnabled(): boolean {
-    return true;
-  }
-
-  updateConfig(newConfig: any): void {
-    this.config = { ...this.config, ...newConfig };
-  }
-
-  // Private methods to match Logger interface
-  // private shouldLog(level: string): boolean {
-  //   return true; // Always log in tests
-  // }
-  //
-  // private writeLog(level: string, message: string, data?: unknown): void {
-  //   // Mock implementation - just call the appropriate public method
-  //   switch (level) {
-  //     case "debug":
-  //       this.debug(message, data);
-  //       break;
-  //     case "info":
-  //       this.info(message, data);
-  //       break;
-  //     case "warn":
-  //       this.warn(message, data);
-  //       break;
-  //     case "error":
-  //       this.error(message, data instanceof Error ? data : undefined, data);
-  //       break;
-  //   }
-  // }
-
-  // private formatLogEntry(
-  //   level: string,
-  //   message: string,
-  //   data?: unknown,
-  // ): string {
-  //   return `${level.toUpperCase()}: ${message}${
-  //     data ? " " + JSON.stringify(data) : ""
-  //   }`;
-  // }
-  //
-  // private formatJsonEntry(
-  //   level: string,
-  //   message: string,
-  //   data?: unknown,
-  // ): string {
-  //   return JSON.stringify({ level, message, data });
-  // }
-  //
-  // private formatTextEntry(
-  //   level: string,
-  //   message: string,
-  //   data?: unknown,
-  // ): string {
-  //   return this.formatLogEntry(level, message, data);
-  // }
-  //
-  // private colorMessage(message: string, level: string): string {
-  //   return message; // No coloring in tests
-  // }
-  //
-  // private getLogLevelFromEnv(): string {
-  //   return "debug";
-  // }
-
-  // Additional properties to match AuditLogger interface
-  // private initialized = true;
-
-  // private async writeLogEntry(entry: Record<string, unknown>): Promise<void> {
-  //   // Mock implementation
-  //   this.buffer.push(JSON.stringify(entry));
-  // }
-  //
-  // private async flushBuffer(): Promise<void> {
-  //   // Mock implementation - clear buffer
-  //   this.buffer = [];
-  // }
-
-  // Test helper methods
-  clear(): void {
-    this.infoCalls = [];
-    this.warnCalls = [];
-    this.errorCalls = [];
-    this.debugCalls = [];
-    this.authEvents = [];
-  }
-
-  private logAuthEventPrivate(message: string, data?: any): void {
-    if (data?.userId || message.includes('OAuth') || message.includes('auth')) {
-      this.authEvents.push({
-        event: message,
-        userId: data?.userId || 'unknown',
-        timestamp: new Date(),
-      });
-    }
-  }
-
-  hasAuthEvent(event: string): boolean {
-    return this.authEvents.some((e) => e.event.includes(event));
-  }
-
-  getAuthEventsForUser(
-    userId: string,
-  ): Array<{ event: string; userId: string; timestamp: Date }> {
-    return this.authEvents.filter((e) => e.userId === userId);
-  }
-}
-
-/**
  * Factory Functions for Creating Mock Objects
  */
 
-export function createMockOAuthConsumer(): MockOAuthConsumer {
-  return new MockOAuthConsumer();
+export function createMockOAuthConsumer(auditLogger?: any): MockOAuthConsumer {
+  return new MockOAuthConsumer(auditLogger);
 }
 
 export function createMockApiClient(): MockApiClient {
@@ -1052,18 +853,14 @@ export function createMockApiClient(): MockApiClient {
 /**
  * Create a connected set of OAuth consumer and API client
  */
-export function createConnectedMocks(): {
+export function createConnectedMocks(auditLogger?: any): {
   oauthConsumer: MockOAuthConsumer;
   apiClient: MockApiClient;
 } {
-  const oauthConsumer = new MockOAuthConsumer();
+  const oauthConsumer = new MockOAuthConsumer(auditLogger);
   const apiClient = new MockApiClient();
   apiClient.setOAuthConsumer(oauthConsumer);
   return { oauthConsumer, apiClient };
-}
-
-export function createMockAuthLogger(): MockAuthLogger {
-  return new MockAuthLogger();
 }
 
 /**
@@ -1072,7 +869,8 @@ export function createMockAuthLogger(): MockAuthLogger {
 export function createAuthenticatedToolContext(overrides: any = {}): any {
   const mockOAuth = createMockOAuthConsumer();
   const mockApiClient = createMockApiClient();
-  const mockLogger = createMockAuthLogger();
+  const mockLogger = createMockLogger();
+  const mockAuditLogger = createMockAuditLogger();
 
   return {
     userId: 'test-user',
@@ -1080,6 +878,7 @@ export function createAuthenticatedToolContext(overrides: any = {}): any {
     clientId: 'test-client',
     startTime: new Date(),
     logger: mockLogger,
+    auditLogger: mockAuditLogger,
     oauthConsumer: mockOAuth,
     apiClient: mockApiClient,
     authenticated: true,
@@ -1293,29 +1092,6 @@ export function assertApiClientCall(
     actualCallCount,
     expectedCallCount,
     `Expected ${expectedCallCount} calls to ${method}, but got ${actualCallCount}`,
-  );
-}
-
-/**
- * Assert that proper audit logging occurred
- */
-export function assertAuditLogging(
-  mockLogger: MockAuthLogger,
-  userId: string,
-  operation: string,
-): void {
-  const authEvents = mockLogger.getAuthEventsForUser(userId);
-  assertEquals(
-    authEvents.length > 0,
-    true,
-    `Should have auth events for user: ${userId}`,
-  );
-
-  const hasOperation = authEvents.some((event) => event.event.includes(operation));
-  assertEquals(
-    hasOperation,
-    true,
-    `Should have logged operation: ${operation}`,
   );
 }
 

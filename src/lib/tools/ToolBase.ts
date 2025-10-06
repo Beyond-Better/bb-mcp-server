@@ -367,20 +367,16 @@ export abstract class ToolBase {
     }
 
     try {
-      // Use the correct AuditLogger method - logSystemEvent for tool operations
-      await context.auditLogger.logSystemEvent({
-        event: 'tool_execution',
-        severity: result === 'success' ? 'info' : 'error',
-        details: {
-          tool: toolName,
-          toolClass: this.name,
-          version: this.version,
-          category: this.category,
-          userId: context.userId || 'unknown',
-          requestId: context.requestId || 'unknown',
-          result,
-          executionTime,
-        },
+      // Use the dedicated logToolCall method for tool execution auditing
+      await context.auditLogger.logToolCall({
+        toolName,
+        toolClass: this.name,
+        version: this.version,
+        category: this.category,
+        success: result === 'success',
+        durationMs: executionTime,
+        userId: context.userId,
+        requestId: context.requestId,
       });
     } catch (error) {
       this.logWarn('Failed to log tool execution to audit log', { error });

@@ -128,7 +128,18 @@ function createTestContext(
     startTime: new Date(),
     auditLogger: auditLogger ||
       new AuditLogger(
-        { enabled: true, logAllApiCalls: true },
+        {
+          enabled: true,
+          logCalls: {
+            api: true,
+            auth: true,
+            workflow_execution: true,
+            workflow_operation: true,
+            tools: true,
+            system: true,
+            custom: true,
+          },
+        },
         logger || new Logger({ level: 'info' }),
       ),
     logger,
@@ -187,7 +198,18 @@ Deno.test('WorkflowBase - parameter validation with Zod', async () => {
 Deno.test('WorkflowBase - successful execution with validation', async () => {
   const logger = new Logger({ level: 'debug', format: 'text' });
   const kvManager = new KVManager();
-  const auditLogger = new AuditLogger({ enabled: true, logAllApiCalls: true }, logger);
+  const auditLogger = new AuditLogger({
+    enabled: true,
+    logCalls: {
+      api: true,
+      auth: true,
+      workflow_execution: true,
+      workflow_operation: true,
+      tools: true,
+      system: true,
+      custom: true,
+    },
+  }, logger);
   const context = createTestContext(logger, auditLogger, kvManager);
 
   const workflow = new TestWorkflow();

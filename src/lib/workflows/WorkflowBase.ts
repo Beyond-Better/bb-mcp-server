@@ -438,6 +438,7 @@ export abstract class WorkflowBase {
 
   /**
    * Audit logging with AuditLogger integration
+   * This logs the overall workflow execution (top-level run)
    */
   protected async logWorkflowExecution(context: WorkflowContext): Promise<void> {
     if (!context.auditLogger) {
@@ -447,24 +448,51 @@ export abstract class WorkflowBase {
     try {
       const duration = this.startTime ? performance.now() - this.startTime : 0;
 
-      await context.auditLogger.logWorkflowOperation({
-        timestamp: new Date().toISOString(),
+      await context.auditLogger.logWorkflowExecution({
+        workflowName: this.name,
+        operation: 'workflow_execution',
+        success: this.determineAuditResult() === 'success',
+        durationMs: duration,
         userId: context.userId,
-        workflow: this.name,
         requestId: context.requestId,
-        action: 'workflow_execution',
-        details: {
+        inputParams: {
           version: this.version,
           category: this.category,
-          duration_ms: duration,
           resources_used: this.resources.length,
         },
-        result: this.determineAuditResult(),
-        durationMs: duration,
-        resources: this.resources,
       });
     } catch (error) {
       this.logWarn('Failed to log workflow execution to audit log', { error });
+    }
+  }
+
+  /**
+   * Log individual workflow operation (step within a workflow)
+   * Use this method to log specific operations during workflow execution
+   */
+  protected async logOperation(
+    operationName: string,
+    success: boolean,
+    durationMs: number,
+    context: WorkflowContext,
+    details?: { inputParams?: unknown; outputResult?: unknown; error?: string },
+  ): Promise<void> {
+    if (!context.auditLogger) {
+      return;
+    }
+
+    try {
+      await context.auditLogger.logWorkflowOperation({
+        workflowName: this.name,
+        operation: operationName,
+        success,
+        durationMs,
+        userId: context.userId,
+        requestId: context.requestId,
+        ...details,
+      });
+    } catch (error) {
+      this.logWarn('Failed to log workflow operation to audit log', { error, operationName });
     }
   }
 

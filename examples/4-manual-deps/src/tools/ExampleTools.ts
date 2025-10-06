@@ -28,7 +28,7 @@ export interface ExampleToolsDependencies {
   apiClient: ExampleApiClient;
   oauthConsumer: ExampleOAuthConsumer;
   logger: Logger;
-  auditLogger?: AuditLogger;
+  auditLogger: AuditLogger;
 }
 
 /**
@@ -56,11 +56,7 @@ export class ExampleTools extends ToolBase {
     this.apiClient = dependencies.apiClient;
     this.oauthConsumer = dependencies.oauthConsumer;
     this.logger = dependencies.logger;
-    this.auditLogger = dependencies.auditLogger ||
-      new AuditLogger(
-        { enabled: false, logAllApiCalls: false },
-        dependencies.logger,
-      );
+    this.auditLogger = dependencies.auditLogger;
   }
 
   /**
@@ -340,13 +336,15 @@ export class ExampleTools extends ToolBase {
         userId,
       });
 
-      await this.auditLogger.logSystemEvent({
-        event: 'query_customers_executed',
-        severity: 'info',
-        details: {
-          customers_length: customers.items.length,
-          success: true,
-        },
+      await this.auditLogger.logToolCall({
+        toolName: 'query_customers_example',
+        toolClass: this.name,
+        version: this.version,
+        category: this.category,
+        success: true,
+        durationMs: 0, // Would need to track execution time
+        userId,
+        outputResult: { customersCount: customers.items.length },
       });
 
       return {
@@ -409,13 +407,15 @@ export class ExampleTools extends ToolBase {
         notes,
       }, userId);
 
-      await this.auditLogger.logSystemEvent({
-        event: 'create_order_executed',
-        severity: 'info',
-        details: {
-          customer_id: order.customerId,
-          success: true,
-        },
+      await this.auditLogger.logToolCall({
+        toolName: 'create_order_example',
+        toolClass: this.name,
+        version: this.version,
+        category: this.category,
+        success: true,
+        durationMs: 0, // Would need to track execution time
+        userId,
+        outputResult: { orderId: order.id, customerId: order.customerId },
       });
 
       return {
@@ -472,13 +472,15 @@ export class ExampleTools extends ToolBase {
         userId,
       });
 
-      await this.auditLogger.logSystemEvent({
-        event: 'get_order_status_executed',
-        severity: 'info',
-        details: {
-          order_id: orderStatus.orderId,
-          success: true,
-        },
+      await this.auditLogger.logToolCall({
+        toolName: 'get_order_status_example',
+        toolClass: this.name,
+        version: this.version,
+        category: this.category,
+        success: true,
+        durationMs: 0, // Would need to track execution time
+        userId,
+        outputResult: { orderId: orderStatus.orderId },
       });
 
       return {

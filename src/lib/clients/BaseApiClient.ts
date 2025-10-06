@@ -7,6 +7,7 @@
  */
 
 import type { Logger } from '../utils/Logger.ts';
+import type { AuditLogger } from '../utils/AuditLogger.ts';
 import type { ThirdPartyApiHealthStatus, ThirdPartyApiInfo } from '../types/AppServerTypes.ts';
 
 /**
@@ -36,10 +37,12 @@ export interface BaseApiClientConfig {
 export abstract class BaseApiClient {
   protected config: BaseApiClientConfig;
   protected logger: Logger;
+  protected auditLogger: AuditLogger;
 
-  constructor(config: BaseApiClientConfig, logger: Logger) {
+  constructor(config: BaseApiClientConfig, logger: Logger, auditLogger: AuditLogger) {
     this.config = config;
     this.logger = logger;
+    this.auditLogger = auditLogger;
   }
 
   /**
@@ -75,6 +78,45 @@ export abstract class BaseApiClient {
    */
   protected getLogger(): Logger {
     return this.logger;
+  }
+
+  /**
+   * Get the audit logger instance
+   */
+  protected getAuditLogger(): AuditLogger | undefined {
+    return this.auditLogger;
+  }
+
+  /**
+   * Log API call for audit purposes
+   * Helper method for concrete implementations to track API calls
+   */
+  protected async logApiCall(
+    method: string,
+    endpoint: string,
+    statusCode: number,
+    durationMs: number,
+    userId?: string,
+    requestId?: string,
+    error?: string,
+  ): Promise<void> {
+    if (!this.auditLogger) {
+      return;
+    }
+
+    try {
+      await this.auditLogger.logApiCall({
+        method,
+        endpoint,
+        statusCode,
+        durationMs,
+        userId,
+        requestId,
+        error,
+      });
+    } catch (auditError) {
+      this.logger.warn('Failed to log API call to audit log', { auditError });
+    }
   }
 
   /**

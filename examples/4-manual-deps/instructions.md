@@ -45,7 +45,7 @@ HTTP_CORS_ORIGINS=*
 LOG_LEVEL=debug|info|warn|error
 LOG_FORMAT=json|text
 AUDIT_ENABLED=true
-AUDIT_LOG_ALL_API_CALLS=true
+AUDIT_LOG_CALLS_API=true
 AUDIT_RETENTION_DAYS=90
 AUDIT_LOG_FILE=./logs/audit.log
 
@@ -122,11 +122,8 @@ const logger = new Logger({
 });
 
 // 2. Manual Audit Logger Setup
-const auditLogger = new AuditLogger({
-  enabled: configManager.get('AUDIT_ENABLED', 'true') === 'true',
-  logAllApiCalls: configManager.get('AUDIT_LOG_ALL_API_CALLS', 'true') === 'true',
-  retentionDays: parseInt(configManager.get('AUDIT_RETENTION_DAYS', '90'), 10),
-}, logger);
+const auditConfig = configManager?.get<AuditConfig>('audit');
+return new AuditLogger(auditConfig, logger);
 
 // 3. Manual KV Manager Initialization
 const kvManager = new KVManager({

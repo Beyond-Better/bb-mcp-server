@@ -33,12 +33,12 @@ import { ExampleOperationWorkflow } from '../../src/workflows/ExampleOperationWo
 // Import OAuth-aware test utilities
 import {
   createAuthenticatedWorkflowContext,
-  createMockAuthLogger,
+  createMockLogger,
   createMockOAuthConsumer,
   MockApiClient,
-  MockAuthLogger,
   MockOAuthConsumer,
 } from '../utils/test-helpers.ts';
+import { SpyLogger } from '@beyondbetter/bb-mcp-server/testing';
 import { getResultData } from '../utils/type-helpers.ts';
 
 /**
@@ -230,7 +230,7 @@ type WorkflowContext = any;
 describe('ExampleOperationWorkflow - Multi-Step OAuth Operations', () => {
   let mockOAuth: MockOAuthConsumer;
   let mockApiClient: MockOperationApiClient;
-  let mockLogger: MockAuthLogger;
+  let mockLogger: SpyLogger;
   let workflow: ExampleOperationWorkflow;
   let context: WorkflowContext;
   let logSpy: Spy;
@@ -239,7 +239,7 @@ describe('ExampleOperationWorkflow - Multi-Step OAuth Operations', () => {
     // Set up OAuth and enhanced API mocks
     mockOAuth = createMockOAuthConsumer();
     mockApiClient = new MockOperationApiClient();
-    mockLogger = createMockAuthLogger();
+    mockLogger = createMockLogger();
 
     // Connect OAuth consumer to API client for authentication
     mockApiClient.setOAuthConsumer(mockOAuth);

@@ -15,6 +15,7 @@
 
 import type { Logger } from '../../types/library.types.ts';
 import type { KVManager } from '../storage/KVManager.ts';
+import type { AuditLogger } from '../utils/AuditLogger.ts';
 import { toError } from '../utils/Error.ts';
 import type { PKCEHandler, PKCEMethod } from './PKCEHandler.ts';
 import type { ClientRegistry } from './ClientRegistry.ts';
@@ -55,6 +56,8 @@ export interface AuthorizationHandlerDependencies {
   kvManager: KVManager;
   /** Logger for security event logging */
   logger?: Logger | undefined;
+  /** Audit logger for authentication event tracking */
+  auditLogger?: AuditLogger | undefined;
   /** Client registry for client validation */
   clientRegistry: ClientRegistry;
   /** PKCE handler for code challenge validation */
@@ -103,6 +106,7 @@ export interface AuthorizationState {
 export class AuthorizationHandler {
   private kvManager: KVManager;
   private logger: Logger | undefined;
+  private auditLogger: AuditLogger | undefined;
   private config: AuthorizationConfig;
   private clientRegistry: ClientRegistry;
   private pkceHandler: PKCEHandler;
@@ -115,6 +119,7 @@ export class AuthorizationHandler {
   constructor(config: AuthorizationConfig, dependencies: AuthorizationHandlerDependencies) {
     this.kvManager = dependencies.kvManager;
     this.logger = dependencies.logger;
+    this.auditLogger = dependencies.auditLogger;
     this.clientRegistry = dependencies.clientRegistry;
     this.pkceHandler = dependencies.pkceHandler;
     this.tokenManager = dependencies.tokenManager;
@@ -190,6 +195,18 @@ export class AuthorizationHandler {
       //   userId,
       //   codeGenerated: true,
       // });
+
+      // Log authorization success for audit
+      await this.auditLogger?.logAuthEvent({
+        event: 'login',
+        success: true,
+        userId,
+        details: {
+          clientId: request.client_id,
+          hasPKCE: !!(request.code_challenge && request.code_challenge_method),
+          scope: request.scope,
+        },
+      });
 
       return {
         code: authorizationCode,

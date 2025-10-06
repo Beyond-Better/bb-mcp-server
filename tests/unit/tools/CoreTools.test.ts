@@ -275,7 +275,7 @@ describe('CoreTools', () => {
       const handler = samplingTool.handler;
 
       const logSpy = spy(mockLogger, 'info');
-      const auditSpy = spy(mockAuditLogger, 'logSystemEvent');
+      const auditSpy = spy(mockAuditLogger, 'logToolCall');
 
       const result = await handler({
         prompt: 'Test prompt',
@@ -371,7 +371,7 @@ describe('CoreTools', () => {
       faultyCoreTools.registerWith(mockToolRegistry as any);
 
       const logSpy = spy(mockLogger, 'error');
-      const auditSpy = spy(mockAuditLogger, 'logSystemEvent');
+      const auditSpy = spy(mockAuditLogger, 'logToolCall');
 
       const samplingTool = mockToolRegistry.getRegisteredTool('test_sampling');
       const handler = samplingTool.handler;
@@ -424,7 +424,7 @@ describe('CoreTools', () => {
       const handler = elicitationTool.handler;
 
       const logSpy = spy(mockLogger, 'info');
-      const auditSpy = spy(mockAuditLogger, 'logSystemEvent');
+      const auditSpy = spy(mockAuditLogger, 'logToolCall');
 
       const requestedSchema = JSON.stringify({
         type: 'object',
@@ -548,7 +548,7 @@ describe('CoreTools', () => {
       faultyCoreTools.registerWith(mockToolRegistry as any);
 
       const logSpy = spy(mockLogger, 'error');
-      const auditSpy = spy(mockAuditLogger, 'logSystemEvent');
+      const auditSpy = spy(mockAuditLogger, 'logToolCall');
 
       const elicitationTool = mockToolRegistry.getRegisteredTool('test_elicitation');
       const handler = elicitationTool.handler;
@@ -616,7 +616,7 @@ describe('CoreTools', () => {
     });
 
     it('should log all tool executions for audit', async () => {
-      const auditSpy = spy(mockAuditLogger, 'logSystemEvent');
+      const auditSpy = spy(mockAuditLogger, 'logToolCall');
 
       // Execute each tool
       const echoTool = mockToolRegistry.getRegisteredTool('echo');

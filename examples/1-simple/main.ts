@@ -2,7 +2,7 @@
 
 /**
  * @module examples/1-simple
- * 
+ *
  * # Simple MCP Server - Minimal Setup with Basic Plugin Tools
  *
  * This demonstrates the simplest approach for bb-mcp-server:
@@ -68,20 +68,20 @@
  * 1. Try 2-plugin-workflows to learn about multi-step processes
  * 2. Explore 3-plugin-api-auth for external API integration
  * 3. Study 4-manual-deps for complete infrastructure control
- * 
+ *
  * @example Run this example directly from JSR
  * ```bash
  * # Run with STDIO transport (default)
  * deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/1-simple
- * 
+ *
  * # Run with HTTP transport
  * MCP_TRANSPORT=http deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/1-simple
  * ```
- * 
+ *
  * @example Basic server setup
  * ```typescript
  * import { AppServer } from 'jsr:@beyondbetter/bb-mcp-server';
- * 
+ *
  * const appServer = await AppServer.create({
  *   serverConfig: {
  *     name: 'my-mcp-server',
@@ -90,10 +90,10 @@
  *     description: 'My custom MCP server',
  *   },
  * });
- * 
+ *
  * await appServer.start();
  * ```
- * 
+ *
  * @see {@link https://github.com/beyond-better/bb-mcp-server/tree/main/examples/1-simple | Full example documentation}
  * @see {@link https://github.com/beyond-better/bb-mcp-server/tree/main/examples | All examples}
  */

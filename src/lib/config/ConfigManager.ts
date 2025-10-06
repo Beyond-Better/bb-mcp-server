@@ -406,9 +406,17 @@ export class ConfigManager {
   private loadAuditConfig(): AuditConfig {
     return {
       enabled: this.getEnvBoolean('AUDIT_ENABLED', true),
-      logAllApiCalls: this.getEnvBoolean('AUDIT_LOG_ALL_API_CALLS', true),
       logFile: this.getEnvOptional('AUDIT_LOG_FILE', './logs/audit.log'),
       retentionDays: parseInt(this.getEnvOptional('AUDIT_RETENTION_DAYS', '90')),
+      logCalls: {
+        api: this.getEnvBoolean('AUDIT_LOG_CALLS_API', true),
+        auth: this.getEnvBoolean('AUDIT_LOG_CALLS_AUTH', true),
+        workflow_execution: this.getEnvBoolean('AUDIT_LOG_CALLS_WORKFLOW_EXECUTION', true),
+        workflow_operation: this.getEnvBoolean('AUDIT_LOG_CALLS_WORKFLOW_OPERATION', true),
+        tools: this.getEnvBoolean('AUDIT_LOG_CALLS_TOOLS', true),
+        system: this.getEnvBoolean('AUDIT_LOG_CALLS_SYSTEM', true),
+        custom: this.getEnvBoolean('AUDIT_LOG_CALLS_CUSTOM', true),
+      },
     };
   }
 

@@ -11,7 +11,11 @@
 // 🎯 Library imports - API client base class, logging, and types
 import { BaseApiClient, type BaseApiClientConfig } from '@beyondbetter/bb-mcp-server';
 import { Logger } from '@beyondbetter/bb-mcp-server';
-import type { ThirdPartyApiHealthStatus, ThirdPartyApiInfo } from '@beyondbetter/bb-mcp-server';
+import type {
+  AuditLogger,
+  ThirdPartyApiHealthStatus,
+  ThirdPartyApiInfo,
+} from '@beyondbetter/bb-mcp-server';
 
 // 🎯 Consumer-specific imports
 import { ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts';
@@ -102,8 +106,9 @@ export class ExampleApiClient extends BaseApiClient {
     config: ExampleApiClientConfig,
     oauthConsumer: ExampleOAuthConsumer,
     logger: Logger,
+    auditLogger: AuditLogger,
   ) {
-    super(config, logger);
+    super(config, logger, auditLogger);
     this.oauthConsumer = oauthConsumer;
   }
 

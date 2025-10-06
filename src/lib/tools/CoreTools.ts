@@ -277,15 +277,15 @@ export class CoreTools {
         hasContent: !!samplingResult?.content,
       });
 
-      // Log sampling usage for audit
-      await this.auditLogger.logSystemEvent({
-        event: 'test_sampling_executed',
-        severity: 'info',
-        details: {
-          model,
-          prompt_length: prompt.length,
-          success: true,
-        },
+      // Log sampling usage for audit - this is a tool call
+      await this.auditLogger.logToolCall({
+        toolName: 'test_sampling',
+        toolClass: 'CoreTools',
+        version: '1.0.0',
+        category: 'core',
+        success: true,
+        durationMs: 0, // Would need to track execution time
+        inputParams: { model, promptLength: prompt.length },
       });
 
       return {
@@ -308,15 +308,16 @@ export class CoreTools {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error('CoreTools: Test sampling failed:', toError(error));
 
-      // Log sampling failure for audit
-      await this.auditLogger.logSystemEvent({
-        event: 'test_sampling_failed',
-        severity: 'error',
-        details: {
-          model,
-          prompt_length: prompt.length,
-          error: errorMessage,
-        },
+      // Log sampling failure for audit - this is a tool call
+      await this.auditLogger.logToolCall({
+        toolName: 'test_sampling',
+        toolClass: 'CoreTools',
+        version: '1.0.0',
+        category: 'core',
+        success: false,
+        durationMs: 0, // Would need to track execution time
+        error: errorMessage,
+        inputParams: { model, promptLength: prompt.length },
       });
 
       return {
@@ -394,15 +395,16 @@ export class CoreTools {
         action: elicitationResult.action,
       });
 
-      // Log elicitation usage for audit
-      await this.auditLogger.logSystemEvent({
-        event: 'test_elicitation_executed',
-        severity: 'info',
-        details: {
-          message_length: message.length,
-          action: elicitationResult.action,
-          success: true,
-        },
+      // Log elicitation usage for audit - this is a tool call
+      await this.auditLogger.logToolCall({
+        toolName: 'test_elicitation',
+        toolClass: 'CoreTools',
+        version: '1.0.0',
+        category: 'core',
+        success: true,
+        durationMs: 0, // Would need to track execution time
+        outputResult: { action: elicitationResult.action },
+        inputParams: { messageLength: message.length },
       });
 
       if (elicitationResult.action === 'accept' && elicitationResult.content) {
@@ -444,14 +446,16 @@ export class CoreTools {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error('CoreTools: Test elicitation failed:', toError(error));
 
-      // Log elicitation failure for audit
-      await this.auditLogger.logSystemEvent({
-        event: 'test_elicitation_failed',
-        severity: 'error',
-        details: {
-          message_length: message.length,
-          error: errorMessage,
-        },
+      // Log elicitation failure for audit - this is a tool call
+      await this.auditLogger.logToolCall({
+        toolName: 'test_elicitation',
+        toolClass: 'CoreTools',
+        version: '1.0.0',
+        category: 'core',
+        success: false,
+        durationMs: 0, // Would need to track execution time
+        error: errorMessage,
+        inputParams: { messageLength: message.length },
       });
 
       return {

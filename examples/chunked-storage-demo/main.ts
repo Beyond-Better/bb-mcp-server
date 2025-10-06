@@ -1,6 +1,6 @@
 /**
  * @module examples/chunked-storage-demo
- * 
+ *
  * # Chunked Storage Demo - MCP Server with Large Message Support
  *
  * This example demonstrates how to use the TransportEventStoreChunked
@@ -11,37 +11,37 @@
  * - Compression for efficient storage (gzip)
  * - Monitoring and statistics
  * - Error handling for oversized messages
- * 
+ *
  * The chunked storage system automatically splits messages larger than 60KB into
  * smaller chunks, stores them separately in Deno KV, and reassembles them on retrieval.
  * Compression is applied when beneficial (typically 20-80% size reduction for text).
- * 
+ *
  * @example Run this example directly from JSR
  * ```bash
  * # Run with STDIO transport (default)
  * deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/chunked-storage-demo
- * 
+ *
  * # Run with HTTP transport
  * MCP_TRANSPORT=http deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/chunked-storage-demo
  * ```
- * 
+ *
  * @example Test large message handling
  * ```bash
  * # After starting the server, use MCP client to generate large messages:
  * # Generate a 500KB JSON message
  * generate_large_message({"size": 500, "content": "json"})
- * 
+ *
  * # Check storage statistics
  * get_storage_stats({})
- * 
+ *
  * # Generate very large message (2MB)
  * generate_large_message({"size": 2048, "content": "mixed"})
  * ```
- * 
+ *
  * @example Using chunked storage in your project
  * ```typescript
  * import { TransportEventStoreChunked, KVManager } from 'jsr:@beyondbetter/bb-mcp-server';
- * 
+ *
  * const eventStore = new TransportEventStoreChunked(
  *   kvManager,
  *   ['events'],
@@ -54,7 +54,7 @@
  *   },
  * );
  * ```
- * 
+ *
  * @see {@link https://github.com/beyond-better/bb-mcp-server/tree/main/examples/chunked-storage-demo | Full example documentation}
  * @see {@link https://github.com/beyond-better/bb-mcp-server/tree/main/examples | All examples}
  */
@@ -273,7 +273,18 @@ async function main() {
   await kvManager.initialize();
 
   // Create required dependencies
-  const auditLogger = new AuditLogger({ enabled: false, logAllApiCalls: false }, logger);
+  const auditLogger = new AuditLogger({
+    enabled: false,
+    logCalls: {
+      api: true,
+      auth: true,
+      workflow_execution: true,
+      workflow_operation: true,
+      tools: true,
+      system: true,
+      custom: true,
+    },
+  }, logger);
   const errorHandler = new ErrorHandler();
   const toolRegistry = await getToolRegistry(logger, errorHandler);
   const workflowRegistry = await getWorkflowRegistry(logger, errorHandler);
