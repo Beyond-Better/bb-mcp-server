@@ -16,6 +16,7 @@
 import type { Logger } from '../../types/library.types.ts';
 import type { CredentialStore } from '../storage/CredentialStore.ts';
 import type { KVManager } from '../storage/KVManager.ts';
+import type { AuditLogger } from '../utils/AuditLogger.ts';
 import { toError } from '../utils/Error.ts';
 import type {
   AuthCallbackResult,
@@ -37,6 +38,8 @@ export interface OAuthConsumerDependencies {
   credentialStore: CredentialStore;
   /** Logger for security event logging */
   logger: Logger;
+  /** Audit logger for authentication event tracking */
+  auditLogger?: AuditLogger;
 }
 
 /**
@@ -62,6 +65,7 @@ export interface OAuthConsumerDependencies {
 export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> {
   protected config: T;
   protected logger: Logger;
+  protected auditLogger?: AuditLogger;
 
   // Dependencies
   protected kvManager: KVManager;
@@ -88,6 +92,7 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
     this.kvManager = dependencies.kvManager;
     this.credentialStore = dependencies.credentialStore;
     this.logger = dependencies.logger;
+    this.auditLogger = dependencies.auditLogger;
 
     if (!this.kvManager) throw new Error(`OAuthConsumer constructor failed: must supply kvManager`);
     if (!this.credentialStore) {
@@ -294,6 +299,18 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
       //   authorizationUrl,
       // });
 
+      // Log authorization flow start for audit
+      await this.auditLogger?.logAuthEvent({
+        event: 'login',
+        success: true,
+        userId,
+        details: {
+          providerId: this.config.providerId,
+          scopes: scopes || this.config.scopes,
+          state,
+        },
+      });
+
       return {
         authorizationUrl,
         state,
@@ -363,6 +380,17 @@ export class OAuthConsumer<T extends OAuthConsumerConfig = OAuthConsumerConfig> 
       //   userId: storedAuthRequest.userId,
       //   providerId: this.config.providerId,
       // });
+
+      // Log successful authorization callback for audit
+      await this.auditLogger?.logAuthEvent({
+        event: 'login',
+        success: true,
+        userId: storedAuthRequest.userId,
+        details: {
+          providerId: this.config.providerId,
+          state,
+        },
+      });
 
       return {
         success: true,
