@@ -27,10 +27,7 @@
  */
 
 import { assertEquals, assertExists } from '@std/assert';
-import {
-  createMockAuditLogger,
-  createMockLogger,
-} from '@beyondbetter/bb-mcp-server/testing';
+import { createMockAuditLogger, createMockLogger } from '@beyondbetter/bb-mcp-server/testing';
 export { createMockAuditLogger, createMockLogger };
 
 /**

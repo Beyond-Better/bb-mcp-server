@@ -84,7 +84,12 @@ const oauthConfig = configManager.get<OAuthProviderConfig>('oauthProvider');
 const oauthProvider = new OAuthProvider(oauthConfig, { logger, kvManager, credentialStore });
 
 const transportConfig = configManager.get<TransportConfig>('transport');
-const transportManager = new TransportManager(transportConfig, { logger, kvManager, sessionStore, eventStore });
+const transportManager = new TransportManager(transportConfig, {
+  logger,
+  kvManager,
+  sessionStore,
+  eventStore,
+});
 ```
 
 **Demonstrates**:

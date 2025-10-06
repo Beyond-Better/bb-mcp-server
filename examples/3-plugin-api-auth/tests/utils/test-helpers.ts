@@ -27,10 +27,7 @@
  */
 
 import { assertEquals, assertExists } from '@std/assert';
-import {
-  createMockAuditLogger,
-  createMockLogger,
-} from '@beyondbetter/bb-mcp-server/testing';
+import { createMockAuditLogger, createMockLogger } from '@beyondbetter/bb-mcp-server/testing';
 export { createMockAuditLogger, createMockLogger };
 
 /**
@@ -71,7 +68,7 @@ export class MockOAuthConsumer {
 
   constructor(auditLogger?: any) {
     this.auditLogger = auditLogger;
-    
+
     // Set up default test tokens for multiple test users
     const defaultToken = {
       access_token: 'mock_access_token_12345',
@@ -841,7 +838,6 @@ export class MockApiClient {
   }
 }
 
-
 /**
  * Factory Functions for Creating Mock Objects
  */
@@ -866,7 +862,6 @@ export function createConnectedMocks(auditLogger?: any): {
   apiClient.setOAuthConsumer(oauthConsumer);
   return { oauthConsumer, apiClient };
 }
-
 
 /**
  * Create authenticated tool context with OAuth mocks

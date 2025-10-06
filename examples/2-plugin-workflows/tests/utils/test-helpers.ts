@@ -25,11 +25,8 @@
  * - Reusable test fixtures and data
  */
 
-import { assertEquals, assertExists } from "@std/assert";
-import {
-  createMockAuditLogger,
-  createMockLogger,
-} from "@beyondbetter/bb-mcp-server/testing";
+import { assertEquals, assertExists } from '@std/assert';
+import { createMockAuditLogger, createMockLogger } from '@beyondbetter/bb-mcp-server/testing';
 export { createMockAuditLogger, createMockLogger };
 
 /**
@@ -132,9 +129,9 @@ export function createMockToolRegistry(): MockToolRegistry {
  */
 export function createMockToolContext(overrides: any = {}): any {
   return {
-    userId: "test-user",
-    requestId: "test-request-123",
-    clientId: "test-client",
+    userId: 'test-user',
+    requestId: 'test-request-123',
+    clientId: 'test-client',
     startTime: new Date(),
     logger: createMockLogger(),
     auditLogger: createMockAuditLogger(),
@@ -147,14 +144,14 @@ export function createMockToolContext(overrides: any = {}): any {
  */
 export function createTestContext(overrides: any = {}): any {
   return {
-    userId: "test-user",
-    requestId: "test-request-123",
-    clientId: "test-client",
+    userId: 'test-user',
+    requestId: 'test-request-123',
+    clientId: 'test-client',
     startTime: new Date(),
     logger: createMockLogger(),
     auditLogger: createMockAuditLogger(),
-    sessionId: "test-session-456",
-    workflowId: "test-workflow-789",
+    sessionId: 'test-session-456',
+    workflowId: 'test-workflow-789',
     ...overrides,
   };
 }
@@ -178,13 +175,13 @@ export class MockConfigManager {
 
   private setDefaults(): void {
     const defaults = {
-      "LOG_LEVEL": "debug",
-      "LOG_FORMAT": "text",
-      "MCP_TRANSPORT": "stdio",
-      "PLUGINS_DISCOVERY_PATHS": "./src/plugins",
-      "PLUGINS_AUTOLOAD": "true",
-      "STORAGE_DENO_KV_PATH": ":memory:", // In-memory database for tests
-      "DEV_MODE": "true",
+      'LOG_LEVEL': 'debug',
+      'LOG_FORMAT': 'text',
+      'MCP_TRANSPORT': 'stdio',
+      'PLUGINS_DISCOVERY_PATHS': './src/plugins',
+      'PLUGINS_AUTOLOAD': 'true',
+      'STORAGE_DENO_KV_PATH': ':memory:', // In-memory database for tests
+      'DEV_MODE': 'true',
     };
 
     Object.entries(defaults).forEach(([key, value]) => {
@@ -252,29 +249,29 @@ export function generateDateTimeTestParams(): Array<{
 }> {
   return [
     {
-      name: "default parameters",
+      name: 'default parameters',
       params: {},
-      expectedFormat: "iso",
+      expectedFormat: 'iso',
     },
     {
-      name: "ISO format with timezone",
-      params: { format: "iso", timezone: "UTC" },
-      expectedFormat: "iso",
+      name: 'ISO format with timezone',
+      params: { format: 'iso', timezone: 'UTC' },
+      expectedFormat: 'iso',
     },
     {
-      name: "human readable format",
-      params: { format: "human" },
-      expectedFormat: "human",
+      name: 'human readable format',
+      params: { format: 'human' },
+      expectedFormat: 'human',
     },
     {
-      name: "unix timestamp",
-      params: { format: "unix" },
-      expectedFormat: "unix",
+      name: 'unix timestamp',
+      params: { format: 'unix' },
+      expectedFormat: 'unix',
     },
     {
-      name: "custom format",
-      params: { format: "custom", customFormat: "YYYY-MM-DD" },
-      expectedFormat: "custom",
+      name: 'custom format',
+      params: { format: 'custom', customFormat: 'YYYY-MM-DD' },
+      expectedFormat: 'custom',
     },
   ];
 }
@@ -289,19 +286,19 @@ export function generateSystemInfoTestParams(): Array<{
 }> {
   return [
     {
-      name: "basic system info",
+      name: 'basic system info',
       params: {},
-      expectedFields: ["runtime", "system", "process", "timestamp"],
+      expectedFields: ['runtime', 'system', 'process', 'timestamp'],
     },
     {
-      name: "detailed with memory",
-      params: { detail: "detailed", includeMemory: true },
-      expectedFields: ["runtime", "system", "process", "memory", "detailed"],
+      name: 'detailed with memory',
+      params: { detail: 'detailed', includeMemory: true },
+      expectedFields: ['runtime', 'system', 'process', 'memory', 'detailed'],
     },
     {
-      name: "with environment variables",
+      name: 'with environment variables',
       params: { includeEnvironment: true },
-      expectedFields: ["runtime", "system", "process", "environment"],
+      expectedFields: ['runtime', 'system', 'process', 'environment'],
     },
   ];
 }
@@ -316,28 +313,28 @@ export function generateJsonValidationTestParams(): Array<{
 }> {
   return [
     {
-      name: "valid simple JSON",
+      name: 'valid simple JSON',
       params: { json_string: '{"test": true}' },
       expectValid: true,
     },
     {
-      name: "valid complex JSON",
+      name: 'valid complex JSON',
       params: { json_string: '{"user": {"name": "test", "items": [1,2,3]}}' },
       expectValid: true,
     },
     {
-      name: "invalid JSON syntax",
-      params: { json_string: "{invalid}" },
+      name: 'invalid JSON syntax',
+      params: { json_string: '{invalid}' },
       expectValid: false,
     },
     {
-      name: "empty JSON object",
-      params: { json_string: "{}" },
+      name: 'empty JSON object',
+      params: { json_string: '{}' },
       expectValid: true,
     },
     {
-      name: "JSON array",
-      params: { json_string: "[1, 2, 3]" },
+      name: 'JSON array',
+      params: { json_string: '[1, 2, 3]' },
       expectValid: true,
     },
   ];
@@ -353,23 +350,23 @@ export function generateJsonValidationTestParams(): Array<{
  * Assert that a tool response has the correct MCP structure
  */
 export function assertValidMcpResponse(response: any, toolName?: string): void {
-  assertExists(response, "Response should exist");
-  assertExists(response.content, "Response should have content");
+  assertExists(response, 'Response should exist');
+  assertExists(response.content, 'Response should have content');
   assertEquals(
     Array.isArray(response.content),
     true,
-    "Content should be an array",
+    'Content should be an array',
   );
   assertEquals(
     response.content.length > 0,
     true,
-    "Content should not be empty",
+    'Content should not be empty',
   );
-  assertEquals(response.content[0].type, "text", "Content type should be text");
-  assertExists(response.content[0].text, "Content should have text");
+  assertEquals(response.content[0].type, 'text', 'Content type should be text');
+  assertExists(response.content[0].text, 'Content should have text');
 
   if (toolName) {
-    assertExists(response.metadata, "Response should have metadata");
+    assertExists(response.metadata, 'Response should have metadata');
     assertEquals(
       response.metadata.tool,
       toolName,
@@ -401,8 +398,8 @@ export function assertErrorResponse(
   response: any,
   expectedErrorText?: string,
 ): void {
-  assertEquals(response.isError, true, "Response should indicate error");
-  assertExists(response.content, "Error response should have content");
+  assertEquals(response.isError, true, 'Response should indicate error');
+  assertExists(response.content, 'Error response should have content');
 
   if (expectedErrorText) {
     const responseText = response.content[0].text;
@@ -440,16 +437,14 @@ export async function measureExecutionTime<T>(
 export async function assertExecutionTime<T>(
   fn: () => Promise<T>,
   maxDuration: number,
-  description: string = "Function",
+  description: string = 'Function',
 ): Promise<T> {
   const { result, duration } = await measureExecutionTime(fn);
 
   assertEquals(
     duration <= maxDuration,
     true,
-    `${description} should execute in under ${maxDuration}ms, but took ${
-      duration.toFixed(2)
-    }ms`,
+    `${description} should execute in under ${maxDuration}ms, but took ${duration.toFixed(2)}ms`,
   );
 
   return result;

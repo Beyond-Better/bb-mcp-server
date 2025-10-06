@@ -30,12 +30,12 @@ import createPlugin from '../../src/plugins/ExamplePlugin.ts';
 import {
   createAuthenticatedWorkflowContext,
   createConnectedMocks,
-  createMockLogger,
   createMockAuditLogger,
+  createMockLogger,
   MockApiClient,
   MockOAuthConsumer,
 } from '../utils/test-helpers.ts';
-import { SpyLogger, SpyAuditLogger } from '@beyondbetter/bb-mcp-server/testing';
+import { SpyAuditLogger, SpyLogger } from '@beyondbetter/bb-mcp-server/testing';
 
 /**
  * Plugin OAuth Integration Tests
@@ -55,7 +55,7 @@ describe('Plugin OAuth Integration', () => {
     // Set up logger and audit logger first
     mockLogger = createMockLogger();
     mockAuditLogger = createMockAuditLogger();
-    
+
     // Set up comprehensive OAuth and API mocks with proper wiring
     const mocks = createConnectedMocks(mockAuditLogger);
     mockOAuth = mocks.oauthConsumer;

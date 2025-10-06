@@ -27,10 +27,7 @@ import type {
   OAuthCredentials,
   TokenResult,
 } from '../../../src/lib/auth/OAuthTypes.ts';
-import {
-  createMockAuditLogger,
-  createMockLogger,
-} from '../../utils/test-helpers.ts';
+import { createMockAuditLogger, createMockLogger } from '../../utils/test-helpers.ts';
 
 // Mock logger for testing
 const mockLogger = createMockLogger();

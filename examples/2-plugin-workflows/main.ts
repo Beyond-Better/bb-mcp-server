@@ -2,7 +2,7 @@
 
 /**
  * @module examples/2-plugin-workflows
- * 
+ *
  * # Plugin-Workflows MCP Server - Multi-Step Workflow Demonstrations
  *
  * This demonstrates advanced workflow capabilities with bb-mcp-server:
@@ -110,16 +110,16 @@
  * 1. Try 3-plugin-api-auth to learn OAuth and external API integration
  * 2. Explore 4-manual-deps for complete infrastructure control
  * 3. Build your own workflows for specific business processes
- * 
+ *
  * @example Run this example directly from JSR
  * ```bash
  * # Run with STDIO transport (default)
  * deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/2-plugin-workflows
- * 
+ *
  * # Run with HTTP transport
  * MCP_TRANSPORT=http deno run --allow-all --unstable-kv jsr:@beyondbetter/bb-mcp-server/examples/2-plugin-workflows
  * ```
- * 
+ *
  * @example Execute a workflow
  * ```typescript
  * // Data processing workflow example
@@ -131,7 +131,7 @@
  *   analysisType: 'summary'
  * });
  * ```
- * 
+ *
  * @see {@link https://github.com/beyond-better/bb-mcp-server/tree/main/examples/2-plugin-workflows | Full example documentation}
  * @see {@link https://github.com/beyond-better/bb-mcp-server/tree/main/examples/1-simple | Previous example: Simple MCP Server}
  */

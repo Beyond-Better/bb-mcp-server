@@ -541,48 +541,48 @@ export class SpyAuditLogger extends AuditLogger {
 
   // Get specific events by filter
   getApiCallsByEndpoint(endpoint: string): any[] {
-    return this.apiCalls.filter(call => call.endpoint === endpoint);
+    return this.apiCalls.filter((call) => call.endpoint === endpoint);
   }
 
   getAuthEventsByType(eventType: string): any[] {
-    return this.authEvents.filter(event => event.event === eventType);
+    return this.authEvents.filter((event) => event.event === eventType);
   }
 
   getToolCallsByName(toolName: string): any[] {
-    return this.toolCalls.filter(call => call.toolName === toolName);
+    return this.toolCalls.filter((call) => call.toolName === toolName);
   }
 
   getWorkflowExecutionsByName(workflowName: string): any[] {
-    return this.workflowExecutions.filter(exec => exec.workflowName === workflowName);
+    return this.workflowExecutions.filter((exec) => exec.workflowName === workflowName);
   }
 
   getWorkflowOperationsByName(workflowName: string, operation?: string): any[] {
-    let filtered = this.workflowOperations.filter(op => op.workflowName === workflowName);
+    let filtered = this.workflowOperations.filter((op) => op.workflowName === workflowName);
     if (operation) {
-      filtered = filtered.filter(op => op.operation === operation);
+      filtered = filtered.filter((op) => op.operation === operation);
     }
     return filtered;
   }
 
   // Get failed events
   getFailedApiCalls(): any[] {
-    return this.apiCalls.filter(call => !call.success || call.statusCode >= 400);
+    return this.apiCalls.filter((call) => !call.success || call.statusCode >= 400);
   }
 
   getFailedAuthEvents(): any[] {
-    return this.authEvents.filter(event => !event.success);
+    return this.authEvents.filter((event) => !event.success);
   }
 
   getFailedWorkflowExecutions(): any[] {
-    return this.workflowExecutions.filter(exec => !exec.success);
+    return this.workflowExecutions.filter((exec) => !exec.success);
   }
 
   getFailedWorkflowOperations(): any[] {
-    return this.workflowOperations.filter(op => !op.success);
+    return this.workflowOperations.filter((op) => !op.success);
   }
 
   getFailedToolCalls(): any[] {
-    return this.toolCalls.filter(call => !call.success);
+    return this.toolCalls.filter((call) => !call.success);
   }
 }
 

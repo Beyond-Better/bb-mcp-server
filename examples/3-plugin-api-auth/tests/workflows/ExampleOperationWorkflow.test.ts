@@ -34,13 +34,13 @@ import { ExampleOperationWorkflow } from '../../src/plugins/workflows/ExampleOpe
 // Import OAuth-aware test utilities
 import {
   createAuthenticatedWorkflowContext,
-  createMockLogger,
   createMockAuditLogger,
+  createMockLogger,
   createMockOAuthConsumer,
   MockApiClient,
   MockOAuthConsumer,
 } from '../utils/test-helpers.ts';
-import { SpyLogger, SpyAuditLogger } from '@beyondbetter/bb-mcp-server/testing';
+import { SpyAuditLogger, SpyLogger } from '@beyondbetter/bb-mcp-server/testing';
 import { getResultData } from '../utils/type-helpers.ts';
 
 /**
