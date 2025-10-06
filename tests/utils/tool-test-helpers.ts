@@ -38,7 +38,12 @@ export const ToolTestData = {
   /**
    * Generate valid tool arguments for testing
    */
-  validToolArgs: (overrides: Record<string, unknown> = {}) => ({
+  validToolArgs: (overrides: Record<string, unknown> = {}): {
+    userId: string;
+    requestId: string;
+    message: string;
+    [key: string]: unknown;
+  } => ({
     userId: 'test-user-' + Math.random().toString(36).substr(2, 8),
     requestId: 'test-req-' + Math.random().toString(36).substr(2, 8),
     message: 'Test message',
@@ -70,7 +75,7 @@ export const ToolTestData = {
   /**
    * Generate complex nested schema for validation testing
    */
-  complexSchema: () =>
+  complexSchema: (): ZodSchema<any> =>
     z.object({
       user: z.object({
         id: z.string().uuid(),
@@ -121,7 +126,13 @@ export const ToolTestData = {
   /**
    * Generate performance test data
    */
-  performanceTestData: (size: number = 100) => ({
+  performanceTestData: (size: number = 100): {
+    items: Array<{
+      id: string;
+      data: string;
+      nested: { value: number; timestamp: string };
+    }>;
+  } => ({
     items: Array.from({ length: size }, (_, i) => ({
       id: `item-${i}`,
       data: `data-${i}`.repeat(10), // Moderate size to test performance
@@ -158,7 +169,7 @@ export const ToolAssertions = {
   /**
    * Assert that a tool result has the expected structure
    */
-  hasValidToolResult: (result: CallToolResult, expectedContent?: string) => {
+  hasValidToolResult: (result: CallToolResult, expectedContent?: string): void => {
     if (!hasTextContent(result)) {
       throw new Error('Tool result must have valid text content');
     }
@@ -175,7 +186,7 @@ export const ToolAssertions = {
   /**
    * Assert that a tool result indicates an error
    */
-  isErrorResult: (result: CallToolResult, expectedErrorText?: string) => {
+  isErrorResult: (result: CallToolResult, expectedErrorText?: string): void => {
     if (!result.isError) {
       throw new Error('Expected result to have isError: true');
     }
@@ -197,7 +208,7 @@ export const ToolAssertions = {
   validationSucceeded: <T>(
     result: { success: boolean; data?: T; error?: string },
     expectedData?: Partial<T>,
-  ) => {
+  ): void => {
     if (!result.success) {
       throw new Error(`Validation failed: ${result.error}`);
     }
@@ -221,7 +232,7 @@ export const ToolAssertions = {
   validationFailed: (
     result: { success: boolean; data?: any; error?: string },
     expectedErrorFragment?: string,
-  ) => {
+  ): void => {
     if (result.success) {
       throw new Error('Expected validation to fail, but it succeeded');
     }
@@ -238,7 +249,7 @@ export const ToolAssertions = {
   /**
    * Assert that logging calls include expected context
    */
-  hasLoggingContext: (logger: SpyLogger, expectedContext: Record<string, any>) => {
+  hasLoggingContext: (logger: SpyLogger, expectedContext: Record<string, any>): void => {
     const allCalls = [
       ...logger.infoCalls,
       ...logger.warnCalls,
@@ -271,7 +282,7 @@ export const ToolAssertions = {
     auditLogger: SpyAuditLogger,
     expectedEventType: string,
     expectedCount: number = 1,
-  ) => {
+  ): void => {
     const matchingEvents = auditLogger.systemEvents.filter((event) =>
       event.event === expectedEventType
     );
@@ -286,7 +297,7 @@ export const ToolAssertions = {
   /**
    * Assert tool execution performance
    */
-  executionWithinTimeLimit: (result: { executionTime?: number }, maxMs: number) => {
+  executionWithinTimeLimit: (result: { executionTime?: number }, maxMs: number): void => {
     if (!result.executionTime) {
       throw new Error('Result should include executionTime');
     }
@@ -358,7 +369,7 @@ export const PerformanceTestUtils = {
     maxTotal?: number;
     maxAverage?: number;
     maxSingle?: number;
-  }) => {
+  }): void => {
     if (limits.maxTotal && metrics.totalDuration && metrics.totalDuration > limits.maxTotal) {
       throw new Error(
         `Total duration ${metrics.totalDuration}ms exceeded limit ${limits.maxTotal}ms`,
@@ -399,7 +410,9 @@ export const MockFactory = {
   /**
    * Create a simple tool handler for testing
    */
-  createToolHandler: (responseText: string = 'Mock response') => {
+  createToolHandler: (
+    responseText: string = 'Mock response',
+  ): (args: any) => Promise<CallToolResult> => {
     return async (args: any): Promise<CallToolResult> => ({
       content: [{ type: 'text', text: `${responseText}: ${JSON.stringify(args)}` }],
     });
@@ -408,7 +421,7 @@ export const MockFactory = {
   /**
    * Create a failing tool handler for error testing
    */
-  createFailingHandler: (errorMessage: string = 'Mock error') => {
+  createFailingHandler: (errorMessage: string = 'Mock error'): () => Promise<never> => {
     return async (): Promise<never> => {
       throw new Error(errorMessage);
     };
@@ -423,7 +436,7 @@ export const ErrorTestUtils = {
    * Generate different types of errors for testing error handling
    */
   errorTypes: {
-    standardError: () => new Error('Standard test error'),
+    standardError: (): Error => new Error('Standard test error'),
     stringError: () => 'String error message',
     objectError: () => ({ message: 'Object error', code: 'TEST_ERROR' }),
     nullError: () => null,
@@ -436,7 +449,7 @@ export const ErrorTestUtils = {
   testErrorHandling: async <T>(
     testFn: (error: any) => Promise<T>,
     validator: (result: T, errorType: string) => void,
-  ) => {
+  ): Promise<void> => {
     for (const [errorType, errorGenerator] of Object.entries(ErrorTestUtils.errorTypes)) {
       const error = errorGenerator();
       const result = await testFn(error);
@@ -452,7 +465,13 @@ export const TestScenarios = {
   /**
    * Generate validation test scenarios
    */
-  validationScenarios: () => [
+  validationScenarios: (): Array<{
+    name: string;
+    schema: ZodSchema<any>;
+    input: any;
+    shouldSucceed: boolean;
+    expectedDefaults?: Record<string, any>;
+  }> => [
     {
       name: 'valid_simple_object',
       schema: z.object({ name: z.string(), value: z.number() }),

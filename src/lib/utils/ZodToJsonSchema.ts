@@ -5,7 +5,7 @@
  * This is essential for the get_schema_for_workflow tool to provide usable parameter schemas.
  */
 
-import { z, type ZodSchema, type ZodType } from 'zod';
+import type { ZodSchema, ZodType } from 'zod';
 
 /**
  * JSON Schema representation
