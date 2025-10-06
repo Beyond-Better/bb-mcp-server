@@ -45,6 +45,7 @@ import {
 
 // 🎯 Import dependency helpers from the library
 import { getAuditLogger, getToolRegistry, getWorkflowRegistry } from '@beyondbetter/bb-mcp-server';
+import { loadInstructions, validateInstructions } from '@beyondbetter/bb-mcp-server';
 
 // 🎯 Consumer-specific imports - business logic components
 import { type ExampleOAuthConfig, ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts';
@@ -52,7 +53,6 @@ import { ExampleApiClient, type ExampleApiClientConfig } from '../api/ExampleApi
 import { ExampleTools } from '../tools/ExampleTools.ts';
 import { ExampleQueryWorkflow } from '../workflows/ExampleQueryWorkflow.ts';
 import { ExampleOperationWorkflow } from '../workflows/ExampleOperationWorkflow.ts';
-import { loadInstructions, validateInstructions } from '../utils/InstructionsLoader.ts';
 
 /**
  * Create ExampleCorp dependencies using library infrastructure
