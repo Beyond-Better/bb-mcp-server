@@ -75,12 +75,7 @@ export function getLogger(configManager: ConfigManager): Logger {
  */
 export function getAuditLogger(configManager: ConfigManager, logger: Logger): AuditLogger {
   const auditConfig = configManager?.get<AuditConfig>('audit');
-  return new AuditLogger({
-    enabled: auditConfig.enabled,
-    logAllApiCalls: auditConfig.logAllApiCalls,
-    logFile: auditConfig.logFile,
-    retentionDays: auditConfig.retentionDays,
-  }, logger);
+  return new AuditLogger(auditConfig, logger);
 }
 
 /**

@@ -10,11 +10,18 @@ import { toError } from './Error.ts';
 
 export interface AuditConfig {
   enabled: boolean;
-  logAllApiCalls: boolean;
   logFile?: string;
   retentionDays?: number;
   bufferSize?: number;
   flushInterval?: number;
+  logCalls: {
+    api: boolean;
+    auth: boolean;
+    workflow: boolean;
+    tools: boolean;
+    system: boolean;
+    custom: boolean;
+  };
 }
 
 export interface BaseAuditEntry {
@@ -173,7 +180,7 @@ export class AuditLogger {
    * Log API call
    */
   async logApiCall(entry: Omit<ApiAuditEntry, 'timestamp'>): Promise<void> {
-    if (!this.config.enabled || (!this.config.logAllApiCalls && !entry.error)) {
+    if (!this.config.enabled || (!this.config.logCalls.api && !entry.error)) {
       return;
     }
 
@@ -194,7 +201,7 @@ export class AuditLogger {
    * Log workflow operation
    */
   async logWorkflowOperation(entry: Omit<WorkflowAuditEntry, 'timestamp'>): Promise<void> {
-    if (!this.config.enabled) {
+    if (!this.config.enabled || (!this.config.logCalls.workflow && !entry.error)) {
       return;
     }
 
@@ -215,7 +222,7 @@ export class AuditLogger {
    * Log authentication event
    */
   async logAuthEvent(entry: Omit<AuthAuditEntry, 'timestamp'>): Promise<void> {
-    if (!this.config.enabled) {
+    if (!this.config.enabled || (!this.config.logCalls.auth && !entry.error)) {
       return;
     }
 
@@ -236,7 +243,7 @@ export class AuditLogger {
    * Log system event
    */
   async logSystemEvent(entry: Omit<SystemAuditEntry, 'timestamp'>): Promise<void> {
-    if (!this.config.enabled) {
+    if (!this.config.enabled || (!this.config.logCalls.system && !entry.error)) {
       return;
     }
 
@@ -257,7 +264,7 @@ export class AuditLogger {
    * Log custom audit entry
    */
   async logCustomEvent(type: string, entry: Omit<BaseAuditEntry, 'timestamp'>): Promise<void> {
-    if (!this.config.enabled) {
+    if (!this.config.enabled || (!this.config.logCalls.custom && !entry.error)) {
       return;
     }
 

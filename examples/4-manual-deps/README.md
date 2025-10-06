@@ -67,35 +67,24 @@ export async function createManualDependencies(): Promise<Partial<AppServerDepen
 
 ```typescript
 // Manual creation of all library components
+const loggingConfig = configManager?.get<LoggingConfig>('logging');
 const logger = new Logger({
-  level: configManager.get('LOG_LEVEL', 'info'),
-  format: configManager.get('LOG_FORMAT', 'json'),
+  level: loggingConfig.level,
+  format: loggingConfig.format,
 });
 
-const auditLogger = new AuditLogger({
-  enabled: configManager.get('AUDIT_ENABLED', 'true') === 'true',
-  logAllApiCalls: configManager.get('AUDIT_LOG_ALL_API_CALLS', 'true') === 'true',
-  retentionDays: parseInt(configManager.get('AUDIT_RETENTION_DAYS', '90'), 10),
-}, logger);
+const auditConfig = configManager?.get<AuditConfig>('audit');
+return new AuditLogger(auditConfig, logger);
 
-const kvManager = new KVManager({
-  kvPath: configManager.get('STORAGE_DENO_KV_PATH', './data/manual-deps.db'),
-}, logger);
+const storageConfig = configManager?.get<StorageConfig>('storage');
+const kvPath = storageConfig.denoKvPath;
+const kvManager = new KVManager({ kvPath }, logger);
 
-const oauthProvider = new OAuthProvider({
-  issuer: configManager.get('OAUTH_PROVIDER_ISSUER', 'http://localhost:3000'),
-  clientId: configManager.get('OAUTH_PROVIDER_CLIENT_ID', 'manual-client'),
-  // ... complete OAuth configuration
-}, { logger, kvManager, credentialStore });
+const oauthConfig = configManager.get<OAuthProviderConfig>('oauthProvider');
+const oauthProvider = new OAuthProvider(oauthConfig, { logger, kvManager, credentialStore });
 
-const transportManager = new TransportManager({
-  type: configManager.get('MCP_TRANSPORT', 'stdio') as 'stdio' | 'http',
-  http: {
-    hostname: configManager.get('HTTP_HOST', 'localhost'),
-    port: parseInt(configManager.get('HTTP_PORT', '3000'), 10),
-    // ... complete HTTP configuration
-  },
-}, { logger, kvManager, sessionStore, eventStore });
+const transportConfig = configManager.get<TransportConfig>('transport');
+const transportManager = new TransportManager(transportConfig, { logger, kvManager, sessionStore, eventStore });
 ```
 
 **Demonstrates**:
@@ -255,7 +244,7 @@ HTTP_CORS_ORIGINS=*
 LOG_LEVEL=debug|info|warn|error
 LOG_FORMAT=json|text
 AUDIT_ENABLED=true
-AUDIT_LOG_ALL_API_CALLS=true
+AUDIT_LOG_CALLS_API=true
 AUDIT_RETENTION_DAYS=90
 
 # Storage Configuration (manual setup)

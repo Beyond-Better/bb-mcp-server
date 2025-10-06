@@ -38,12 +38,8 @@ export interface LoggingConfig {
 /**
  * Audit logging configuration
  */
-export interface AuditConfig {
-  enabled: boolean;
-  logAllApiCalls: boolean;
-  logFile: string;
-  retentionDays: number;
-}
+import type { AuditConfig } from '../utils/AuditLogger.ts';
+export type { AuditConfig };
 
 /**
  * Rate limiting configuration
