@@ -257,6 +257,7 @@ export class ConfigManager {
       config.http = {
         hostname: this.getEnvOptional('HTTP_HOST', 'localhost'),
         port: parseInt(this.getEnvOptional('HTTP_PORT', '3000')),
+        allowedHosts: this.getEnvArray('HTTP_ALLOWED_HOSTS', ['localhost', '127.0.0.1']),
         // Session configuration for HTTP transport (primary environment variables)
         sessionTimeout: parseInt(this.getEnvOptional('MCP_SESSION_TIMEOUT', '1800000')), // 30 * 60 * 1000 = 30 minutes default
         sessionCleanupInterval: parseInt(
@@ -474,7 +475,7 @@ export class ConfigManager {
       clients: {
         enableDynamicRegistration: this.getEnvBoolean('OAUTH_PROVIDER_DYNAMIC_CLIENT_REG', true),
         requireHTTPS: this.getEnvBoolean('OAUTH_PROVIDER_REQUIRE_HTTPS', false),
-        allowedRedirectHosts: this.getEnvArray('OAUTH_PROVIDER_ALLOWED_HOSTS', ['localhost']),
+        allowedRedirectHosts: this.getEnvArray('HTTP_ALLOWED_HOSTS', ['localhost', '127.0.0.1']), // can have OAUTH_PROVIDER_ALLOWED_HOSTS override later if needed
       },
 
       authorization: {

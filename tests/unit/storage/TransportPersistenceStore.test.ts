@@ -35,6 +35,7 @@ async function createTestDependencies() {
     http: {
       hostname: 'localhost',
       port: 3000,
+      allowedHosts: ['localhost', '127.0.0.1'],
       sessionTimeout: 30 * 60 * 1000,
       sessionCleanupInterval: 5 * 60 * 1000,
       maxConcurrentSessions: 100,

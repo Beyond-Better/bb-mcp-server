@@ -41,6 +41,7 @@ function createTestHttpTransportConfig(): HttpTransportConfig {
   return {
     hostname: 'localhost',
     port: 3001,
+    allowedHosts: ['localhost', '127.0.0.1'],
     sessionTimeout: 30 * 60 * 1000,
     maxConcurrentSessions: 100,
     enableSessionPersistence: false,
