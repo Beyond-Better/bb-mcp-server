@@ -439,6 +439,7 @@ export class HttpTransport implements Transport {
           allowedHosts: [
             this.config.hostname,
             `${this.config.hostname}:${this.config.port}`,
+            ...(this.config.allowedHosts || []),
           ],
         });
 

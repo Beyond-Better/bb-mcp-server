@@ -35,6 +35,7 @@ export interface TransportConfig {
 export interface HttpTransportConfig {
   hostname: string; // Changed from 'host' to 'hostname'
   port: number;
+  allowedHosts: string[];
   // Session management configuration (production critical)
   sessionTimeout: number; // Session timeout in milliseconds
   sessionCleanupInterval: number; // Cleanup interval in milliseconds
@@ -56,7 +57,6 @@ export interface HttpTransportConfig {
   };
   rateLimit?: RateLimitConfig;
   enableDnsRebindingProtection?: boolean;
-  allowedHosts?: string[];
   // 🔒 Authentication configuration
   enableAuthentication?: boolean; // Auto-enabled if oauthProvider available
   skipAuthentication?: boolean; // Skip auth even if OAuth components available
