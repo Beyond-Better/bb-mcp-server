@@ -89,6 +89,7 @@ export async function createExampleDependencies(
   // 🎯 Create ExampleCorp OAuth consumer (extends library OAuthConsumer)
   const oauthConsumer = new ExampleOAuthConsumer(exampleOAuthConfig, {
     logger,
+    auditLogger,
     kvManager,
     credentialStore,
   });
