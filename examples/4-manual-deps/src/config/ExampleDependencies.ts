@@ -44,7 +44,7 @@ import {
 } from '@beyondbetter/bb-mcp-server';
 
 // 🎯 Import dependency helpers from the library
-import { getToolRegistry, getWorkflowRegistry } from '@beyondbetter/bb-mcp-server';
+import { getAuditLogger, getToolRegistry, getWorkflowRegistry } from '@beyondbetter/bb-mcp-server';
 
 // 🎯 Consumer-specific imports - business logic components
 import { type ExampleOAuthConfig, ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts';
