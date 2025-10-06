@@ -95,6 +95,8 @@ export {
   validateConfiguration,
 } from './lib/server/DependencyHelpers.ts';
 
+export { loadInstructions, validateInstructions } from './lib/utils/InstructionsLoader.ts';
+
 // OAuth dependency types from individual components
 export type { TokenManagerDependencies } from './lib/auth/TokenManager.ts';
 export type { ClientRegistryDependencies } from './lib/auth/ClientRegistry.ts';
