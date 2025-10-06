@@ -7,6 +7,60 @@
 
 A comprehensive library for building Deno-based MCP (Model Context Protocol) servers with OAuth and workflow capabilities.
 
+## 🤖 Recommended: Build with Beyond Better
+
+**We strongly recommend using [Beyond Better](https://beyondbetter.app) to develop your MCP server applications!**
+
+Beyond Better is an AI-powered project assistant that revolutionizes how you build MCP servers:
+
+### Why Beyond Better for MCP Development?
+
+- **🎯 Project-Wide Intelligence**: BB understands your entire MCP server structure, making complex implementations easier
+- **💬 Smart Conversations**: Discuss architecture, debug issues, and refine implementations with AI assistance  
+- **⚡ Code Generation**: Generate boilerplate, implement workflows, and follow best practices automatically
+- **📚 Comprehensive Guidelines**: Use our consumer-facing guidelines with BB for optimal results
+- **🔄 Sync Documentation**: Keep MCP server instructions synchronized with code changes
+- **🛠️ Custom Tools**: Extend BB with MCP-specific tools for testing and validation
+
+### Quick Start with Beyond Better
+
+**Option 1: Beyond Better Cloud** (Easiest - recommended)
+
+1. **Sign up**: Visit [beyondbetter.app](https://beyondbetter.app)
+2. **Create project**: Add your MCP project through the browser UI
+3. **Configure guidelines**: Add `guidelines-create-app.md` in project settings
+4. **Start building**: Chat with BB to generate your MCP server
+
+All configuration is managed through the intuitive browser interface - no command-line needed!
+
+**Option 2: Self-Hosted / Local-Only Mode** (Open source)
+
+```bash
+# 1. Install Beyond Better CLI
+curl -sSL https://raw.githubusercontent.com/Beyond-Better/bb/main/install.sh | sh
+
+# 2. Create your MCP project
+mkdir my-mcp-server && cd my-mcp-server
+
+# 3. Initialize BB
+bb init
+
+# 4. Start development with guidelines
+bb start
+# In BB, reference: "Use guidelines from @beyondbetter/bb-mcp-server guidelines-create-app.md"
+```
+
+**📖 Consumer Guidelines**: See [guidelines-create-app.md](guidelines-create-app.md) for comprehensive instructions on building MCP servers with this library. These guidelines are specifically designed for use with LLMs and Beyond Better.
+
+**🔗 Beyond Better Resources**:
+- **[Website](https://beyondbetter.app)** - Get started with BB Cloud
+- **[Download](https://beyondbetter.app/download)** - BB desktop app
+- **[Documentation](https://beyondbetter.app/docs)** - Complete BB documentation
+- **[Understanding BB](https://beyondbetter.app/docs/understanding-bb)** - How BB works
+- **[GitHub](https://github.com/Beyond-Better/bb)** - Open source repository
+
+---
+
 ## 🚀 Quick Start for Users
 
 Get started building your own MCP server in minutes with our example applications!
@@ -61,6 +115,8 @@ The examples directory contains everything you need to:
 - 🛠️ **Use as templates** for your own MCP server implementations
 
 ### Library Usage (Without Examples)
+
+**💡 New to building MCP servers?** Check out [guidelines-create-app.md](guidelines-create-app.md) for comprehensive patterns and best practices. These guidelines work great with [Beyond Better](#-recommended-build-with-beyond-better) for AI-assisted development.
 
 If you prefer to start from scratch:
 
@@ -198,8 +254,13 @@ Beyond MCP Server provides a layered architecture that separates concerns:
 
 ## 📚 Documentation & Support
 
+### For Library Consumers (Building MCP Servers)
+- **📖 [Consumer Guidelines](guidelines-create-app.md)** - Comprehensive guide for building MCP servers with this library
+- **🤖 [Beyond Better Integration](#-recommended-build-with-beyond-better)** - AI-assisted development workflow
 - **🚀 [Getting Started Guide](examples/README.md)** - Complete learning progression with examples
 - **🔧 [API Documentation](docs/)** - Detailed API reference and guides
+
+### Community & Support
 - **🐛 [Issues & Bug Reports](https://github.com/beyond-better/bb-mcp-server/issues)** - Community support and bug tracking
 - **💬 [Discussions](https://github.com/beyond-better/bb-mcp-server/discussions)** - Community Q&A and feature requests
 
@@ -209,8 +270,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🔗 Related Projects
 
+- [Beyond Better](https://beyondbetter.app) - **Recommended AI-powered development assistant** for building MCP servers. See [guidelines-create-app.md](guidelines-create-app.md) for integration details.
 - [Model Context Protocol](https://github.com/modelcontextprotocol/typescript-sdk) - Official MCP TypeScript SDK
-- [Beyond Better](https://beyondbetter.app) - AI-powered development tools
 
 ---
 
