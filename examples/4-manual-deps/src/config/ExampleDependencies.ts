@@ -13,6 +13,7 @@ import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
 // 🎯 Library imports - all infrastructure dependencies
 import {
   AppServerDependencies,
+  type AuditConfig,
   AuditLogger,
   //BeyondMcpServerDependencies,
   ConfigManager,
@@ -27,12 +28,14 @@ import {
   type LoggingConfig,
   type McpServerInstructionsConfig,
   OAuthProvider,
+  type OAuthProviderConfig,
   performHealthChecks,
   SessionStore,
+  type StorageConfig,
   type TransportConfig,
   TransportEventStore,
   TransportEventStoreChunked,
-  TransportEventStoreChunkedConfig,
+  type TransportEventStoreChunkedConfig,
   TransportManager,
   validateConfiguration,
   //WorkflowRegistry,
@@ -88,9 +91,6 @@ export async function createManualDependencies(
     resolvedPath: new URL(kvPath, `file://${Deno.cwd()}/`).pathname,
     currentWorkingDirectory: Deno.cwd(),
   });
-
-  const kvManager = new KVManager({ kvPath }, logger);
-
   // Initialize KV connection before using it
   await kvManager.initialize();
 
@@ -194,7 +194,7 @@ export async function createManualDependencies(
   // 🎯 Create ExampleCorp OAuth consumer (extends library OAuthConsumer)
   const oauthConsumer = new ExampleOAuthConsumer(
     exampleOAuthConfig,
-    { logger, kvManager, credentialStore },
+    { logger, auditLogger, kvManager, credentialStore },
   );
 
   // 🎯 Create ExampleCorp API client configuration using standard config keys
@@ -407,6 +407,7 @@ export async function createTestExampleDependencies(): Promise<
   // Create mock configuration for testing
   const testConfigManager = new ConfigManager();
   const testLogger = getLogger(testConfigManager);
+  const testAuditLogger = getAuditLogger(testConfigManager, testLogger);
   const testKvManager = await getKvManager(testConfigManager, testLogger);
   const testCredentialStore = getCredentialStore(testKvManager, testLogger);
   testConfigManager.set('EXAMPLECORP_CLIENT_ID', 'test-client-id');
@@ -422,6 +423,7 @@ export async function createTestExampleDependencies(): Promise<
   return await createManualDependencies({
     configManager: testConfigManager,
     logger: testLogger,
+    auditLogger: testAuditLogger,
     kvManager: testKvManager,
     credentialStore: testCredentialStore,
   });

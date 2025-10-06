@@ -159,6 +159,7 @@ export type {
   ConfigValidationResult,
   EnvironmentMapping,
   LoggingConfig,
+  McpServerInstructionsConfig,
   OAuthConsumerConfig,
   OAuthProviderConfig,
   ServerConfig,
