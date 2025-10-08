@@ -6,7 +6,7 @@
  * with future extensibility for directory-based content.
  */
 
-import type { Logger } from './library.types.ts';
+import type { Logger } from '../utils/Logger.ts';
 
 /**
  * Content module interface for documentation

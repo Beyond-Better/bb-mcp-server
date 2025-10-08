@@ -370,12 +370,6 @@ docsEndpointConfig: {
 }
 ```
 
-**Check HTTP transport:**
-```bash
-# Docs endpoint only works with HTTP transport
-MCP_TRANSPORT=http
-```
-
 **Check logs:**
 ```bash
 LOG_LEVEL=debug
@@ -529,6 +523,6 @@ docsEndpointConfig: {
 
 ## See Also
 
-- [InstructionsLoader Guide](./INSTRUCTIONS-LOADER-GUIDE.md) - Similar pattern for MCP instructions
-- [HTTP Server Guide](./HTTP-SERVER-GUIDE.md) - HTTP transport configuration
-- [Workflow Development Guide](./WORKFLOW-DEVELOPMENT-GUIDE.md) - Creating workflows
+- [InstructionsLoader Guide](./setting-mcp-server-instructions.md) - Similar pattern for MCP instructions
+- [HTTP Server Guide](./http-server-guide.md) - HTTP transport configuration
+- [Plugins (Tools/Workflows) Development Guide](./plugins-tools-workflows.md) - Creating plugins for tools/workflows
