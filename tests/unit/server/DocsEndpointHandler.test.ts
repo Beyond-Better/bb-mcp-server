@@ -7,10 +7,7 @@
 
 import { assertEquals, assertExists, assertStringIncludes } from '@std/assert';
 import { DocsEndpointHandler } from '../../../src/lib/server/DocsEndpointHandler.ts';
-import type {
-  DocsContentModule,
-  DocsEndpointConfig,
-} from '../../../src/lib/types/DocsTypes.ts';
+import type { DocsContentModule, DocsEndpointConfig } from '../../../src/lib/types/DocsTypes.ts';
 import { createMockLogger } from '../../utils/test-helpers.ts';
 
 // Mock content module for testing

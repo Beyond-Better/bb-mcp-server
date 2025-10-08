@@ -138,7 +138,7 @@ Deno.test({
       http: {
         hostname: 'localhost',
         port: 3000,
-		allowedHosts: ['localhost', '127.0.0.1'],
+        allowedHosts: ['localhost', '127.0.0.1'],
         sessionTimeout: 30 * 60 * 1000,
         maxConcurrentSessions: 1000,
         enableSessionPersistence: true,
@@ -192,7 +192,7 @@ Deno.test({
       http: {
         hostname: 'localhost',
         port: 3001,
-		allowedHosts: ['localhost', '127.0.0.1'],
+        allowedHosts: ['localhost', '127.0.0.1'],
         cors: corsConfig,
         sessionTimeout: 30 * 60 * 1000,
         maxConcurrentSessions: 1000,
@@ -229,7 +229,7 @@ Deno.test({
       http: {
         hostname: 'localhost',
         port: 3002,
-		allowedHosts: ['localhost', '127.0.0.1'],
+        allowedHosts: ['localhost', '127.0.0.1'],
         sessionTimeout: 30 * 60 * 1000,
         maxConcurrentSessions: 1000,
         enableSessionPersistence: true,
@@ -267,7 +267,7 @@ Deno.test({
       http: {
         hostname: 'localhost',
         port: 3003,
-		allowedHosts: ['localhost', '127.0.0.1'],
+        allowedHosts: ['localhost', '127.0.0.1'],
         sessionTimeout: 30 * 60 * 1000,
         maxConcurrentSessions: 1000,
         enableSessionPersistence: true,
@@ -366,7 +366,7 @@ Deno.test({
       http: {
         hostname: 'localhost',
         port: 3004,
-		allowedHosts: ['localhost', '127.0.0.1'],
+        allowedHosts: ['localhost', '127.0.0.1'],
         sessionTimeout: 30 * 60 * 1000,
         maxConcurrentSessions: 1000,
         enableSessionPersistence: true,
@@ -410,7 +410,7 @@ Deno.test({
       http: {
         hostname: 'localhost',
         port: 3005,
-		allowedHosts: ['localhost', '127.0.0.1'],
+        allowedHosts: ['localhost', '127.0.0.1'],
         sessionTimeout: 30 * 60 * 1000,
         maxConcurrentSessions: 1000,
         enableSessionPersistence: true,
@@ -448,7 +448,7 @@ Deno.test({
       http: {
         hostname: 'localhost',
         port: 3006,
-		allowedHosts: ['localhost', '127.0.0.1'],
+        allowedHosts: ['localhost', '127.0.0.1'],
         sessionTimeout: 30 * 60 * 1000,
         maxConcurrentSessions: 1000,
         enableSessionPersistence: true,
@@ -485,7 +485,7 @@ Deno.test({
       http: {
         hostname: 'localhost',
         port: 3007,
-		allowedHosts: ['localhost', '127.0.0.1'],
+        allowedHosts: ['localhost', '127.0.0.1'],
         sessionTimeout: 30 * 60 * 1000,
         maxConcurrentSessions: 1000,
         enableSessionPersistence: true,
@@ -587,7 +587,7 @@ Deno.test({
       http: {
         hostname: 'localhost',
         port: 3008,
-		allowedHosts: ['localhost', '127.0.0.1'],
+        allowedHosts: ['localhost', '127.0.0.1'],
         sessionTimeout: 30 * 60 * 1000,
         maxConcurrentSessions: 1000,
         enableSessionPersistence: true,
@@ -675,7 +675,7 @@ Deno.test({
       http: {
         hostname: 'localhost',
         port: 3010,
-		allowedHosts: ['localhost', '127.0.0.1'],
+        allowedHosts: ['localhost', '127.0.0.1'],
         sessionTimeout: 30 * 60 * 1000,
         maxConcurrentSessions: 1000,
         enableSessionPersistence: true,
@@ -719,7 +719,7 @@ Deno.test({
       http: {
         hostname: 'localhost',
         port: 3011,
-		allowedHosts: ['localhost', '127.0.0.1'],
+        allowedHosts: ['localhost', '127.0.0.1'],
         sessionTimeout: 30 * 60 * 1000,
         maxConcurrentSessions: 1000,
         enableSessionPersistence: true,
@@ -756,7 +756,7 @@ Deno.test({
       http: {
         hostname: 'localhost',
         port: 3012,
-		allowedHosts: ['localhost', '127.0.0.1'],
+        allowedHosts: ['localhost', '127.0.0.1'],
         sessionTimeout: 30 * 60 * 1000,
         maxConcurrentSessions: 1000,
         enableSessionPersistence: true,
@@ -794,7 +794,7 @@ Deno.test({
       http: {
         hostname: 'localhost',
         port: 3013,
-		allowedHosts: ['localhost', '127.0.0.1'],
+        allowedHosts: ['localhost', '127.0.0.1'],
         sessionTimeout: 30 * 60 * 1000,
         maxConcurrentSessions: 1000,
         enableSessionPersistence: true,

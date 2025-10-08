@@ -11,10 +11,7 @@
  * 4. TODO: Default directory (future)
  */
 
-import type {
-  DocsContentLoaderOptions,
-  DocsContentLoaderResult,
-} from '../types/DocsTypes.ts';
+import type { DocsContentLoaderOptions, DocsContentLoaderResult } from '../types/DocsTypes.ts';
 import type { Logger } from '../utils/Logger.ts';
 
 /**

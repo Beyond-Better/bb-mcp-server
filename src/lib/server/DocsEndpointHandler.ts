@@ -321,7 +321,11 @@ export class DocsEndpointHandler {
         <li class="doc-item">
           <a href="${this.config.path}/${doc.fileName}" class="doc-link">
             <span class="doc-title">${this.escapeHtml(doc.title)}</span>
-            ${doc.description ? `<span class="doc-description">${this.escapeHtml(doc.description)}</span>` : ''}
+            ${
+          doc.description
+            ? `<span class="doc-description">${this.escapeHtml(doc.description)}</span>`
+            : ''
+        }
           </a>
         </li>
       `,

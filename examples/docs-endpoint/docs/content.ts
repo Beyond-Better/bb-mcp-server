@@ -138,7 +138,7 @@ const result = await executeWorkflow('example_workflow', {
 
 ## Creating Custom Workflows
 
-Extend the `WorkflowBase` class:
+Extend the \`WorkflowBase\` class:
 
 \`\`\`typescript
 import { WorkflowBase } from '@example/mcp-server';

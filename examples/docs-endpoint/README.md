@@ -22,11 +22,13 @@ deno run --allow-all examples/docs-endpoint/main.ts
 ## Testing the Endpoint
 
 ### List All Documentation
+
 ```bash
 curl http://localhost:3000/docs
 ```
 
 ### Get as HTML (default)
+
 ```bash
 curl http://localhost:3000/docs/getting-started
 # or explicitly
@@ -34,12 +36,15 @@ curl http://localhost:3000/docs/getting-started.html
 ```
 
 ### Get as Markdown
+
 ```bash
 curl http://localhost:3000/docs/getting-started.md
 ```
 
 ### View in Browser
+
 Open http://localhost:3000/docs in your browser to see:
+
 - Styled documentation listing
 - Clickable links to each document
 - Beautiful markdown rendering with syntax highlighting
