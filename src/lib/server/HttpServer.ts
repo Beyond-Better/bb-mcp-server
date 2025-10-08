@@ -18,6 +18,7 @@ import type { TransportManager } from '../transport/TransportManager.ts';
 import type { OAuthProvider } from '../auth/OAuthProvider.ts';
 import type { OAuthConsumer } from '../auth/OAuthConsumer.ts';
 import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
+import type { DocsEndpointHandler } from './DocsEndpointHandler.ts';
 import { OAuthEndpoints } from './OAuthEndpoints.ts';
 import { BeyondMcpServer } from './BeyondMcpServer.ts';
 import { APIRouter } from './APIRouter.ts';
@@ -69,6 +70,14 @@ export interface HttpServerDependencies {
   workflowRegistry: WorkflowRegistry;
   /** Server configuration */
   httpServerConfig: HttpServerConfig;
+  /** Documentation endpoint handler (optional) */
+  docsEndpointHandler?: DocsEndpointHandler;
+  // TODO: Future - Generic custom endpoints
+  // /** Custom endpoint handlers */
+  // customEndpoints?: Array<{
+  //   path: string;
+  //   handle(request: Request): Promise<Response>;
+  // }>;
 }
 
 /**
@@ -91,6 +100,7 @@ export class HttpServer {
   //private statusEndpoints: StatusEndpoints; // only used in APIRouter
   private corsHandler: CORSHandler;
   private errorPages: ErrorPages;
+  private docsHandler: DocsEndpointHandler | undefined;
 
   // Integration components
   private beyondMcpServer: BeyondMcpServer;
@@ -108,6 +118,9 @@ export class HttpServer {
     //this.statusEndpoints = new StatusEndpoints(dependencies, this.startTime); // only used in APIRouter
     this.corsHandler = new CORSHandler(this.httpServerConfig.cors);
     this.errorPages = new ErrorPages(this.httpServerConfig);
+    this.docsHandler = dependencies.docsEndpointHandler !== undefined
+      ? dependencies.docsEndpointHandler
+      : undefined;
 
     // Integration components
     this.beyondMcpServer = dependencies.beyondMcpServer;
@@ -202,6 +215,18 @@ export class HttpServer {
     if (path.startsWith('/.well-known/')) {
       return await this.oauthEndpoints.handleWellKnown(request, path.slice(13), method);
     }
+
+    // Documentation endpoint (if configured)
+    if (this.docsHandler && path.startsWith(this.docsHandler.path)) {
+      return await this.docsHandler.handle(request);
+    }
+
+    // TODO: Future - Generic custom endpoints
+    // for (const handler of this.customEndpoints || []) {
+    //   if (path.startsWith(handler.path)) {
+    //     return await handler.handle(request);
+    //   }
+    // }
 
     // MCP transport endpoint
     if (path === '/mcp') {

@@ -64,6 +64,7 @@ export { APIRouter } from './lib/server/APIRouter.ts';
 export { StatusEndpoints } from './lib/server/StatusEndpoints.ts';
 export { CORSHandler } from './lib/server/CORSHandler.ts';
 export { ErrorPages } from './lib/server/ErrorPages.ts';
+export { DocsEndpointHandler } from './lib/server/DocsEndpointHandler.ts';
 
 // Beyond MCP Server exports
 export { BeyondMcpServer } from './lib/server/BeyondMcpServer.ts';
@@ -80,6 +81,7 @@ export {
   getAuditLogger,
   getConfigManager,
   getCredentialStore,
+  getDocsEndpointHandler,
   getErrorHandler,
   getHttpServerConfig,
   getKvManager,
@@ -96,6 +98,7 @@ export {
 } from './lib/server/DependencyHelpers.ts';
 
 export { loadInstructions, validateInstructions } from './lib/utils/InstructionsLoader.ts';
+export { loadDocsContent, validateDocsContent } from './lib/utils/DocsContentLoader.ts';
 
 // OAuth dependency types from individual components
 export type { TokenManagerDependencies } from './lib/auth/TokenManager.ts';
@@ -159,6 +162,7 @@ export type {
   AuditConfig,
   ConfigLoaderOptions,
   ConfigValidationResult,
+  DocsEndpointConfig,
   EnvironmentMapping,
   LoggingConfig,
   McpServerInstructionsConfig,
@@ -301,6 +305,15 @@ export type {
   ThirdPartyApiHealthStatus,
   ThirdPartyApiInfo,
 } from './lib/types/AppServerTypes.ts';
+
+// Documentation types
+export type {
+  DocsContentLoaderOptions,
+  DocsContentLoaderResult,
+  DocsContentModule,
+  DocsFrontmatter,
+  ParsedDocument,
+} from './lib/types/DocsTypes.ts';
 
 // API Client types
 export type { BaseApiClientConfig } from './lib/clients/BaseApiClient.ts';

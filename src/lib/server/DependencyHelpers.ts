@@ -9,6 +9,7 @@
 import { ConfigManager } from '../config/ConfigManager.ts';
 import type {
   AuditConfig,
+  DocsEndpointConfig,
   LoggingConfig,
   McpServerInstructionsConfig,
   OAuthConsumerConfig,
@@ -36,6 +37,7 @@ import { OAuthProvider } from '../auth/OAuthProvider.ts';
 import { OAuthConsumer } from '../auth/OAuthConsumer.ts';
 import { TransportManager } from '../transport/TransportManager.ts';
 import { BeyondMcpServer } from './BeyondMcpServer.ts';
+import { DocsEndpointHandler } from './DocsEndpointHandler.ts';
 import { toError } from '../utils/Error.ts';
 import type {
   //AppServerConfig,
@@ -371,6 +373,45 @@ export function getTransportPersistenceStore(
     transportConfig,
     logger,
   );
+}
+
+/**
+ * Create documentation endpoint handler (optional)
+ * Consuming apps can provide their own DocsEndpointHandler or use this default
+ */
+export function getDocsEndpointHandler(
+  configManager: ConfigManager,
+  logger: Logger,
+  docsConfig?: DocsEndpointConfig,
+): DocsEndpointHandler | undefined {
+  // Use provided config or load from ConfigManager
+  const config = docsConfig || configManager.get<DocsEndpointConfig>('docsEndpoint');
+
+  if (!config || !config.enabled) {
+    logger.debug('DependencyHelper: Documentation endpoint not enabled');
+    return undefined;
+  }
+
+  // Validate that content source is provided
+  if (!config.contentModule && !config.content) {
+    logger.warn(
+      'DependencyHelper: Documentation endpoint enabled but no content provided',
+      {
+        hint: 'Provide contentModule or content in docsEndpointConfig',
+      },
+    );
+    return undefined;
+  }
+
+  logger.info('DependencyHelper: Creating documentation endpoint handler', {
+    path: config.path,
+    hasContentModule: !!config.contentModule,
+    hasContent: !!config.content,
+    allowListing: config.allowListing,
+    cacheEnabled: config.enableCache,
+  });
+
+  return new DocsEndpointHandler(config, logger);
 }
 
 /**
@@ -831,6 +872,10 @@ export async function getAllDependencies(
   // Create HTTP server config if needed
   const httpServerConfig = overrides.httpServerConfig || getHttpServerConfig(configManager);
 
+  // Create docs endpoint handler if needed (can be overridden by consumer)
+  const docsEndpointHandler = overrides.docsEndpointHandler ||
+    getDocsEndpointHandler(configManager, logger, overrides.docsEndpointConfig);
+
   // Create MCP server (either from class or default)
   const serverConfig = overrides.serverConfig || {
     name: configManager.get('SERVER_NAME', 'generic-mcp-server'),
@@ -854,6 +899,7 @@ export async function getAllDependencies(
     oauthProvider,
     transportManager,
     httpServerConfig,
+    docsEndpointHandler,
     ...consumerDeps,
   };
 

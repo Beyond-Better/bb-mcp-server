@@ -18,6 +18,8 @@ import type { OAuthProvider } from '../auth/OAuthProvider.ts';
 import type { TransportManager } from '../transport/TransportManager.ts';
 import type { BeyondMcpServer } from '../server/BeyondMcpServer.ts';
 import type { HttpServerConfig } from '../server/ServerTypes.ts';
+import type { DocsEndpointHandler } from '../server/DocsEndpointHandler.ts';
+import type { DocsEndpointConfig } from './DocsTypes.ts';
 import type { WorkflowBase } from '../workflows/WorkflowBase.ts';
 import type { ToolRegistration } from '../types/BeyondMcpTypes.ts';
 import type { TransportConfig } from '../transport/TransportTypes.ts';
@@ -65,6 +67,9 @@ export interface AppServerDependencies {
   // HTTP Server configuration (optional)
   httpServerConfig?: HttpServerConfig;
 
+  // Documentation endpoint handler (optional)
+  docsEndpointHandler?: DocsEndpointHandler;
+
   // Consumer-specific dependencies (pre-built instances
   thirdpartyApiClient?: any;
   oauthConsumer?: any;
@@ -111,6 +116,8 @@ export interface AppServerOverrides extends Partial<AppServerDependencies> {
   // Common override patterns
   config?: ConfigManager;
   serverConfig?: AppServerConfig;
+  // Documentation endpoint configuration (alternative to providing docsEndpointHandler)
+  docsEndpointConfig?: DocsEndpointConfig;
 }
 
 /**
