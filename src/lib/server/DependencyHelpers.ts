@@ -380,20 +380,23 @@ export function getTransportPersistenceStore(
  * Consuming apps can provide their own DocsEndpointHandler or use this default
  */
 export function getDocsEndpointHandler(
-  configManager: ConfigManager,
+  docsEndpointConfig: DocsEndpointConfig,
   logger: Logger,
-  docsConfig?: DocsEndpointConfig,
 ): DocsEndpointHandler | undefined {
-  // Use provided config or load from ConfigManager
-  const config = docsConfig || configManager.get<DocsEndpointConfig>('docsEndpoint');
+  // logger.info('DependencyHelper: Documentation endpoint', {
+  //   enabled: docsEndpointConfig.enabled,
+  //   path: docsEndpointConfig.path,
+  //   availableDocs: docsEndpointConfig.contentModule?.list(),
+  //   totalDocs: docsEndpointConfig.contentModule?.stats().total,
+  // });
 
-  if (!config || !config.enabled) {
+  if (!docsEndpointConfig || !docsEndpointConfig.enabled) {
     logger.debug('DependencyHelper: Documentation endpoint not enabled');
     return undefined;
   }
 
   // Validate that content source is provided
-  if (!config.contentModule && !config.content) {
+  if (!docsEndpointConfig.contentModule && !docsEndpointConfig.content) {
     logger.warn(
       'DependencyHelper: Documentation endpoint enabled but no content provided',
       {
@@ -404,14 +407,14 @@ export function getDocsEndpointHandler(
   }
 
   logger.info('DependencyHelper: Creating documentation endpoint handler', {
-    path: config.path,
-    hasContentModule: !!config.contentModule,
-    hasContent: !!config.content,
-    allowListing: config.allowListing,
-    cacheEnabled: config.enableCache,
+    path: docsEndpointConfig.path,
+    hasContentModule: !!docsEndpointConfig.contentModule,
+    hasContent: !!docsEndpointConfig.content,
+    allowListing: docsEndpointConfig.allowListing,
+    cacheEnabled: docsEndpointConfig.enableCache,
   });
 
-  return new DocsEndpointHandler(config, logger);
+  return new DocsEndpointHandler(docsEndpointConfig, logger);
 }
 
 /**
@@ -873,8 +876,10 @@ export async function getAllDependencies(
   const httpServerConfig = overrides.httpServerConfig || getHttpServerConfig(configManager);
 
   // Create docs endpoint handler if needed (can be overridden by consumer)
+  const docsEndpointConfig = overrides.docsEndpointConfig ||
+    configManager.get<DocsEndpointConfig>('docsEndpoint');
   const docsEndpointHandler = overrides.docsEndpointHandler ||
-    getDocsEndpointHandler(configManager, logger, overrides.docsEndpointConfig);
+    getDocsEndpointHandler(docsEndpointConfig, logger);
 
   // Create MCP server (either from class or default)
   const serverConfig = overrides.serverConfig || {
@@ -899,6 +904,7 @@ export async function getAllDependencies(
     oauthProvider,
     transportManager,
     httpServerConfig,
+    docsEndpointConfig,
     docsEndpointHandler,
     ...consumerDeps,
   };

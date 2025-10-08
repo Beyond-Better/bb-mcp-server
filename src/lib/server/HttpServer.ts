@@ -71,7 +71,7 @@ export interface HttpServerDependencies {
   /** Server configuration */
   httpServerConfig: HttpServerConfig;
   /** Documentation endpoint handler (optional) */
-  docsEndpointHandler?: DocsEndpointHandler;
+  docsEndpointHandler?: DocsEndpointHandler | undefined;
   // TODO: Future - Generic custom endpoints
   // /** Custom endpoint handlers */
   // customEndpoints?: Array<{
@@ -132,6 +132,7 @@ export class HttpServer {
       port: this.httpServerConfig.port,
       name: this.httpServerConfig.name,
       version: this.httpServerConfig.version,
+      usingDocsHandler: !!this.docsHandler,
     });
   }
 

@@ -14,6 +14,7 @@ export interface ServerConfig {
   transport: 'stdio' | 'http';
   httpPort?: number;
   httpHost?: string;
+  publicUrl?: string;
   devMode: boolean;
 }
 

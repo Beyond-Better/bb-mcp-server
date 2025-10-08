@@ -255,6 +255,7 @@ export class AppServer {
         oauthConsumer: this.dependencies.oauthConsumer,
         workflowRegistry: this.dependencies.workflowRegistry,
         httpServerConfig: this.dependencies.httpServerConfig,
+        docsEndpointHandler: this.dependencies.docsEndpointHandler,
       });
 
       // Start HTTP server (handles MCP via /mcp endpoint)
