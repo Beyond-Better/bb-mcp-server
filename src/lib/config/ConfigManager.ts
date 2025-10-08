@@ -86,7 +86,7 @@ export class ConfigManager {
       if (oauthProvider) {
         this.config.oauthProvider = oauthProvider;
       }
-      this._logger?.info('Configuration oauthProvider:', oauthProvider);
+      this._logger?.info('ConfigManager: oauthProvider:', oauthProvider);
 
       const oauthConsumer = this.loadOAuthConsumerConfig();
       if (oauthConsumer) {
@@ -99,6 +99,7 @@ export class ConfigManager {
       }
 
       const docsEndpoint = this.loadDocsEndpointConfig();
+      this._logger?.info('ConfigManager: docsEndpoint:', docsEndpoint);
       if (docsEndpoint) {
         this.config.docsEndpoint = docsEndpoint;
       }
@@ -238,12 +239,16 @@ export class ConfigManager {
    * Load server configuration from environment
    */
   private loadServerConfig(): ServerConfig {
+    const httpHost = this.getEnvOptional('HTTP_HOST', 'localhost');
+    const httpPort = parseInt(this.getEnvOptional('HTTP_PORT', '3000'));
+
     return {
       name: this.getEnvOptional('SERVER_NAME', 'mcp-server'),
       version: this.getEnvOptional('SERVER_VERSION', '1.0.0'),
       transport: this.getEnvOptional('MCP_TRANSPORT', 'stdio') as 'stdio' | 'http',
-      httpPort: parseInt(this.getEnvOptional('HTTP_PORT', '3000')),
-      httpHost: this.getEnvOptional('HTTP_HOST', 'localhost'),
+      httpHost,
+      httpPort,
+      publicUrl: this.getEnvOptional('SERVER_PUBLIC_URL', `http://${httpHost}:${httpPort}`),
       devMode: this.getEnvBoolean('DEV_MODE', false),
     };
   }

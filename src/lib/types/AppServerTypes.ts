@@ -68,6 +68,7 @@ export interface AppServerDependencies {
   httpServerConfig?: HttpServerConfig;
 
   // Documentation endpoint handler (optional)
+  docsEndpointConfig?: DocsEndpointConfig;
   docsEndpointHandler?: DocsEndpointHandler;
 
   // Consumer-specific dependencies (pre-built instances
