@@ -13,6 +13,7 @@ import type {
   AuditConfig,
   ConfigLoaderOptions,
   ConfigValidationResult,
+  DocsEndpointConfig,
   //EnvironmentMapping,
   LoggingConfig,
   McpServerInstructionsConfig,
@@ -95,6 +96,11 @@ export class ConfigManager {
       const thirdpartyApiClient = this.loadThirdpartyApiConfig();
       if (thirdpartyApiClient) {
         this.config.thirdpartyApiClient = thirdpartyApiClient;
+      }
+
+      const docsEndpoint = this.loadDocsEndpointConfig();
+      if (docsEndpoint) {
+        this.config.docsEndpoint = docsEndpoint;
       }
 
       // Validate configuration
@@ -554,6 +560,27 @@ export class ConfigManager {
       timeout,
       retryAttempts,
       retryDelayMs,
+    };
+  }
+
+  /**
+   * Load documentation endpoint configuration from environment (optional)
+   */
+  private loadDocsEndpointConfig(): DocsEndpointConfig | null {
+    const enabled = this.getEnvBoolean('DOCS_ENDPOINT_ENABLED', false);
+
+    // Early return if disabled
+    if (!enabled) {
+      return null;
+    }
+
+    return {
+      enabled: true,
+      path: this.getEnvOptional('DOCS_ENDPOINT_PATH', '/docs'),
+      allowListing: this.getEnvBoolean('DOCS_ENDPOINT_ALLOW_LISTING', true),
+      enableCache: this.getEnvBoolean('DOCS_ENDPOINT_ENABLE_CACHE', true),
+      // Note: contentModule and content are provided programmatically via dependencies
+      // They cannot be loaded from environment variables
     };
   }
 

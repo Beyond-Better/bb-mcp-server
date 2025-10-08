@@ -137,6 +137,13 @@ export interface McpServerInstructionsConfig {
 }
 
 /**
+ * Documentation Endpoint configuration
+ * @see ../types/DocsTypes.ts for full type definition
+ */
+import type { DocsEndpointConfig } from '../types/DocsTypes.ts';
+export type { DocsEndpointConfig };
+
+/**
  * Security configuration
  */
 export interface SecurityConfig {
@@ -181,6 +188,7 @@ export interface AppConfig {
   workflows?: WorkflowConfig;
   security?: SecurityConfig;
   thirdPartyIntegrations?: ThirdPartyIntegrationConfig[];
+  docsEndpoint?: DocsEndpointConfig;
   // Allow for custom configuration extensions
   [key: string]: unknown;
 }
