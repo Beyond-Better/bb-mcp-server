@@ -640,7 +640,8 @@ export class DocsEndpointHandler {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
         'Cache-Control': 'public, max-age=3600',
-        'Content-Security-Policy': "default-src 'self'; style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; script-src 'self'; img-src 'self' data:; font-src 'self' data:;",
+        'Content-Security-Policy':
+          "default-src 'self'; style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; script-src 'self'; img-src 'self' data:; font-src 'self' data:;",
       },
     });
   }
@@ -672,7 +673,8 @@ export class DocsEndpointHandler {
       status,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
-        'Content-Security-Policy': "default-src 'self'; style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; script-src 'self'; img-src 'self' data:; font-src 'self' data:;",
+        'Content-Security-Policy':
+          "default-src 'self'; style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; script-src 'self'; img-src 'self' data:; font-src 'self' data:;",
       },
     });
   }

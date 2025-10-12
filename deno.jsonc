@@ -1,6 +1,6 @@
 {
   "name": "@beyondbetter/bb-mcp-server",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "Comprehensive library for building Deno-based MCP servers",
   "license": "MIT",
   "copyright": "2025 - Beyond Better <charlie@beyondbetter.app>",
@@ -20,6 +20,7 @@
     "test:coverage": "deno test --allow-all --unstable-kv --coverage=coverage tests/",
     "test:unit": "deno test --allow-all --unstable-kv tests/unit/",
     "test:integration": "deno test --allow-all --unstable-kv tests/integration/",
+    "mcp-inspector": "npx @modelcontextprotocol/inspector",
     "check": "deno check src/mod.ts",
     "check:all": "deno check src/mod.ts tests/**/*.ts examples/*/main.ts examples/*/tests/**/*.ts",
     "update-deps": "deno cache src/mod.ts",
