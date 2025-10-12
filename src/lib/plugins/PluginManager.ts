@@ -4,7 +4,7 @@
  * Basic plugin discovery and management system for future extensibility
  */
 
-import { resolve } from '@std/path';
+import { isAbsolute, resolve } from '@std/path';
 import type { Logger } from '../utils/Logger.ts';
 import type { AppPlugin, LoadedPlugin, PluginDiscoveryOptions } from '../types/PluginTypes.ts';
 import type { AppServerDependencies } from '../types/AppServerTypes.ts';
@@ -48,14 +48,14 @@ export class PluginManager {
    */
   async loadPlugin(pluginPath: string): Promise<AppPlugin> {
     // Ensure we have an absolute path for reliable import
-    const absolutePath = pluginPath.startsWith('/') || pluginPath.startsWith('file://')
+    const absolutePath = isAbsolute(pluginPath) || pluginPath.startsWith('file://')
       ? pluginPath
       : resolve(Deno.cwd(), pluginPath);
 
     // Convert to file:// URL for Deno import
     const importUrl = absolutePath.startsWith('file://') ? absolutePath : `file://${absolutePath}`;
 
-    this.logger?.info('Loading plugin', {
+    this.logger?.info('PluginManager: Loading plugin', {
       originalPath: pluginPath,
       absolutePath,
       importUrl,
@@ -86,7 +86,7 @@ export class PluginManager {
           key.toLowerCase().includes('plugin') && typeof pluginModule[key] === 'function'
         );
         if (factoryNames.length > 0) {
-          this.logger?.debug(`Found plugin factory function: ${factoryNames[0]}`, {
+          this.logger?.debug(`PluginManager: Found plugin factory function: ${factoryNames[0]}`, {
             path: pluginPath,
             availableExports: Object.keys(pluginModule),
           });
@@ -96,11 +96,14 @@ export class PluginManager {
             const factoryFunction = pluginModule[factoryNames[0]!]; // Safe: already checked length > 0
             plugin = factoryFunction(this.dependencies);
 
-            this.logger?.debug('Successfully created plugin using factory function', {
-              path: pluginPath,
-              factoryName: factoryNames[0],
-              pluginName: plugin?.name,
-            });
+            this.logger?.debug(
+              'PluginManager: Successfully created plugin using factory function',
+              {
+                path: pluginPath,
+                factoryName: factoryNames[0],
+                pluginName: plugin?.name,
+              },
+            );
           } catch (error) {
             throw new Error(
               `Failed to create plugin using factory function ${
@@ -128,18 +131,18 @@ export class PluginManager {
       const validationErrors = this.validatePlugin(plugin);
       if (validationErrors.length > 0) {
         const errorMessage = `Plugin registration has errors:\n${validationErrors.join('\n')}`;
-        this.logger?.error('Failed to register plugin', new Error(errorMessage), {
+        this.logger?.error('PluginManager: Failed to register plugin', new Error(errorMessage), {
           plugin: plugin.name,
           errors: validationErrors,
         });
         throw new Error(errorMessage);
       }
 
-      this.logger?.info('Registering plugin', { name: plugin.name });
+      this.logger?.info('PluginManager: Registering plugin', { name: plugin.name });
 
       await this.registerPlugin(plugin);
 
-      // this.logger?.info('Loaded plugin', {
+      // this.logger?.info('PluginManager: Loaded plugin', {
       //   name: plugin.name,
       //   version: plugin.version,
       //   workflows: plugin.workflows.length,
@@ -153,7 +156,7 @@ export class PluginManager {
         error instanceof Error ? error.message : 'Unknown error'
       }`;
 
-      this.logger?.error('Plugin load failed', new Error(errorMessage), {
+      this.logger?.error('PluginManager: Plugin load failed', new Error(errorMessage), {
         path: pluginPath,
         absolutePath,
         importUrl,
@@ -168,14 +171,14 @@ export class PluginManager {
    * Unload a plugin by name
    */
   async unloadPlugin(name: string): Promise<void> {
-    this.logger?.debug('Unloading plugin', { plugin: name });
+    this.logger?.debug('PluginManager: Unloading plugin', { plugin: name });
 
     const success = await this.unregisterPlugin(name);
 
     if (success) {
-      this.logger?.info('Unloaded plugin', { plugin: name });
+      this.logger?.info('PluginManager: Unloaded plugin', { plugin: name });
     } else {
-      this.logger?.warn('Plugin not found for unloading', { plugin: name });
+      this.logger?.warn('PluginManager: Plugin not found for unloading', { plugin: name });
     }
   }
 
@@ -184,7 +187,7 @@ export class PluginManager {
     //const validationErrors = this.validatePlugin(plugin);
     //if (validationErrors.length > 0) {
     //  const errorMessage = `Plugin registration has errors:\n${validationErrors.join('\n')}`;
-    //  this.logger?.error('Failed to register plugin', new Error(errorMessage), {
+    //  this.logger?.error('PluginManager: Failed to register plugin', new Error(errorMessage), {
     //    plugin: plugin.name,
     //    errors: validationErrors,
     //  });
@@ -219,7 +222,7 @@ export class PluginManager {
         registeredItems: pluginItems,
       });
 
-      this.logger?.info('Registered plugin', {
+      this.logger?.info('PluginManager: Registered plugin', {
         plugin: plugin.name,
         version: plugin.version,
         workflows: pluginItems.workflows.length,
@@ -234,7 +237,7 @@ export class PluginManager {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
 
-      this.logger?.error('Failed to initialize plugin', error as Error, {
+      this.logger?.error('PluginManager: Failed to initialize plugin', error as Error, {
         plugin: plugin.name,
       });
 
@@ -245,7 +248,7 @@ export class PluginManager {
   async unregisterPlugin(pluginName: string): Promise<boolean> {
     const loadedPlugin = this.plugins.get(pluginName);
     if (!loadedPlugin) {
-      this.logger?.warn('Plugin not found for unloading', { plugin: pluginName });
+      this.logger?.warn('PluginManager: Plugin not found for unloading', { plugin: pluginName });
       return false;
     }
 
@@ -272,7 +275,7 @@ export class PluginManager {
       // Remove plugin
       this.plugins.delete(pluginName);
 
-      this.logger?.info('Unloaded plugin', {
+      this.logger?.info('PluginManager: Unloaded plugin', {
         plugin: pluginName,
         workflows: loadedPlugin.registeredItems?.workflows?.length || 0,
         tools: loadedPlugin.registeredItems?.tools?.length || 0,
@@ -280,7 +283,7 @@ export class PluginManager {
 
       return true;
     } catch (error) {
-      this.logger?.error('Failed to unregister plugin', error as Error, {
+      this.logger?.error('PluginManager: Failed to unregister plugin', error as Error, {
         plugin: pluginName,
       });
       return false;
@@ -331,7 +334,7 @@ export class PluginManager {
     // Log debug info for empty workflow plugins
     if (plugin.tools.length === 0 && plugin.workflows.length === 0 && hasInitializeMethod) {
       this.logger?.debug(
-        'Plugin has empty tools/workflows array but has initialize method - assuming dependency injection pattern',
+        'PluginManager: Plugin has empty tools/workflows array but has initialize method - assuming dependency injection pattern',
         {
           plugin: plugin.name,
           version: plugin.version,
@@ -346,10 +349,12 @@ export class PluginManager {
    * Discover and load plugins from configured paths
    */
   async discoverPlugins(): Promise<AppPlugin[]> {
-    // Resolve all discovery paths to absolute paths from current working directory
-    const absolutePaths = this.discoveryOptions.paths.map((path) => resolve(Deno.cwd(), path));
+    // Keep absolute paths as-is, resolve relative paths against CWD
+    const absolutePaths = this.discoveryOptions.paths.map((path) =>
+      isAbsolute(path) ? path : resolve(Deno.cwd(), path)
+    );
 
-    this.logger?.info('Discovering plugins', {
+    this.logger?.info('PluginManager: Discovering plugins', {
       paths: this.discoveryOptions.paths,
       absolutePaths,
       cwd: Deno.cwd(),
@@ -363,14 +368,14 @@ export class PluginManager {
         const plugins = await this.discoverPluginsInPath(absolutePath);
         discoveredPlugins.push(...plugins);
       } catch (error) {
-        this.logger?.warn('Failed to discover plugins in path', {
+        this.logger?.warn('PluginManager: Failed to discover plugins in path', {
           path: absolutePath,
           error: error instanceof Error ? error.message : 'Unknown error',
         });
       }
     }
 
-    this.logger?.info('Plugin discovery completed', {
+    this.logger?.info('PluginManager: Plugin discovery completed', {
       discovered: discoveredPlugins.length,
     });
 
@@ -386,12 +391,12 @@ export class PluginManager {
     try {
       // Check if path exists
       const stat = await Deno.stat(basePath);
-      // this.logger?.info('Checking path for plugins', {
+      // this.logger?.info('PluginManager: Checking path for plugins', {
       //   basePath,
       //   stat,
       // });
       if (!stat.isDirectory) {
-        // this.logger?.warn('Plugin path is not a directory', { path: basePath });
+        // this.logger?.warn('PluginManager: Plugin path is not a directory', { path: basePath });
         return plugins;
       }
 
@@ -399,7 +404,7 @@ export class PluginManager {
       for await (const entry of Deno.readDir(basePath)) {
         if (entry.isFile && this.isPluginFile(entry.name)) {
           const pluginPath = resolve(basePath, entry.name);
-          // this.logger?.info('Checking plugin', {
+          // this.logger?.info('PluginManager: Checking plugin', {
           //   basePath,
           //   entry,
           //   pluginPath,
@@ -407,19 +412,19 @@ export class PluginManager {
 
           try {
             if (this.shouldLoadPlugin(entry.name)) {
-              this.logger?.info('Should load plugin', {
+              this.logger?.info('PluginManager: Should load plugin', {
                 pluginName: entry.name,
               });
               const plugin = await this.loadPlugin(pluginPath);
               plugins.push(plugin);
             } else {
-              this.logger?.debug('Skipping blocked plugin', {
+              this.logger?.debug('PluginManager: Skipping blocked plugin', {
                 file: entry.name,
                 path: pluginPath,
               });
             }
           } catch (error) {
-            this.logger?.error('Failed to load discovered plugin', error as Error, {
+            this.logger?.error('PluginManager: Failed to load discovered plugin', error as Error, {
               file: entry.name,
               path: pluginPath,
             });
@@ -433,12 +438,12 @@ export class PluginManager {
       }
     } catch (error) {
       if (error instanceof Deno.errors.NotFound) {
-        this.logger?.debug('Plugin path not found', { path: basePath });
+        this.logger?.debug('PluginManager: Plugin path not found', { path: basePath });
       } else {
         throw error;
       }
     }
-    // this.logger?.info('Found plugins', {
+    // this.logger?.info('PluginManager: Found plugins', {
     //   plugins,
     // });
 
@@ -479,7 +484,7 @@ export class PluginManager {
   private shouldLoadPlugin(filename: string): boolean {
     const pluginName = this.extractPluginName(filename);
 
-    // this.logger?.info('Should load plugin', {
+    // this.logger?.info('PluginManager: Should load plugin', {
     //   pluginName,
     //   allowedPlugins: this.discoveryOptions.allowedPlugins,
     //   blockedPlugins: this.discoveryOptions.blockedPlugins,
@@ -540,7 +545,7 @@ export class PluginManager {
    * Reload a plugin (unload and load again)
    */
   async reloadPlugin(name: string, path?: string): Promise<AppPlugin> {
-    this.logger?.info('Reloading plugin', { plugin: name });
+    this.logger?.info('PluginManager: Reloading plugin', { plugin: name });
 
     // Find existing plugin if path not provided
     if (!path) {
@@ -565,24 +570,24 @@ export class PluginManager {
    */
   async startWatching(): Promise<void> {
     if (!this.discoveryOptions.watchForChanges) {
-      this.logger?.debug('Plugin watching disabled');
+      this.logger?.debug('PluginManager: Plugin watching disabled');
       return;
     }
 
-    this.logger?.info('Starting plugin file watching', {
+    this.logger?.info('PluginManager: Starting plugin file watching', {
       paths: this.discoveryOptions.paths,
     });
 
     // TODO: Implement file watching using Deno's file system watcher
     // This would watch for changes in plugin files and auto-reload them
-    this.logger?.warn('Plugin file watching not implemented yet');
+    this.logger?.warn('PluginManager: Plugin file watching not implemented yet');
   }
 
   /**
    * Stop file watching
    */
   async stopWatching(): Promise<void> {
-    this.logger?.info('Stopping plugin file watching');
+    this.logger?.info('PluginManager: Stopping plugin file watching');
     // TODO: Implement cleanup of file watchers
   }
 
