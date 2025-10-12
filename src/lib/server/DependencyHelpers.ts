@@ -425,8 +425,8 @@ export function getHttpServerConfig(configManager: ConfigManager): HttpServerCon
   const oauthConfig = configManager.get<OAuthProviderConfig>('oauthProvider');
   const serverConfig = configManager.get<ServerConfig>('server');
 
-  // Only create HTTP server config if HTTP transport or OAuth provider is configured
-  if (transportConfig?.type !== 'http' && !oauthConfig.clientId) {
+  // Don't create HTTP server config if STDIO (not HTTP) transport and skipHttp or no OAuth provider is configured
+  if (transportConfig?.type !== 'http' && (serverConfig.skipHttp || !oauthConfig.clientId)) {
     return undefined;
   }
 

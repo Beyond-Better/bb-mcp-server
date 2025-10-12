@@ -16,6 +16,7 @@ export interface ServerConfig {
   httpHost?: string;
   publicUrl?: string;
   devMode: boolean;
+  skipHttp: boolean;
 }
 
 /**

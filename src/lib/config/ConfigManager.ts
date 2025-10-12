@@ -56,6 +56,18 @@ export class ConfigManager {
     this._logger = logger;
   }
 
+  private sanitizeSecrets(
+    obj: Record<string, any>,
+    secretKeys: string[] = ['clientSecret', 'apiKey', 'token', 'password'],
+  ): Record<string, any> {
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, value]) => [
+        key,
+        secretKeys.includes(key) ? '[REDACTED]' : value,
+      ]),
+    );
+  }
+
   /**
    * Load configuration from environment variables
    */
@@ -86,7 +98,7 @@ export class ConfigManager {
       if (oauthProvider) {
         this.config.oauthProvider = oauthProvider;
       }
-      this._logger?.info('ConfigManager: oauthProvider:', oauthProvider);
+      this._logger?.info('ConfigManager: oauthProvider:', this.sanitizeSecrets(oauthProvider));
 
       const oauthConsumer = this.loadOAuthConsumerConfig();
       if (oauthConsumer) {
@@ -245,6 +257,7 @@ export class ConfigManager {
     return {
       name: this.getEnvOptional('SERVER_NAME', 'mcp-server'),
       version: this.getEnvOptional('SERVER_VERSION', '1.0.0'),
+      skipHttp: this.getEnvBoolean('SERVER_SKIP_HTTP', false),
       transport: this.getEnvOptional('MCP_TRANSPORT', 'stdio') as 'stdio' | 'http',
       httpHost,
       httpPort,
