@@ -168,11 +168,15 @@ export type {
   McpServerInstructionsConfig,
   OAuthConsumerConfig,
   OAuthProviderConfig,
+  PluginManagerConfig,
+  RateLimitConfig,
   ServerConfig,
+  StorageConfig,
   ThirdPartyApiConfig,
   TransportEventStoreChunkedConfig,
   TransportEventStoreConfig,
   TransportEventStoreType,
+  WorkflowConfig,
 } from './lib/config/ConfigTypes.ts';
 
 // Workflow types (avoiding conflicts with consumer.types.ts)

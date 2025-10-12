@@ -44,9 +44,9 @@ export class PluginManager {
   }
 
   /**
-   * Load a plugin from a file path
+   * Dynamically Load a plugin from a file path
    */
-  async loadPlugin(pluginPath: string): Promise<AppPlugin> {
+  async loadDynamicPlugin(pluginPath: string): Promise<AppPlugin> {
     // Ensure we have an absolute path for reliable import
     const absolutePath = isAbsolute(pluginPath) || pluginPath.startsWith('file://')
       ? pluginPath
@@ -122,33 +122,7 @@ export class PluginManager {
         );
       }
 
-      // Call optional initialize method for async setup
-      if (plugin.initialize && typeof plugin.initialize === 'function') {
-        await plugin.initialize(this.dependencies, this.toolRegistry, this.workflowRegistry);
-      }
-
-      // Validate plugin structure
-      const validationErrors = this.validatePlugin(plugin);
-      if (validationErrors.length > 0) {
-        const errorMessage = `Plugin registration has errors:\n${validationErrors.join('\n')}`;
-        this.logger?.error('PluginManager: Failed to register plugin', new Error(errorMessage), {
-          plugin: plugin.name,
-          errors: validationErrors,
-        });
-        throw new Error(errorMessage);
-      }
-
-      this.logger?.info('PluginManager: Registering plugin', { name: plugin.name });
-
-      await this.registerPlugin(plugin);
-
-      // this.logger?.info('PluginManager: Loaded plugin', {
-      //   name: plugin.name,
-      //   version: plugin.version,
-      //   workflows: plugin.workflows.length,
-      //   path: pluginPath,
-      //   absolutePath,
-      // });
+      await this.preparePlugin(plugin);
 
       return plugin;
     } catch (error) {
@@ -168,9 +142,56 @@ export class PluginManager {
   }
 
   /**
+   * Prepare a plugin
+   */
+  async preparePlugin(plugin: AppPlugin): Promise<void> {
+    this.logger?.info(`PluginManager: Preparing plugin ${plugin.name}`);
+
+    try {
+      // Call optional initialize method for async setup
+      if (plugin.initialize && typeof plugin.initialize === 'function') {
+        await plugin.initialize(this.dependencies, this.toolRegistry, this.workflowRegistry);
+      }
+
+      // Validate plugin structure
+      const validationErrors = this.validatePlugin(plugin);
+      if (validationErrors.length > 0) {
+        const errorMessage = `Plugin registration has errors:\n${validationErrors.join('\n')}`;
+        this.logger?.error('PluginManager: Failed to register plugin', new Error(errorMessage), {
+          plugin: plugin.name,
+          errors: validationErrors,
+        });
+        throw new Error(errorMessage);
+      }
+
+      this.logger?.info('PluginManager: Registering plugin', { name: plugin.name });
+      await this.registerPlugin(plugin);
+
+      // this.logger?.info('PluginManager: Prepared plugin', {
+      //   name: plugin.name,
+      //   version: plugin.version,
+      //   workflows: plugin.workflows.length,
+      //   path: pluginPath,
+      //   absolutePath,
+      // });
+    } catch (error) {
+      const errorMessage = `Failed to prepare plugin from ${plugin.name}: ${
+        error instanceof Error ? error.message : 'Unknown error'
+      }`;
+
+      this.logger?.error('PluginManager: Plugin prepare failed', new Error(errorMessage), {
+        name: plugin.name,
+        error: error instanceof Error ? error.stack : undefined,
+      });
+
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
    * Unload a plugin by name
    */
-  async unloadPlugin(name: string): Promise<void> {
+  async unloadDynamicPlugin(name: string): Promise<void> {
     this.logger?.debug('PluginManager: Unloading plugin', { plugin: name });
 
     const success = await this.unregisterPlugin(name);
@@ -183,7 +204,7 @@ export class PluginManager {
   }
 
   async registerPlugin(plugin: AppPlugin): Promise<void> {
-    // gets validated in loadPlugin
+    // gets validated in preparePlugin
     //const validationErrors = this.validatePlugin(plugin);
     //if (validationErrors.length > 0) {
     //  const errorMessage = `Plugin registration has errors:\n${validationErrors.join('\n')}`;
@@ -415,7 +436,7 @@ export class PluginManager {
               this.logger?.info('PluginManager: Should load plugin', {
                 pluginName: entry.name,
               });
-              const plugin = await this.loadPlugin(pluginPath);
+              const plugin = await this.loadDynamicPlugin(pluginPath);
               plugins.push(plugin);
             } else {
               this.logger?.debug('PluginManager: Skipping blocked plugin', {
@@ -544,7 +565,7 @@ export class PluginManager {
   /**
    * Reload a plugin (unload and load again)
    */
-  async reloadPlugin(name: string, path?: string): Promise<AppPlugin> {
+  async reloadDynamicPlugin(name: string, path?: string): Promise<AppPlugin> {
     this.logger?.info('PluginManager: Reloading plugin', { plugin: name });
 
     // Find existing plugin if path not provided
@@ -559,10 +580,10 @@ export class PluginManager {
     }
 
     // Unload existing plugin
-    await this.unloadPlugin(name);
+    await this.unloadDynamicPlugin(name);
 
     // Load plugin again
-    return await this.loadPlugin(path);
+    return await this.loadDynamicPlugin(path);
   }
 
   /**
