@@ -231,8 +231,8 @@ export async function registerPluginsInRegistries(
 
     for (const plugin of staticPlugins) {
       try {
-        await pluginManager.registerPlugin(plugin);
-        logger.info('DependencyHelper: Static plugin registered successfully', {
+        await pluginManager.preparePlugin(plugin);
+        logger.info('DependencyHelper: Static plugin prepared successfully', {
           plugin: plugin.name,
           version: plugin.version,
           workflows: plugin.workflows.length,
