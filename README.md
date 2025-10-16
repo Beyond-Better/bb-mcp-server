@@ -1,5 +1,9 @@
 # Beyond MCP Server
 
+[![Beyond Better](https://img.shields.io/badge/Beyond-Better-blue?style=flat&labelColor=6FD99C&color=0C1F3E)](https://beyondbetter.app)
+![MCP Server](https://img.shields.io/badge/MCP-Server-blue?style=flat&logo=modelcontextprotocol&logoSize=auto&logoColor=black&labelColor=beige)
+[![MCP Server](https://img.shields.io/badge/MCP-Beyond%20Better-blue?style=flat&logo=modelcontextprotocol&logoSize=auto&logoColor=black&labelColor=beige)](https://github.com/Beyond-Better/bb-mcp-server)
+
 [![JSR](https://jsr.io/badges/@beyondbetter/bb-mcp-server)](https://jsr.io/@beyondbetter/bb-mcp-server)
 [![JSR Score](https://jsr.io/badges/@beyondbetter/bb-mcp-server/score)](https://jsr.io/@beyondbetter/bb-mcp-server)
 [![JSR Scope](https://jsr.io/badges/@beyondbetter)](https://jsr.io/@beyondbetter)
