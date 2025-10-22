@@ -109,7 +109,7 @@ export interface CreateContextData {
 /**
  * Tool Definition with Zod Integration
  */
-export interface ToolDefinition<T extends Record<string, ZodSchema>> {
+export interface ToolDefinition<T extends Record<string, ZodSchema> = any> {
   title: string;
   description: string;
   inputSchema: T;
@@ -132,15 +132,16 @@ export interface ToolExample {
 /**
  * Tool Handler with Strong Typing
  */
-export type ToolHandler<T extends Record<string, ZodSchema>> = (
+export type ToolHandler<T extends Record<string, ZodSchema> = any> = (
   args: InferZodSchema<T>,
   extra?: ToolCallExtra,
 ) => Promise<CallToolResult>;
 
 /**
  * Extract types from Zod schema
+ * Utility type for getting properly typed args from inputSchema
  */
-type InferZodSchema<T extends Record<string, ZodSchema>> = {
+export type InferZodSchema<T extends Record<string, ZodSchema> = any> = {
   [K in keyof T]: T[K] extends ZodSchema<infer U> ? U : never;
 };
 
@@ -157,10 +158,10 @@ export interface ToolCallExtra {
 /**
  * Registered Tool Information
  */
-export interface RegisteredTool {
+export interface RegisteredTool<T extends Record<string, ZodSchema> = any> {
   name: string;
-  definition: ToolDefinition<any>;
-  handler: ToolHandler<any>;
+  definition: ToolDefinition<T>;
+  handler: ToolHandler<T>;
   validator: ZodObject<any>;
   registeredAt: Date;
   callCount?: number;
@@ -170,11 +171,14 @@ export interface RegisteredTool {
 
 /**
  * Tool Registration for Batch Operations
+ * 
+ * Generic type parameter T allows proper type inference from inputSchema to handler args.
+ * Defaults to 'any' for backward compatibility.
  */
-export interface ToolRegistration {
+export interface ToolRegistration<T extends Record<string, ZodSchema> = any> {
   name: string;
-  definition: ToolDefinition<any>;
-  handler: ToolHandler<any>;
+  definition: ToolDefinition<T>;
+  handler: ToolHandler<T>;
   options?: ToolRegistrationOptions;
 }
 
@@ -203,6 +207,21 @@ export interface CoreToolsDependencies {
   logger: Logger;
   sdkMcpServer: SdkMcpServer; // SdkMcpServer from mcp/server/mcp.js
   auditLogger: AuditLogger;
+}
+
+/**
+ * Tool Dependencies for Plugin Tool Modules
+ * 
+ * Standard dependencies passed to tool modules from plugin initialization.
+ * Provides type-safe access to core server components for tool implementations.
+ */
+export interface ToolDependencies {
+  logger: Logger;
+  configManager?: ConfigManager;
+  auditLogger?: AuditLogger;
+  errorHandler?: ErrorHandler;
+  kvManager?: KVManager;
+  [key: string]: any; // Allow custom dependencies for extensibility
 }
 
 /**
@@ -245,6 +264,29 @@ export interface ElicitInputRequest {
 export interface ElicitInputResult {
   action: 'accept' | 'reject';
   content?: unknown;
+}
+
+/**
+ * Logging level for notifications
+ */
+export type LoggingLevel = 'debug' | 'info' | 'notice' | 'warning' | 'error' | 'critical' | 'alert' | 'emergency';
+
+/**
+ * Send notification (logging message) request
+ */
+export interface SendNotificationRequest {
+  /**
+   * The severity of this log message.
+   */
+  level: LoggingLevel;
+  /**
+   * An optional name of the logger issuing this message.
+   */
+  logger?: string;
+  /**
+   * The data to be logged, such as a string message or an object. Any JSON serializable type is allowed here.
+   */
+  data: unknown;
 }
 
 /**

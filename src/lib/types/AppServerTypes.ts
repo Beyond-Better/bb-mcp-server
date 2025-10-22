@@ -92,6 +92,9 @@ export interface AppServerDependencies {
   // Static plugins (for compiled binaries or explicit registration)
   // If provided, these plugins are registered before discovery runs
   staticPlugins?: AppPlugin[];
+
+  // Allow custom dependencies for extensibility
+  [key: string]: any;
 }
 type AppOnlyKeys = 'sessionStore' | 'eventStore' | 'credentialStore' | 'beyondMcpServer';
 
