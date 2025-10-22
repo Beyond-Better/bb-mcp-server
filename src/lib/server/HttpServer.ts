@@ -72,12 +72,11 @@ export interface HttpServerDependencies {
   httpServerConfig: HttpServerConfig;
   /** Documentation endpoint handler (optional) */
   docsEndpointHandler?: DocsEndpointHandler | undefined;
-  // TODO: Future - Generic custom endpoints
-  // /** Custom endpoint handlers */
-  // customEndpoints?: Array<{
-  //   path: string;
-  //   handle(request: Request): Promise<Response>;
-  // }>;
+  /** Custom endpoint handlers */
+  customEndpoints?: Array<{
+    path: string;
+    handle(request: Request): Promise<Response>;
+  }>;
 }
 
 /**
@@ -101,6 +100,10 @@ export class HttpServer {
   private corsHandler: CORSHandler;
   private errorPages: ErrorPages;
   private docsHandler: DocsEndpointHandler | undefined;
+  private customEndpoints: Array<{
+    path: string;
+    handle(request: Request): Promise<Response>;
+  }>;
 
   // Integration components
   private beyondMcpServer: BeyondMcpServer;
@@ -121,6 +124,7 @@ export class HttpServer {
     this.docsHandler = dependencies.docsEndpointHandler !== undefined
       ? dependencies.docsEndpointHandler
       : undefined;
+    this.customEndpoints = dependencies.customEndpoints || [];
 
     // Integration components
     this.beyondMcpServer = dependencies.beyondMcpServer;
@@ -133,6 +137,7 @@ export class HttpServer {
       name: this.httpServerConfig.name,
       version: this.httpServerConfig.version,
       usingDocsHandler: !!this.docsHandler,
+      customEndpointsCount: this.customEndpoints.length,
     });
   }
 
@@ -222,12 +227,12 @@ export class HttpServer {
       return await this.docsHandler.handle(request);
     }
 
-    // TODO: Future - Generic custom endpoints
-    // for (const handler of this.customEndpoints || []) {
-    //   if (path.startsWith(handler.path)) {
-    //     return await handler.handle(request);
-    //   }
-    // }
+    // Custom endpoints
+    for (const handler of this.customEndpoints) {
+      if (path.startsWith(handler.path)) {
+        return await handler.handle(request);
+      }
+    }
 
     // MCP transport endpoint
     if (path === '/mcp') {
