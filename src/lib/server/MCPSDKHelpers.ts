@@ -21,7 +21,9 @@ import type {
   CreateMessageResult,
   ElicitInputRequest,
   ElicitInputResult,
+  LoggingLevel,
   RegisteredTool,
+  SendNotificationRequest,
 } from '../types/BeyondMcpTypes.ts';
 
 /**
@@ -68,6 +70,41 @@ export class BeyondMcpSDKHelpers {
       this.logger.error('MCPSDKHelpers: MCP sampling failed:', toError(error));
       throw new Error(
         `MCP sampling failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * MCP Notification API integration
+   * Sends a logging message notification to the client
+   */
+  async sendNotification(request: SendNotificationRequest, sessionId?: string): Promise<void> {
+    this.logger.debug('MCPSDKHelpers: Sending notification via MCP notification API', {
+      level: request.level,
+      logger: request.logger,
+      hasData: !!request.data,
+      sessionId,
+    });
+
+    try {
+      // Send notification using SDK's sendLoggingMessage
+      await this.sdkMcpServer.sendLoggingMessage(
+        {
+          level: request.level,
+          logger: request.logger,
+          data: request.data,
+        },
+        sessionId,
+      );
+
+      this.logger.debug('MCPSDKHelpers: Notification sent successfully', {
+        level: request.level,
+        logger: request.logger,
+      });
+    } catch (error) {
+      this.logger.error('MCPSDKHelpers: MCP notification failed:', toError(error));
+      throw new Error(
+        `MCP notification failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
   }

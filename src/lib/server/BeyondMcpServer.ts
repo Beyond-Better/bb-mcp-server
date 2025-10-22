@@ -42,6 +42,7 @@ import {
   type CreateMessageResult,
   type ElicitInputRequest,
   type ElicitInputResult,
+  type SendNotificationRequest,
   type ToolDefinition,
   type ToolHandler,
   ToolHandlerMode,
@@ -373,6 +374,13 @@ export class BeyondMcpServer {
       throw new Error('BeyondMcpServer not initialized. Call initialize() first.');
     }
     return await this.mcpSDKHelpers.elicitInput(request);
+  }
+
+  async sendNotification(request: SendNotificationRequest, sessionId?: string): Promise<void> {
+    if (!this.mcpSDKHelpers) {
+      throw new Error('BeyondMcpServer not initialized. Call initialize() first.');
+    }
+    return await this.mcpSDKHelpers.sendNotification(request, sessionId);
   }
 
   /**
