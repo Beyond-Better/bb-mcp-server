@@ -19,6 +19,7 @@ import type { OAuthProvider } from '../auth/OAuthProvider.ts';
 import type { OAuthConsumer } from '../auth/OAuthConsumer.ts';
 import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
 import type { DocsEndpointHandler } from './DocsEndpointHandler.ts';
+import type { CustomEndpoints } from './ServerTypes.ts';
 import { OAuthEndpoints } from './OAuthEndpoints.ts';
 import { BeyondMcpServer } from './BeyondMcpServer.ts';
 import { APIRouter } from './APIRouter.ts';
@@ -73,10 +74,7 @@ export interface HttpServerDependencies {
   /** Documentation endpoint handler (optional) */
   docsEndpointHandler?: DocsEndpointHandler | undefined;
   /** Custom endpoint handlers */
-  customEndpoints?: Array<{
-    path: string;
-    handle(request: Request): Promise<Response>;
-  }>;
+  customEndpoints?: CustomEndpoints | undefined;
 }
 
 /**
@@ -100,10 +98,7 @@ export class HttpServer {
   private corsHandler: CORSHandler;
   private errorPages: ErrorPages;
   private docsHandler: DocsEndpointHandler | undefined;
-  private customEndpoints: Array<{
-    path: string;
-    handle(request: Request): Promise<Response>;
-  }>;
+  private customEndpoints: CustomEndpoints | undefined;
 
   // Integration components
   private beyondMcpServer: BeyondMcpServer;
@@ -150,11 +145,11 @@ export class HttpServer {
       hostname: this.httpServerConfig.hostname,
       signal: this.abortController.signal,
       onListen: ({ port, hostname }) => {
-        this.logger.info(`HTTP server running on http://${hostname}:${port}`);
+        this.logger.info(`HttpServer: HTTP server running on http://${hostname}:${port}`);
       },
     }, (request: Request) => this.handleRequest(request));
 
-    this.server.finished.then(() => this.logger.info('HTTP server closed'));
+    this.server.finished.then(() => this.logger.info('HttpServer: HTTP server closed'));
   }
 
   /**
@@ -164,7 +159,7 @@ export class HttpServer {
     if (this.server) {
       this.abortController.abort('stopping server');
       this.server = undefined;
-      this.logger.info('HTTP server stopped');
+      this.logger.info('HttpServer: HTTP server stopped');
     }
   }
 
@@ -176,7 +171,7 @@ export class HttpServer {
     const path = url.pathname;
     const method = request.method;
 
-    this.logger.debug(`HTTP request: ${method} ${path}`);
+    this.logger.debug(`HttpServer: HTTP request: ${method} ${path}`);
 
     try {
       // Handle CORS preflight
@@ -191,7 +186,7 @@ export class HttpServer {
       return this.corsHandler.addCORSHeaders(response);
     } catch (error) {
       this.logger.error(
-        'HTTP request error:',
+        'HttpServer: HTTP request error:',
         error instanceof Error ? error : new Error(String(error)),
       );
       return this.corsHandler.addCORSHeaders(
@@ -228,9 +223,11 @@ export class HttpServer {
     }
 
     // Custom endpoints
-    for (const handler of this.customEndpoints) {
-      if (path.startsWith(handler.path)) {
-        return await handler.handle(request);
+    if (this.customEndpoints) {
+      for (const handler of this.customEndpoints) {
+        if (path.startsWith(handler.path)) {
+          return await handler.handle(request, { beyondMcpServer: this.beyondMcpServer });
+        }
       }
     }
 

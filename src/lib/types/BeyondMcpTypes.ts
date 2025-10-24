@@ -10,9 +10,12 @@
  * - Component interfaces
  */
 
-import type { CallToolResult } from 'mcp/types.js';
+import type {
+  CallToolResult,
+  //LoggingLevelSchema
+} from 'mcp/types.js';
 import type { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
-import { type ZodObject, type ZodSchema } from 'zod';
+import type { ZodObject, ZodSchema } from 'zod';
 
 // Import component types
 import type { Logger, LogLevel } from '../utils/Logger.ts';
@@ -38,11 +41,11 @@ export interface BeyondMcpServerConfig {
     description: string;
   };
   capabilities?: {
-    tools?: {};
-    logging?: {};
-    prompts?: {};
+    tools?: Record<PropertyKey, never>;
+    logging?: Record<PropertyKey, never>;
+    prompts?: Record<PropertyKey, never>;
     resources?: { subscribe?: boolean };
-    completions?: {};
+    completions?: Record<PropertyKey, never>;
   };
   mcpServerInstructions?: string;
   transport?: TransportConfig;
@@ -109,6 +112,7 @@ export interface CreateContextData {
 /**
  * Tool Definition with Zod Integration
  */
+// deno-lint-ignore no-explicit-any
 export interface ToolDefinition<T extends Record<string, ZodSchema> = any> {
   title: string;
   description: string;
@@ -132,6 +136,7 @@ export interface ToolExample {
 /**
  * Tool Handler with Strong Typing
  */
+// deno-lint-ignore no-explicit-any
 export type ToolHandler<T extends Record<string, ZodSchema> = any> = (
   args: InferZodSchema<T>,
   extra?: ToolCallExtra,
@@ -141,6 +146,7 @@ export type ToolHandler<T extends Record<string, ZodSchema> = any> = (
  * Extract types from Zod schema
  * Utility type for getting properly typed args from inputSchema
  */
+// deno-lint-ignore no-explicit-any
 export type InferZodSchema<T extends Record<string, ZodSchema> = any> = {
   [K in keyof T]: T[K] extends ZodSchema<infer U> ? U : never;
 };
@@ -158,10 +164,12 @@ export interface ToolCallExtra {
 /**
  * Registered Tool Information
  */
+// deno-lint-ignore no-explicit-any
 export interface RegisteredTool<T extends Record<string, ZodSchema> = any> {
   name: string;
   definition: ToolDefinition<T>;
   handler: ToolHandler<T>;
+  // deno-lint-ignore no-explicit-any
   validator: ZodObject<any>;
   registeredAt: Date;
   callCount?: number;
@@ -171,10 +179,11 @@ export interface RegisteredTool<T extends Record<string, ZodSchema> = any> {
 
 /**
  * Tool Registration for Batch Operations
- * 
+ *
  * Generic type parameter T allows proper type inference from inputSchema to handler args.
  * Defaults to 'any' for backward compatibility.
  */
+// deno-lint-ignore no-explicit-any
 export interface ToolRegistration<T extends Record<string, ZodSchema> = any> {
   name: string;
   definition: ToolDefinition<T>;
@@ -211,7 +220,7 @@ export interface CoreToolsDependencies {
 
 /**
  * Tool Dependencies for Plugin Tool Modules
- * 
+ *
  * Standard dependencies passed to tool modules from plugin initialization.
  * Provides type-safe access to core server components for tool implementations.
  */
@@ -221,6 +230,7 @@ export interface ToolDependencies {
   auditLogger?: AuditLogger;
   errorHandler?: ErrorHandler;
   kvManager?: KVManager;
+  // deno-lint-ignore no-explicit-any
   [key: string]: any; // Allow custom dependencies for extensibility
 }
 
@@ -269,7 +279,15 @@ export interface ElicitInputResult {
 /**
  * Logging level for notifications
  */
-export type LoggingLevel = 'debug' | 'info' | 'notice' | 'warning' | 'error' | 'critical' | 'alert' | 'emergency';
+export type LoggingLevel =
+  | 'debug'
+  | 'info'
+  | 'notice'
+  | 'warning'
+  | 'error'
+  | 'critical'
+  | 'alert'
+  | 'emergency'; // taken from LoggingLevelSchema in MCP SDK
 
 /**
  * Send notification (logging message) request
@@ -344,6 +362,7 @@ export interface ToolPlugin {
   description: string;
   tools: ToolRegistration[];
   dependencies?: string[];
+  // deno-lint-ignore no-explicit-any
   initialize?(server: any): Promise<void>; // BeyondMcpServer
   cleanup?(): Promise<void>;
 }

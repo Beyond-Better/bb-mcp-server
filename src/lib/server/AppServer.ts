@@ -111,6 +111,7 @@ export class AppServer {
       //   credentialStore: appDependencies.credentialStore,
       // });
     }
+
     const resolvedDependencies: AppServerDependencies = await getAllDependencies(
       appDependencies,
     );
@@ -247,6 +248,7 @@ export class AppServer {
 
     // Create HTTP server if we have the dependencies
     if (this.dependencies.httpServerConfig) {
+    this._logger.info('AppServer: customEndpoints...', this.dependencies.customEndpoints);
       this.httpServer = new HttpServer({
         logger: this._logger,
         beyondMcpServer: this.dependencies.beyondMcpServer,
@@ -256,6 +258,7 @@ export class AppServer {
         workflowRegistry: this.dependencies.workflowRegistry,
         httpServerConfig: this.dependencies.httpServerConfig,
         docsEndpointHandler: this.dependencies.docsEndpointHandler,
+        customEndpoints: this.dependencies.customEndpoints,
       });
 
       // Start HTTP server (handles MCP via /mcp endpoint)

@@ -11,6 +11,7 @@ import type { Logger } from '../../types/library.types.ts';
 import type { OAuthProvider } from '../auth/OAuthProvider.ts';
 import type { TransportManager } from '../transport/TransportManager.ts';
 import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
+import type { BeyondMcpServer } from './BeyondMcpServer.ts';
 
 // Re-export core server types for convenience
 export type { HttpServerConfig, HttpServerDependencies } from './HttpServer.ts';
@@ -314,6 +315,16 @@ export interface EndpointRegistry {
     info: HttpEndpointInfo;
   } | null;
 }
+
+/**
+ * Endpoint handler registry
+ */
+export interface CustomEndpoint {
+  path: string;
+  //handle(request: Request, dependencies: AppDependencies): Promise<Response>;
+  handle(request: Request, dependencies: { beyondMcpServer: BeyondMcpServer }): Promise<Response>;
+}
+export type CustomEndpoints = Array<CustomEndpoint>;
 
 /**
  * Request/response logging configuration

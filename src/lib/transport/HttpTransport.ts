@@ -402,6 +402,19 @@ export class HttpTransport implements Transport {
     let requestBody: any;
     try {
       requestBody = await request.json();
+      
+      // Log raw request body for elicitation responses
+      if (requestBody?.result !== undefined || requestBody?.error !== undefined) {
+        this.logger.debug('HttpTransport: Received MCP response', {
+          method: requestBody?.method,
+          hasResult: requestBody?.result !== undefined,
+          hasError: requestBody?.error !== undefined,
+          resultKeys: requestBody?.result ? Object.keys(requestBody.result) : [],
+          result: requestBody?.result,
+          error: requestBody?.error,
+          fullBody: JSON.stringify(requestBody),
+        });
+      }
     } catch (error) {
       return this.createErrorResponse('Bad Request', 400, 'Invalid JSON in request body');
     }
@@ -442,7 +455,7 @@ export class HttpTransport implements Transport {
               protocolVersion: requestBody.params?.protocolVersion,
               connectedAt: Date.now(),
               lastActivity: Date.now(),
-              lastMeta: requestBody._meta,
+              lastMeta: (requestBody as any)._meta, // _meta is optional per MCP spec
               requestCount: 1,
               transport: 'http',
             });
@@ -1237,8 +1250,10 @@ export class HttpTransport implements Transport {
     if (clientSession) {
       clientSession.lastActivity = Date.now();
       clientSession.requestCount++;
-      if (requestBody?._meta) {
-        clientSession.lastMeta = requestBody._meta;
+      // Capture _meta if present (optional field per MCP spec)
+      const meta = requestBody?._meta;
+      if (meta) {
+        clientSession.lastMeta = meta;
       }
     }
   }

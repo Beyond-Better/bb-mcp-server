@@ -860,6 +860,7 @@ export async function getAllDependencies(
     consumerDeps.oauthConsumer, // Pass OAuth consumer for third-party auth
     consumerDeps.thirdpartyApiClient, // Pass API client for token refresh
   );
+
   const transportManager = overrides.transportManager || getTransportManager(
     configManager,
     logger,
@@ -880,6 +881,10 @@ export async function getAllDependencies(
     configManager.get<DocsEndpointConfig>('docsEndpoint');
   const docsEndpointHandler = overrides.docsEndpointHandler ||
     getDocsEndpointHandler(docsEndpointConfig, logger);
+
+  if (overrides.customEndpoints) {
+    consumerDeps.customEndpoints = overrides.customEndpoints;
+  }
 
   // Create MCP server (either from class or default)
   const serverConfig = overrides.serverConfig || {

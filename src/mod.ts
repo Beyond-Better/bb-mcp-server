@@ -236,6 +236,8 @@ export type {
   CompleteServerConfig,
   ComponentStatus,
   CORSConfig,
+  CustomEndpoint,
+  CustomEndpoints,
   EndpointRegistry,
   HealthCheckResult,
   HttpAuthContext,
@@ -282,6 +284,7 @@ export type {
   SessionInfo,
   ToolCallExtra,
   ToolDefinition,
+  ToolDependencies,
   ToolExample,
   ToolExecutionContext,
   ToolHandler,
@@ -293,6 +296,7 @@ export type {
   ToolRegistryStats,
   ToolStats,
   ValidationResult,
+  InferZodSchema,
 } from './lib/types/BeyondMcpTypes.ts';
 
 // AppServer types
