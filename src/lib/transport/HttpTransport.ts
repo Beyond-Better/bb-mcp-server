@@ -14,6 +14,7 @@ import { toError } from '../utils/Error.ts';
 import type {
   //AuthenticationResult,
   //BeyondMcpAuthContext,
+  ClientSessionInfo,
   HttpTransportConfig,
   HttpTransportMetrics,
   //MCPRequest,
@@ -53,6 +54,9 @@ export class HttpTransport implements Transport {
   // MCP Transport Management (from MCPRequestHandler)
   private mcpTransports = new Map<string, StreamableHTTPServerTransport>();
   private activeSSEStreams = new Map<string, SSEStreamCapture>();
+  
+  // Client session tracking
+  private clientSessions = new Map<string, ClientSessionInfo>();
 
   // SSE Keepalive mechanism to prevent network timeout disconnections
   private sseKeepaliveIntervals = new Map<string, number>();
@@ -154,7 +158,6 @@ export class HttpTransport implements Transport {
     }
   }
 
-  // deno-lint-ignore require-await
   async stop(): Promise<void> {
     this.logger.info('HttpTransport: Stopping HTTP transport');
 
@@ -206,6 +209,7 @@ export class HttpTransport implements Transport {
     this.mcpTransports.clear();
     this.activeSSEStreams.clear();
     this.sseKeepaliveIntervals.clear();
+    this.clientSessions.clear(); // Clean up all client session tracking
   }
 
   /**
@@ -411,6 +415,9 @@ export class HttpTransport implements Transport {
       transport = this.mcpTransports.get(sessionId)!;
       // this.logger.info('HttpTransport: Using existing MCP session', { sessionId });
 
+      // Update client session activity and metadata
+      this.updateClientActivity(sessionId, requestBody);
+
       // Update session activity if persistence is enabled
       if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
         this.updateSessionActivity(sessionId);
@@ -427,6 +434,18 @@ export class HttpTransport implements Transport {
           onsessioninitialized: (initializedSessionId) => {
             this.mcpTransports.set(initializedSessionId, transport);
             this.logger.info(`HttpTransport: New MCP session initialized: ${initializedSessionId}`);
+
+            // Track client session info from initialize request
+            this.clientSessions.set(initializedSessionId, {
+              sessionId: initializedSessionId,
+              clientInfo: requestBody.params?.clientInfo,
+              protocolVersion: requestBody.params?.protocolVersion,
+              connectedAt: Date.now(),
+              lastActivity: Date.now(),
+              lastMeta: requestBody._meta,
+              requestCount: 1,
+              transport: 'http',
+            });
 
             // Persist the new session if enabled
             if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
@@ -448,6 +467,7 @@ export class HttpTransport implements Transport {
           const sessionIdToCleanup = transport.sessionId;
           if (sessionIdToCleanup) {
             this.mcpTransports.delete(sessionIdToCleanup);
+            this.clientSessions.delete(sessionIdToCleanup); // Clean up client session tracking
 
             // Mark session as inactive in persistence if enabled
             if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
@@ -581,6 +601,9 @@ export class HttpTransport implements Transport {
     }
 
     const transport = this.mcpTransports.get(sessionId)!;
+
+    // Update client session activity
+    this.updateClientActivity(sessionId);
 
     // Update session activity
     if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
@@ -722,6 +745,7 @@ export class HttpTransport implements Transport {
       // Clean up session from memory and persistence
       this.mcpTransports.delete(sessionId);
       this.activeSSEStreams.delete(sessionId);
+      this.clientSessions.delete(sessionId); // Clean up client session tracking
 
       if (this.config.enableTransportPersistence && this.dependencies.sessionStore) {
         this.markSessionInactive(sessionId);
@@ -752,6 +776,7 @@ export class HttpTransport implements Transport {
         }
         this.mcpTransports.delete(sessionId!);
         this.activeSSEStreams.delete(sessionId!);
+        this.clientSessions.delete(sessionId!); // Clean up client session tracking
       } catch (cleanupError) {
         this.logger.error('HttpTransport: Error during DELETE cleanup', toError(cleanupError));
       }
@@ -1185,6 +1210,37 @@ export class HttpTransport implements Transport {
 
   getActiveSessions(): string[] {
     return Array.from(this.mcpTransports.keys());
+  }
+
+  // Public client session tracking methods
+  
+  /**
+   * Get client session info for a specific session
+   */
+  getClientSession(sessionId: string): ClientSessionInfo | undefined {
+    return this.clientSessions.get(sessionId);
+  }
+
+  /**
+   * Get all client session info
+   */
+  getAllClientSessions(): ClientSessionInfo[] {
+    return Array.from(this.clientSessions.values());
+  }
+
+  /**
+   * Update client session activity and metadata
+   * Called on each request to track activity and capture _meta
+   */
+  private updateClientActivity(sessionId: string, requestBody?: any): void {
+    const clientSession = this.clientSessions.get(sessionId);
+    if (clientSession) {
+      clientSession.lastActivity = Date.now();
+      clientSession.requestCount++;
+      if (requestBody?._meta) {
+        clientSession.lastMeta = requestBody._meta;
+      }
+    }
   }
 }
 
