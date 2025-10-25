@@ -54,7 +54,7 @@ export class HttpTransport implements Transport {
   // MCP Transport Management (from MCPRequestHandler)
   private mcpTransports = new Map<string, StreamableHTTPServerTransport>();
   private activeSSEStreams = new Map<string, SSEStreamCapture>();
-  
+
   // Client session tracking
   private clientSessions = new Map<string, ClientSessionInfo>();
 
@@ -402,7 +402,7 @@ export class HttpTransport implements Transport {
     let requestBody: any;
     try {
       requestBody = await request.json();
-      
+
       // Log raw request body for elicitation responses
       if (requestBody?.result !== undefined || requestBody?.error !== undefined) {
         this.logger.debug('HttpTransport: Received MCP response', {
@@ -1226,7 +1226,7 @@ export class HttpTransport implements Transport {
   }
 
   // Public client session tracking methods
-  
+
   /**
    * Get client session info for a specific session
    */

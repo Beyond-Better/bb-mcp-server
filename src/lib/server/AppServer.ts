@@ -248,7 +248,7 @@ export class AppServer {
 
     // Create HTTP server if we have the dependencies
     if (this.dependencies.httpServerConfig) {
-    this._logger.info('AppServer: customEndpoints...', this.dependencies.customEndpoints);
+      this._logger.info('AppServer: customEndpoints...', this.dependencies.customEndpoints);
       this.httpServer = new HttpServer({
         logger: this._logger,
         beyondMcpServer: this.dependencies.beyondMcpServer,

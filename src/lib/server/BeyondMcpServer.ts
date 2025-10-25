@@ -369,7 +369,10 @@ export class BeyondMcpServer {
   /**
    * MCP SDK integration methods
    */
-  async createMessage(request: CreateMessageRequest, sessionId?: string): Promise<CreateMessageResult> {
+  async createMessage(
+    request: CreateMessageRequest,
+    sessionId?: string,
+  ): Promise<CreateMessageResult> {
     if (!this.mcpSDKHelpers) {
       throw new Error('BeyondMcpServer not initialized. Call initialize() first.');
     }

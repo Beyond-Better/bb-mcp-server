@@ -275,6 +275,7 @@ export type {
   CreateMessageResult,
   ElicitInputRequest,
   ElicitInputResult,
+  InferZodSchema,
   MCPConfigValidationResult,
   MCPRateLimitInfo,
   RegisteredTool,
@@ -296,7 +297,6 @@ export type {
   ToolRegistryStats,
   ToolStats,
   ValidationResult,
-  InferZodSchema,
 } from './lib/types/BeyondMcpTypes.ts';
 
 // AppServer types
