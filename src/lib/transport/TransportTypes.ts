@@ -133,6 +133,24 @@ export interface SessionValidationResult {
   reason?: 'session_not_found' | 'session_expired' | 'invalid_transport';
 }
 
+/**
+ * Client session information tracked by transports
+ * Unified interface for both HTTP (multiple clients) and STDIO (single client)
+ */
+export interface ClientSessionInfo {
+  sessionId: string; // HTTP: actual session ID, STDIO: "stdio-session"
+  clientInfo?: {
+    name: string;
+    version: string;
+  };
+  protocolVersion?: string;
+  connectedAt: number;
+  lastActivity: number;
+  lastMeta?: Record<string, unknown>; // Most recent _meta from client request
+  requestCount: number;
+  transport: TransportType; // 'http' or 'stdio'
+}
+
 // Context types
 export interface RequestContextData {
   requestId: string | undefined;

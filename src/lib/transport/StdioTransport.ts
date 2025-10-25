@@ -8,6 +8,7 @@
 import type { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
 import { StdioServerTransport } from 'mcp/server/stdio.js';
 import type {
+  ClientSessionInfo,
   StdioTransportConfig,
   StdioTransportMetrics,
   Transport,
@@ -39,6 +40,9 @@ export class StdioTransport implements Transport {
   private bytesReceived = 0;
   private bytesSent = 0;
   private connected = false;
+
+  // Client session tracking (single client for STDIO)
+  private clientSession: ClientSessionInfo | null = null;
 
   constructor(config: StdioTransportConfig, dependencies: TransportDependencies) {
     this.config = {
@@ -88,6 +92,15 @@ export class StdioTransport implements Transport {
       await sdkMcpServer.connect(this.stdioServerTransport);
       this.connected = true;
 
+      // Initialize client session tracking for STDIO (single client)
+      this.clientSession = {
+        sessionId: 'stdio-session',
+        connectedAt: Date.now(),
+        lastActivity: Date.now(),
+        requestCount: 0,
+        transport: 'stdio',
+      };
+
       this.logger.info('StdioTransport: STDIO transport connected successfully');
 
       // Log transport event
@@ -130,6 +143,7 @@ export class StdioTransport implements Transport {
       await this.sdkMcpServer.close();
       this.connected = false;
       delete this.sdkMcpServer;
+      this.clientSession = null; // Clear client session tracking
 
       this.logger.info('StdioTransport: STDIO transport disconnected successfully');
 
@@ -328,5 +342,22 @@ export class StdioTransport implements Transport {
       valid: issues.length === 0,
       issues,
     };
+  }
+
+  /**
+   * Get client session info (STDIO has single client)
+   */
+  getClientSession(): ClientSessionInfo | null {
+    return this.clientSession;
+  }
+
+  /**
+   * Update client activity (called when processing messages)
+   */
+  updateClientActivity(): void {
+    if (this.clientSession) {
+      this.clientSession.lastActivity = Date.now();
+      this.clientSession.requestCount++;
+    }
   }
 }

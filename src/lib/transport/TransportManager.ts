@@ -10,6 +10,7 @@ import { HttpTransport } from './HttpTransport.ts';
 import { StdioTransport } from './StdioTransport.ts';
 import type {
   //BeyondMcpAuthContext,
+  ClientSessionInfo,
   //MCPRequest,
   //MCPResponse,
   SessionData,
@@ -395,6 +396,33 @@ export class TransportManager {
     }
 
     return [];
+  }
+
+  /**
+   * Get client session information (unified API for both transports)
+   * Returns array of client session info for all connected clients
+   */
+  getClientSessions(): ClientSessionInfo[] {
+    if (this.config.type === 'http' && this.httpTransport) {
+      return this.httpTransport.getAllClientSessions();
+    } else if (this.config.type === 'stdio' && this.stdioTransport) {
+      const client = this.stdioTransport.getClientSession();
+      return client ? [client] : [];
+    }
+    return [];
+  }
+
+  /**
+   * Get client session information for a specific session
+   */
+  getClientSession(sessionId: string): ClientSessionInfo | undefined {
+    if (this.config.type === 'http' && this.httpTransport) {
+      return this.httpTransport.getClientSession(sessionId);
+    } else if (this.config.type === 'stdio' && this.stdioTransport) {
+      const client = this.stdioTransport.getClientSession();
+      return client?.sessionId === sessionId ? client : undefined;
+    }
+    return undefined;
   }
 
   /**

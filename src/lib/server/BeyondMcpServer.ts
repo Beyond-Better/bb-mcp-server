@@ -42,6 +42,7 @@ import {
   type CreateMessageResult,
   type ElicitInputRequest,
   type ElicitInputResult,
+  type SendNotificationRequest,
   type ToolDefinition,
   type ToolHandler,
   ToolHandlerMode,
@@ -234,6 +235,13 @@ export class BeyondMcpServer {
   }
 
   /**
+   * Get the transport manager instance
+   */
+  getTransportManager(): TransportManager {
+    return this.transportManager;
+  }
+
+  /**
    * Execute an operation within the context of an authenticated user
    */
   async executeWithAuthContext<T>(
@@ -361,18 +369,28 @@ export class BeyondMcpServer {
   /**
    * MCP SDK integration methods
    */
-  async createMessage(request: CreateMessageRequest): Promise<CreateMessageResult> {
+  async createMessage(
+    request: CreateMessageRequest,
+    sessionId?: string,
+  ): Promise<CreateMessageResult> {
     if (!this.mcpSDKHelpers) {
       throw new Error('BeyondMcpServer not initialized. Call initialize() first.');
     }
-    return await this.mcpSDKHelpers.createMessage(request);
+    return await this.mcpSDKHelpers.createMessage(request, sessionId);
   }
 
-  async elicitInput(request: ElicitInputRequest): Promise<ElicitInputResult> {
+  async elicitInput(request: ElicitInputRequest, sessionId?: string): Promise<ElicitInputResult> {
     if (!this.mcpSDKHelpers) {
       throw new Error('BeyondMcpServer not initialized. Call initialize() first.');
     }
-    return await this.mcpSDKHelpers.elicitInput(request);
+    return await this.mcpSDKHelpers.elicitInput(request, sessionId);
+  }
+
+  async sendNotification(request: SendNotificationRequest, sessionId?: string): Promise<void> {
+    if (!this.mcpSDKHelpers) {
+      throw new Error('BeyondMcpServer not initialized. Call initialize() first.');
+    }
+    return await this.mcpSDKHelpers.sendNotification(request, sessionId);
   }
 
   /**

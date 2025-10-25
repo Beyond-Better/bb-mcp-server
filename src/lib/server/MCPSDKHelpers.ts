@@ -8,11 +8,11 @@
  * - Tool schema generation helpers
  */
 
-import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
+import type { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
 import type { CallToolResult } from 'mcp/types.js';
 
 // Import library components
-import { Logger } from '../utils/Logger.ts';
+import type { Logger } from '../utils/Logger.ts';
 import { toError } from '../utils/Error.ts';
 
 // Import types
@@ -21,7 +21,9 @@ import type {
   CreateMessageResult,
   ElicitInputRequest,
   ElicitInputResult,
+  //LoggingLevel,
   RegisteredTool,
+  SendNotificationRequest,
 } from '../types/BeyondMcpTypes.ts';
 
 /**
@@ -39,12 +41,16 @@ export class BeyondMcpSDKHelpers {
   /**
    * MCP Sampling API integration
    */
-  async createMessage(request: CreateMessageRequest): Promise<CreateMessageResult> {
+  async createMessage(
+    request: CreateMessageRequest,
+    sessionId?: string,
+  ): Promise<CreateMessageResult> {
     this.logger.debug('MCPSDKHelpers: Creating message via MCP sampling API', {
       model: request.model,
       messageCount: request.messages.length,
       maxTokens: request.maxTokens,
       temperature: request.temperature,
+      sessionId,
     });
 
     try {
@@ -52,6 +58,7 @@ export class BeyondMcpSDKHelpers {
       const mcpRequest = {
         ...request,
         maxTokens: request.maxTokens || 2000, // Ensure maxTokens is present
+        // deno-lint-ignore no-explicit-any
       } as any;
 
       const result = await this.sdkMcpServer.server.createMessage(mcpRequest);
@@ -60,6 +67,7 @@ export class BeyondMcpSDKHelpers {
         model: request.model,
         hasContent: !!result?.content,
         contentLength: result?.content ? JSON.stringify(result.content).length : 0,
+        sessionId,
       });
 
       // Cast result to expected type with unknown intermediate
@@ -73,26 +81,64 @@ export class BeyondMcpSDKHelpers {
   }
 
   /**
+   * MCP Notification API integration
+   * Sends a logging message notification to the client
+   */
+  async sendNotification(request: SendNotificationRequest, sessionId?: string): Promise<void> {
+    this.logger.debug('MCPSDKHelpers: Sending notification via MCP notification API', {
+      level: request.level,
+      logger: request.logger,
+      hasData: !!request.data,
+      sessionId,
+    });
+
+    try {
+      // Send notification using SDK's sendLoggingMessage
+      await this.sdkMcpServer.sendLoggingMessage(
+        {
+          level: request.level,
+          logger: request.logger,
+          data: request.data,
+        },
+        sessionId,
+      );
+
+      this.logger.debug('MCPSDKHelpers: Notification sent successfully', {
+        level: request.level,
+        logger: request.logger,
+      });
+    } catch (error) {
+      this.logger.error('MCPSDKHelpers: MCP notification failed:', toError(error));
+      throw new Error(
+        `MCP notification failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
    * MCP Elicitation API integration
    */
-  async elicitInput(request: ElicitInputRequest): Promise<ElicitInputResult> {
+  async elicitInput(request: ElicitInputRequest, sessionId?: string): Promise<ElicitInputResult> {
     this.logger.debug('MCPSDKHelpers: Eliciting input via MCP elicitation API', {
       messageLength: request.message.length,
       hasSchema: !!request.requestedSchema,
+      sessionId,
     });
 
     try {
       // Cast to MCP SDK expected type
       const mcpRequest = {
         ...request,
+        // deno-lint-ignore no-explicit-any
         requestedSchema: request.requestedSchema as any,
       };
-
+      // deno-lint-ignore no-explicit-any
       const result = await this.sdkMcpServer.server.elicitInput(mcpRequest as any);
 
       this.logger.debug('MCPSDKHelpers: Input elicited successfully', {
         action: result.action,
         hasContent: !!result.content,
+        sessionId,
       });
 
       // Cast result to expected type - handle action mapping
