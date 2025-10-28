@@ -23,6 +23,7 @@ import type {
   ElicitInputResult,
   //LoggingLevel,
   RegisteredTool,
+  SendNotificationProgressRequest,
   SendNotificationRequest,
 } from '../types/BeyondMcpTypes.ts';
 
@@ -111,6 +112,51 @@ export class BeyondMcpSDKHelpers {
       this.logger.error('MCPSDKHelpers: MCP notification failed:', toError(error));
       throw new Error(
         `MCP notification failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * Send progress notification to client (prevents timeout with resetTimeoutOnProgress)
+   * Call this periodically during long-running operations
+   */
+  async sendNotificationProgress(
+    request: SendNotificationProgressRequest,
+    sessionId?: string,
+  ): Promise<void> {
+    this.logger.info('MCPSDKHelpers: Sending progress via MCP request API', {
+      progress: request.progress,
+      progressToken: request.progressToken,
+      message: request.message,
+      details: request.details,
+      sessionId,
+    });
+
+    // progressToken is REQUIRED by MCP spec for client to associate progress with request
+    if (!request.progressToken) {
+      this.logger.warn('MCPSDKHelpers: progressToken missing - notification may not be associated with request');
+    }
+
+    try {
+      await this.sdkMcpServer.server.notification({
+        method: 'notifications/progress',
+        params: {
+          progressToken: request.progressToken!,  // Required by MCP spec
+          progress: request.progress,
+          total: 100,
+          ...(request.message && { message: request.message }),
+          ...(request.details && request.details),
+        },
+      } as any);
+
+      this.logger.debug('Progress notification sent', {
+        progress: request.progress,
+        message: request.message,
+      });
+    } catch (error) {
+      this.logger.error('MCPSDKHelpers: MCP progress failed:', toError(error));
+      throw new Error(
+        `MCP progress failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
   }

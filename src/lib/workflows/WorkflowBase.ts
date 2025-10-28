@@ -22,6 +22,15 @@ import type {
   WorkflowValidationError,
   WorkflowValidationResult,
 } from '../types/WorkflowTypes.ts';
+import {
+  type CreateMessageRequest,
+  type CreateMessageResult,
+  type ElicitInputRequest,
+  type ElicitInputResult,
+  type SendNotificationRequest,
+  type SendNotificationProgressRequest,
+} from '../types/BeyondMcpTypes.ts';
+import { BeyondMcpServer } from '../server/BeyondMcpServer.ts';
 
 import type { PluginCategory, RateLimitConfig } from '../types/PluginTypes.ts';
 
@@ -177,6 +186,206 @@ export abstract class WorkflowBase {
   }
 
   /**
+   * Track resource usage
+   */
+  protected trackResource(
+    type: WorkflowResource['type'],
+    name: string,
+    startTime: number,
+    status: WorkflowResource['status'],
+    metadata?: Record<string, unknown>,
+  ): void {
+    this.resources.push({
+      type,
+      name,
+      duration_ms: performance.now() - startTime,
+      status,
+      metadata,
+    });
+  }
+
+  /**
+   * Safe execution wrapper with resource tracking
+   */
+  protected async safeExecute<T>(
+    operationName: string,
+    operation: () => Promise<T>,
+    resourceType: WorkflowResource['type'] = 'api_call',
+  ): Promise<{ success: boolean; data?: T; error?: FailedStep }> {
+    const startTime = performance.now();
+
+    try {
+      const data = await operation();
+
+      // Track successful resource usage
+      this.trackResource(resourceType, operationName, startTime, 'success');
+
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      // Track failed resource usage
+      this.trackResource(resourceType, operationName, startTime, 'failure', {
+        error: errorMessage,
+      });
+
+      const failedStep: FailedStep = {
+        operation: operationName,
+        error_type: this.classifyError(error),
+        message: errorMessage,
+        details: (error instanceof Error ? error.stack : undefined) || 'No details available',
+        timestamp: new Date().toISOString(),
+      };
+
+      return {
+        success: false,
+        error: failedStep,
+      };
+    }
+  }
+
+  protected async createMessage(
+    request: CreateMessageRequest,
+    sessionId?: string,
+  ): Promise<CreateMessageResult> {
+    const beyondMcpServer = BeyondMcpServer.getInstance();
+    if (!beyondMcpServer) {
+      this.logError('Cannot request sampling - no beyondMcpServer');
+      return {};
+    }
+
+    try {
+      const result = await beyondMcpServer.createMessage(
+        request,
+        sessionId,
+      );
+
+      this.logDebug('Sampling request sent', {
+        request,
+        sessionId,
+      });
+      return result;
+    } catch (error) {
+      this.logWarn('Failed to send Sampling request', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return {};
+    }
+  }
+
+  /**
+   * Send elicitation input request to client
+   *
+   * @param request - { message: string; requestedSchema: unknown }
+   * @param message - Optional message describing current progress
+   * @param sessionId - Optional sessionId
+   */
+
+  protected async elicitInput(
+    request: ElicitInputRequest,
+    sessionId?: string,
+  ): Promise<ElicitInputResult> {
+    const beyondMcpServer = BeyondMcpServer.getInstance();
+    if (!beyondMcpServer) {
+      this.logError('Cannot elicit input - no beyondMcpServer');
+      return {action: 'reject'};
+    }
+
+    try {
+      const result = await beyondMcpServer.elicitInput(
+        request,
+        sessionId,
+      );
+
+      this.logDebug('Elicitation request sent', {
+        request,
+        sessionId,
+      });
+      return result;
+    } catch (error) {
+      this.logWarn('Failed to send elicitation input request', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return {action: 'reject'};
+    }
+  }
+
+  protected async sendNotification(
+    request: SendNotificationRequest,
+    sessionId?: string,
+  ): Promise<void> {
+    const beyondMcpServer = BeyondMcpServer.getInstance();
+    if (!beyondMcpServer) {
+      this.logError('Cannot send notification - no beyondMcpServer');
+      return;
+    }
+
+    try {
+      await beyondMcpServer.sendNotification(
+        request,
+        sessionId,
+      );
+
+      this.logDebug('Notification sent', {
+        request,
+        sessionId,
+      });
+    } catch (error) {
+      this.logWarn('Failed to send notification', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * Send progress notification to client (prevents timeout with resetTimeoutOnProgress)
+   * Call this periodically during long-running operations
+   *
+   * @param progress - Progress value (0-100)
+   * @param message - Optional message describing current progress
+   * @param details - Optional additional details
+   * @param sessionId - Optional sessionId
+   */
+  protected async sendNotificationProgress(
+    request: SendNotificationProgressRequest,
+    sessionId?: string,
+  ): Promise<void> {
+    const beyondMcpServer = BeyondMcpServer.getInstance();
+    if (!beyondMcpServer) {
+      this.logError('Cannot send progress - no beyondMcpServer');
+      return;
+    }
+
+    // Automatically extract progressToken from context if not provided
+    if (!request.progressToken && this.context?.requestMetadata) {
+      const progressToken = (this.context.requestMetadata as any)?.progressToken;
+      if (progressToken) {
+        request = { ...request, progressToken };
+        this.logDebug('Auto-extracted progressToken from context', { progressToken });
+      }
+    }
+
+    try {
+      await beyondMcpServer.sendNotificationProgress(
+        request,
+        sessionId,
+      );
+
+      this.logDebug('Progress notification sent', {
+        request,
+        sessionId,
+      });
+    } catch (error) {
+      this.logWarn('Failed to send progress notification', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
    * Lifecycle hooks (optional overrides)
    */
   protected onBeforeExecute?(params: any, context: WorkflowContext): Promise<void>;
@@ -273,69 +482,6 @@ export abstract class WorkflowBase {
       timestamp: new Date().toISOString(),
     };
   }
-
-  /**
-   * Track resource usage
-   */
-  protected trackResource(
-    type: WorkflowResource['type'],
-    name: string,
-    startTime: number,
-    status: WorkflowResource['status'],
-    metadata?: Record<string, unknown>,
-  ): void {
-    this.resources.push({
-      type,
-      name,
-      duration_ms: performance.now() - startTime,
-      status,
-      metadata,
-    });
-  }
-
-  /**
-   * Safe execution wrapper with resource tracking
-   */
-  protected async safeExecute<T>(
-    operationName: string,
-    operation: () => Promise<T>,
-    resourceType: WorkflowResource['type'] = 'api_call',
-  ): Promise<{ success: boolean; data?: T; error?: FailedStep }> {
-    const startTime = performance.now();
-
-    try {
-      const data = await operation();
-
-      // Track successful resource usage
-      this.trackResource(resourceType, operationName, startTime, 'success');
-
-      return {
-        success: true,
-        data,
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-      // Track failed resource usage
-      this.trackResource(resourceType, operationName, startTime, 'failure', {
-        error: errorMessage,
-      });
-
-      const failedStep: FailedStep = {
-        operation: operationName,
-        error_type: this.classifyError(error),
-        message: errorMessage,
-        details: (error instanceof Error ? error.stack : undefined) || 'No details available',
-        timestamp: new Date().toISOString(),
-      };
-
-      return {
-        success: false,
-        error: failedStep,
-      };
-    }
-  }
-
   /**
    * Classify errors for better error handling
    */

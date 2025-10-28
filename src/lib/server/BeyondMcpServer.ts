@@ -13,23 +13,21 @@ import { McpServer as SdkMcpServer } from 'mcp/server/mcp.js';
 import { StdioServerTransport } from 'mcp/server/stdio.js';
 import type { CallToolResult } from 'mcp/types.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { //z,
-  type ZodSchema,
-} from 'zod';
+import type { ZodSchema } from 'zod';
 
 // Import library components from previous phases
-import { Logger } from '../utils/Logger.ts';
-import { AuditLogger } from '../utils/AuditLogger.ts';
-import { ConfigManager } from '../config/ConfigManager.ts';
+import type { Logger } from '../utils/Logger.ts';
+import type { AuditLogger } from '../utils/AuditLogger.ts';
+import type { ConfigManager } from '../config/ConfigManager.ts';
 import { ErrorHandler } from '../utils/ErrorHandler.ts';
 import { toError } from '../utils/Error.ts';
-import { ToolRegistry } from '../tools/ToolRegistry.ts';
+import type { ToolRegistry } from '../tools/ToolRegistry.ts';
 import { CoreTools } from '../tools/CoreTools.ts';
 import { WorkflowTools } from '../tools/WorkflowTools.ts';
-import { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
-import { TransportManager } from '../transport/TransportManager.ts';
-import { KVManager } from '../storage/KVManager.ts';
-import { OAuthProvider } from '../auth/OAuthProvider.ts';
+import type { WorkflowRegistry } from '../workflows/WorkflowRegistry.ts';
+import type { TransportManager } from '../transport/TransportManager.ts';
+import type { KVManager } from '../storage/KVManager.ts';
+import type { OAuthProvider } from '../auth/OAuthProvider.ts';
 import { RequestContextManager } from './RequestContextManager.ts';
 import { BeyondMcpSDKHelpers } from './MCPSDKHelpers.ts';
 
@@ -43,6 +41,7 @@ import {
   type ElicitInputRequest,
   type ElicitInputResult,
   type SendNotificationRequest,
+  type SendNotificationProgressRequest,
   type ToolDefinition,
   type ToolHandler,
   ToolHandlerMode,
@@ -56,6 +55,7 @@ import {
  * Provides base functionality that any MCP server can extend
  */
 export class BeyondMcpServer {
+  private static instance: BeyondMcpServer;
   protected initialized = false;
 
   protected logger: Logger;
@@ -79,6 +79,9 @@ export class BeyondMcpServer {
 
   // AsyncLocalStorage for request context
   private static contextStorage = new AsyncLocalStorage<BeyondMcpRequestContext>();
+  
+  // AsyncLocalStorage for workflow context (for concurrent workflow execution)
+  private static workflowContextStorage = new AsyncLocalStorage<any>();
 
   constructor(
     config: BeyondMcpServerConfig & { toolRegistration?: ToolRegistrationConfig },
@@ -120,11 +123,11 @@ export class BeyondMcpServer {
       // Create MCP server with official SDK
       const serverOptions: {
         capabilities?: {
-          tools?: {};
-          logging?: {};
-          prompts?: {};
+          tools?: Record<PropertyKey, never>;
+          logging?: Record<PropertyKey, never>;
+          prompts?: Record<PropertyKey, never>;
           resources?: { subscribe?: boolean };
-          completions?: {};
+          completions?: Record<PropertyKey, never>;
         };
         instructions?: string;
       } = {
@@ -180,6 +183,8 @@ export class BeyondMcpServer {
     });
 
     this.requestContextManager = new RequestContextManager(this.logger);
+
+    BeyondMcpServer.instance = this;
   }
 
   /**
@@ -225,6 +230,13 @@ export class BeyondMcpServer {
       this.logger.error('BeyondMcpServer: Failed to initialize Beyond MCP server:', toError(error));
       throw ErrorHandler.wrapError(error, 'BEYOND_MCP_SERVER_INIT_FAILED');
     }
+  }
+
+  /**
+   * Get singleton instance of BeyondMcpServer
+   */
+  static getInstance(): BeyondMcpServer {
+    return BeyondMcpServer.instance;
   }
 
   /**
@@ -391,6 +403,16 @@ export class BeyondMcpServer {
       throw new Error('BeyondMcpServer not initialized. Call initialize() first.');
     }
     return await this.mcpSDKHelpers.sendNotification(request, sessionId);
+  }
+
+  async sendNotificationProgress(
+    request: SendNotificationProgressRequest,
+    sessionId?: string,
+  ): Promise<void> {
+    if (!this.mcpSDKHelpers) {
+      throw new Error('BeyondMcpServer not initialized. Call initialize() first.');
+    }
+    return await this.mcpSDKHelpers.sendNotificationProgress(request, sessionId);
   }
 
   /**

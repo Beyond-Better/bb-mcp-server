@@ -277,8 +277,9 @@ ${toolData.overviews}
         workflowName: workflow_name,
         startTime: new Date(),
         auditLogger: this.auditLogger,
+        beyondMcpServer: BeyondMcpServer.getInstance(),
         logger: this.logger,
-        _meta: (extra?._meta || {}) as Record<string, unknown>,
+        requestMetadata: (extra?._meta || {}) as Record<string, unknown>,  // Map _meta to requestMetadata for WorkflowContext
         // Authentication context from AsyncLocalStorage
         authenticatedUserId: authContext?.authenticatedUserId,
         clientId: authContext?.clientId,
