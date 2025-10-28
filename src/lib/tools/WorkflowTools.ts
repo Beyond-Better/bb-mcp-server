@@ -239,7 +239,7 @@ ${toolData.overviews}
     extra?: Record<string, unknown>,
   ): Promise<CallToolResult> {
     try {
-      // this.logger.info('WorkflowTools: Executing workflow', {args, extra});
+      this.logger.info('WorkflowTools: Executing workflow', {args, extra});
       const { workflow_name, parameters } = args;
 
       //this.logger.info('WorkflowTools: Executing workflow', { workflowNames: this.workflowRegistry.getWorkflowNames()});
@@ -267,6 +267,7 @@ ${toolData.overviews}
         workflowName: workflow_name,
         hasParameters: !!parameters,
         parameterKeys: Object.keys(parameters || {}),
+        meta: extra?._meta,
         authContext,
       });
 
@@ -290,8 +291,11 @@ ${toolData.overviews}
         thirdPartyClient: undefined,
       };
 
-      // Execute workflow with full authentication context
-      const result = await workflow.executeWithValidation(parameters, workflowContext);
+      // Execute workflow within AsyncLocalStorage context for concurrent execution safety
+      const result = await BeyondMcpServer.executeWithWorkflowContext(
+        workflowContext,
+        () => workflow.executeWithValidation(parameters, workflowContext),
+      );
 
       return {
         content: [

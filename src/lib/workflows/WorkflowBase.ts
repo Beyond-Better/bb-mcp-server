@@ -7,8 +7,10 @@
  */
 
 import { z, type ZodSchema } from 'zod';
-//import type { Logger } from '../utils/Logger.ts';
+import type { ConfigManager } from '../config/ConfigManager.ts';
+import type { Logger } from '../utils/Logger.ts';
 //import type { AuditLogger } from '../utils/AuditLogger.ts';
+import type { KVManager } from '../storage/KVManager.ts';
 //import type { ErrorHandler } from '../utils/ErrorHandler.ts';
 import type {
   //BaseWorkflowParameters,
@@ -27,12 +29,19 @@ import {
   type CreateMessageResult,
   type ElicitInputRequest,
   type ElicitInputResult,
-  type SendNotificationRequest,
   type SendNotificationProgressRequest,
+  type SendNotificationRequest,
 } from '../types/BeyondMcpTypes.ts';
 import { BeyondMcpServer } from '../server/BeyondMcpServer.ts';
+import { getConfigManager, getKvManager, getLogger } from '../server/DependencyHelpers.ts';
 
 import type { PluginCategory, RateLimitConfig } from '../types/PluginTypes.ts';
+
+export interface WorkflowDependencies {
+  logger: Logger;
+  configManager: ConfigManager;
+  kvManager: KVManager;
+}
 
 /**
  * Abstract base class for all workflows
@@ -40,7 +49,6 @@ import type { PluginCategory, RateLimitConfig } from '../types/PluginTypes.ts';
  * Enhanced with Zod validation, better error handling, and integration
  */
 export abstract class WorkflowBase {
-  protected context?: WorkflowContext;
   protected startTime?: number;
   protected resources: WorkflowResource[] = [];
 
@@ -59,6 +67,43 @@ export abstract class WorkflowBase {
   // Zod schema for parameter validation
   abstract readonly parameterSchema: ZodSchema<any>;
 
+  protected logger!: Logger;
+  protected configManager!: ConfigManager;
+  protected kvManager!: KVManager;
+  public readonly initialized: Promise<void>;
+
+  constructor(dependencies?: WorkflowDependencies) {
+    if (dependencies?.configManager && dependencies?.kvManager) {
+      this.configManager = dependencies.configManager;
+      this.logger = dependencies?.logger ?? getLogger(this.configManager);
+      this.kvManager = dependencies.kvManager;
+      this.logger.info('WorkflowBase: Initialized');
+      this.initialized = Promise.resolve();
+    } else {
+      this.initialized = (async () => {
+        try {
+          this.configManager = dependencies?.configManager ?? await getConfigManager();
+          this.logger = dependencies?.logger ?? getLogger(this.configManager);
+          this.kvManager = dependencies?.kvManager ??
+            await getKvManager(this.configManager, this.logger);
+          this.logger.info('WorkflowBase: Initialized');
+        } catch (error) {
+          // Handle initialization errors appropriately
+          console.error('Failed to initialize workflow dependencies:', error);
+          throw error;
+        }
+      })();
+    }
+
+    //this.configManager = dependencies?.configManager ?? await getConfigManager();
+    //this.logger = dependencies?.logger ?? getLogger(this.configManager);
+    //this.kvManager = dependencies?.kvManager ?? getKvManager(this.configManager, this.logger);
+    //this.logger.info('WorkflowBase: Initialized');
+  }
+  private async ensureInitialized() {
+    await this.initialized;
+  }
+
   /**
    * Get workflow registration information
    */
@@ -68,6 +113,11 @@ export abstract class WorkflowBase {
    * Get workflow overview for tool descriptions
    */
   abstract getOverview(): string;
+
+  // used by tests to set spyLogger
+  public setLogger(logger: Logger) {
+    this.logger = logger;
+  }
 
   /**
    * Execute the workflow implementation
@@ -81,9 +131,9 @@ export abstract class WorkflowBase {
    * Enhanced main execution with validation, logging, and error handling
    */
   async executeWithValidation(params: unknown, context: WorkflowContext): Promise<WorkflowResult> {
-    this.context = context;
     this.startTime = performance.now();
     this.resources = [];
+    await this.ensureInitialized();
 
     try {
       // Log workflow start
@@ -93,7 +143,7 @@ export abstract class WorkflowBase {
         userId: context.userId,
         requestId: context.requestId,
         dryRun: (params as any)?.dryRun,
-      });
+      }, context);
 
       // Validate parameters
       const validation = await this.validateParameters(params);
@@ -105,14 +155,20 @@ export abstract class WorkflowBase {
       if (validation.warnings && validation.warnings.length > 0) {
         this.logWarn('Parameter validation warnings', {
           warnings: validation.warnings,
-        });
+        }, context);
       }
 
       // Before execution hook
       await this.onBeforeExecute?.(validation.data!, context);
 
+      // Execute workflow within AsyncLocalStorage context for concurrent execution safety
+      const result = await BeyondMcpServer.executeWithWorkflowContext(
+        context,
+        () => this.executeWorkflow(validation.data!, context),
+      );
+
       // Execute workflow
-      const result = await this.executeWorkflow(validation.data!, context);
+      //const result = await this.executeWorkflow(validation.data!, context);
 
       // After execution hook
       await this.onAfterExecute?.(result, context);
@@ -127,7 +183,7 @@ export abstract class WorkflowBase {
         completed_steps: result.completed_steps.length,
         failed_steps: result.failed_steps.length,
         resources_used: this.resources.length,
-      });
+      }, context);
 
       // Add performance data to result
       return {
@@ -213,6 +269,7 @@ export abstract class WorkflowBase {
     resourceType: WorkflowResource['type'] = 'api_call',
   ): Promise<{ success: boolean; data?: T; error?: FailedStep }> {
     const startTime = performance.now();
+    await this.ensureInitialized();
 
     try {
       const data = await operation();
@@ -291,7 +348,7 @@ export abstract class WorkflowBase {
     const beyondMcpServer = BeyondMcpServer.getInstance();
     if (!beyondMcpServer) {
       this.logError('Cannot elicit input - no beyondMcpServer');
-      return {action: 'reject'};
+      throw new Error('Cannot elicit input - BeyondMcpServer not initialized');
     }
 
     try {
@@ -306,10 +363,13 @@ export abstract class WorkflowBase {
       });
       return result;
     } catch (error) {
-      this.logWarn('Failed to send elicitation input request', {
+      this.logError('Failed to send elicitation input request', {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      return {action: 'reject'};
+      // Re-throw to force consumers to handle the error explicitly
+      throw new Error(
+        `Elicitation request failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 
@@ -359,14 +419,23 @@ export abstract class WorkflowBase {
       return;
     }
 
-    // Automatically extract progressToken from context if not provided
-    if (!request.progressToken && this.context?.requestMetadata) {
-      const progressToken = (this.context.requestMetadata as any)?.progressToken;
+    // Automatically extract progressToken from AsyncLocalStorage if not provided
+    // This is concurrency-safe - each workflow execution has its own context
+    if (!request.progressToken) {
+      const progressToken = BeyondMcpServer.getCurrentProgressToken();
       if (progressToken) {
         request = { ...request, progressToken };
-        this.logDebug('Auto-extracted progressToken from context', { progressToken });
+        this.logDebug('Auto-extracted progressToken from AsyncLocalStorage', { progressToken });
+      } else {
+        this.logWarn(
+          'No progressToken found in request or AsyncLocalStorage - progress may not be tracked by client',
+        );
       }
     }
+    this.logInfo('Sending Progress notification', {
+      request,
+      sessionId,
+    });
 
     try {
       await beyondMcpServer.sendNotificationProgress(
@@ -545,39 +614,62 @@ export abstract class WorkflowBase {
 
   /**
    * Enhanced logging helpers with integration
+   * Uses AsyncLocalStorage as fallback for concurrent execution safety
    */
-  protected logInfo(message: string, data?: Record<string, unknown>): void {
-    this.context?.logger?.info(`WorkflowBase: [${this.name}] ${message}`, {
+  protected logInfo(
+    message: string,
+    data?: Record<string, unknown>,
+    contextParam?: WorkflowContext,
+  ): void {
+    // Try this.context first (synchronous path), fall back to AsyncLocalStorage
+    const context = contextParam ?? BeyondMcpServer.getCurrentWorkflowContext();
+    this.logger.info(`WorkflowBase: [${this.name}] ${message}`, {
       workflow: this.name,
-      userId: this.context.userId,
-      requestId: this.context.requestId,
+      userId: context?.userId,
+      requestId: context?.requestId,
       ...data,
     });
   }
 
-  protected logWarn(message: string, data?: Record<string, unknown>): void {
-    this.context?.logger?.warn(`WorkflowBase: [${this.name}] ${message}`, {
+  protected logWarn(
+    message: string,
+    data?: Record<string, unknown>,
+    contextParam?: WorkflowContext,
+  ): void {
+    const context = contextParam ?? BeyondMcpServer.getCurrentWorkflowContext();
+    this.logger.warn(`WorkflowBase: [${this.name}] ${message}`, {
       workflow: this.name,
-      userId: this.context.userId,
-      requestId: this.context.requestId,
+      userId: context?.userId,
+      requestId: context?.requestId,
       ...data,
     });
   }
 
-  protected logError(message: string, error?: Error, data?: Record<string, unknown>): void {
-    this.context?.logger?.error(`WorkflowBase: [${this.name}] ${message}`, error, {
+  protected logError(
+    message: string,
+    error?: Error,
+    data?: Record<string, unknown>,
+    contextParam?: WorkflowContext,
+  ): void {
+    const context = contextParam ?? BeyondMcpServer.getCurrentWorkflowContext();
+    this.logger.error(`WorkflowBase: [${this.name}] ${message}`, error, {
       workflow: this.name,
-      userId: this.context.userId,
-      requestId: this.context.requestId,
+      userId: context?.userId,
+      requestId: context?.requestId,
       ...data,
     });
   }
 
-  protected logDebug(message: string, data?: Record<string, unknown>): void {
-    this.context?.logger?.debug(`WorkflowBase: [${this.name}] ${message}`, {
+  protected logDebug(
+    message: string,
+    data?: Record<string, unknown>,
+    contextParam?: WorkflowContext,
+  ): void {
+    const context = contextParam ?? BeyondMcpServer.getCurrentWorkflowContext();
+    this.logger.debug(`WorkflowBase: [${this.name}] ${message}`, {
       workflow: this.name,
-      userId: this.context.userId,
-      requestId: this.context.requestId,
+      userId: context?.userId,
+      requestId: context?.requestId,
       ...data,
     });
   }

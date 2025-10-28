@@ -9,69 +9,83 @@
  * - Error handling at the integration level
  */
 
-import { assert, assertEquals, assertExists } from 'https://deno.land/std@0.208.0/assert/mod.ts';
-import { afterEach, beforeEach, describe, it } from 'https://deno.land/std@0.208.0/testing/bdd.ts';
-import { type Spy, spy } from 'https://deno.land/std@0.208.0/testing/mock.ts';
-import WorkflowPlugin from '../../src/plugins/WorkflowPlugin.ts';
-import { createMockLogger, createTestContext } from '../utils/test-helpers.ts';
-import type { WorkflowContext } from '@beyondbetter/bb-mcp-server';
+import {
+  assert,
+  assertEquals,
+  assertExists,
+} from "https://deno.land/std@0.208.0/assert/mod.ts";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  it,
+} from "https://deno.land/std@0.208.0/testing/bdd.ts";
+import { type Spy, spy } from "https://deno.land/std@0.208.0/testing/mock.ts";
+import WorkflowPlugin from "../../src/plugins/WorkflowPlugin.ts";
+import { createMockLogger, createTestContext } from "../utils/test-helpers.ts";
+import type { WorkflowContext } from "@beyondbetter/bb-mcp-server";
 
-describe('Workflow Integration Tests', () => {
+describe("Workflow Integration Tests", () => {
   let mockLogger: any;
   let logSpy: Spy;
   let context: WorkflowContext;
 
   beforeEach(() => {
     mockLogger = createMockLogger();
-    logSpy = spy(mockLogger, 'info');
+    logSpy = spy(mockLogger, "info");
     context = createTestContext({ logger: mockLogger });
+
+    const workflows = WorkflowPlugin.workflows!;
+    for (const workflow of workflows) {
+      workflow.setLogger(mockLogger);
+    }
   });
 
   afterEach(() => {
     logSpy.restore();
   });
 
-  describe('Plugin Discovery and Registration', () => {
-    it('should discover WorkflowPlugin correctly', () => {
+  describe("Plugin Discovery and Registration", () => {
+    it("should discover WorkflowPlugin correctly", () => {
       // Test plugin metadata
-      assertEquals(WorkflowPlugin.name, 'workflow-plugin');
-      assertEquals(WorkflowPlugin.version, '1.0.0');
+      assertEquals(WorkflowPlugin.name, "workflow-plugin");
+      assertEquals(WorkflowPlugin.version, "1.0.0");
       assertEquals(
         WorkflowPlugin.description,
-        'Comprehensive workflow demonstrations with multi-step processing and state management',
+        "Comprehensive workflow demonstrations with multi-step processing and state management",
       );
-      assertEquals(WorkflowPlugin.author, 'Beyond MCP Server Examples');
-      assertEquals(WorkflowPlugin.license, 'MIT');
+      assertEquals(WorkflowPlugin.author, "Beyond MCP Server Examples");
+      assertEquals(WorkflowPlugin.license, "MIT");
 
       // Test plugin tags
       assert(Array.isArray(WorkflowPlugin.tags));
-      assert(WorkflowPlugin.tags.includes('workflows'));
-      assert(WorkflowPlugin.tags.includes('multi-step'));
-      assert(WorkflowPlugin.tags.includes('state-management'));
+      assert(WorkflowPlugin.tags.includes("workflows"));
+      assert(WorkflowPlugin.tags.includes("multi-step"));
+      assert(WorkflowPlugin.tags.includes("state-management"));
     });
 
-    it('should register all expected workflows', () => {
+    it("should register all expected workflows", () => {
       assertExists(WorkflowPlugin.workflows);
       assert(Array.isArray(WorkflowPlugin.workflows));
       assertEquals(WorkflowPlugin.workflows.length, 3);
 
       const workflowNames = WorkflowPlugin.workflows.map((w) => w.name);
-      assert(workflowNames.includes('data_processing_pipeline'));
-      assert(workflowNames.includes('file_management_lifecycle'));
-      assert(workflowNames.includes('content_generation_pipeline'));
+      assert(workflowNames.includes("data_processing_pipeline"));
+      assert(workflowNames.includes("file_management_lifecycle"));
+      assert(workflowNames.includes("content_generation_pipeline"));
     });
 
-    it('should register utility tools alongside workflows', () => {
+    it("should register utility tools alongside workflows", () => {
       assertExists(WorkflowPlugin.tools);
       assert(Array.isArray(WorkflowPlugin.tools));
       assertEquals(WorkflowPlugin.tools.length, 2);
 
       const toolNames = WorkflowPlugin.tools.map((t) => t.name);
-      assert(toolNames.includes('current_datetime'));
-      assert(toolNames.includes('validate_json'));
+      assert(toolNames.includes("current_datetime"));
+      assert(toolNames.includes("validate_json"));
     });
 
-    it('should have workflows with proper registration info', () => {
+    it("should have workflows with proper registration info", () => {
       for (const workflow of WorkflowPlugin.workflows!) {
         const registration = workflow.getRegistration();
 
@@ -85,49 +99,59 @@ describe('Workflow Integration Tests', () => {
         assertEquals(registration.requiresAuth, false); // All demo workflows don't require auth
 
         // Test metadata consistency
-        assertEquals(registration.author, 'Beyond MCP Server Examples');
-        assertEquals(registration.license, 'MIT');
+        assertEquals(registration.author, "Beyond MCP Server Examples");
+        assertEquals(registration.license, "MIT");
         assert(Array.isArray(registration.tags));
         assert(registration.tags.length > 0);
       }
     });
   });
 
-  describe('Workflow Categories and Organization', () => {
-    it('should have workflows in appropriate categories', () => {
+  describe("Workflow Categories and Organization", () => {
+    it("should have workflows in appropriate categories", () => {
       const workflows = WorkflowPlugin.workflows!;
 
-      const dataProcessingWorkflow = workflows.find((w) => w.name === 'data_processing_pipeline');
-      const fileManagementWorkflow = workflows.find((w) => w.name === 'file_management_lifecycle');
+      const dataProcessingWorkflow = workflows.find((w) =>
+        w.name === "data_processing_pipeline"
+      );
+      const fileManagementWorkflow = workflows.find((w) =>
+        w.name === "file_management_lifecycle"
+      );
       const contentGenerationWorkflow = workflows.find((w) =>
-        w.name === 'content_generation_pipeline'
+        w.name === "content_generation_pipeline"
       );
 
-      assertEquals(dataProcessingWorkflow?.category, 'data');
-      assertEquals(fileManagementWorkflow?.category, 'utility');
-      assertEquals(contentGenerationWorkflow?.category, 'automation');
+      assertEquals(dataProcessingWorkflow?.category, "data");
+      assertEquals(fileManagementWorkflow?.category, "utility");
+      assertEquals(contentGenerationWorkflow?.category, "automation");
     });
 
-    it('should have meaningful tags for workflow discovery', () => {
+    it("should have meaningful tags for workflow discovery", () => {
       const workflows = WorkflowPlugin.workflows!;
 
       // Data processing should have data-related tags
-      const dataWorkflow = workflows.find((w) => w.name === 'data_processing_pipeline');
-      assert(dataWorkflow?.tags.includes('data'));
-      assert(dataWorkflow?.tags.includes('pipeline'));
+      const dataWorkflow = workflows.find((w) =>
+        w.name === "data_processing_pipeline"
+      );
+      assert(dataWorkflow?.tags.includes("data"));
+      assert(dataWorkflow?.tags.includes("pipeline"));
 
       // File management should have file-related tags
-      const fileWorkflow = workflows.find((w) => w.name === 'file_management_lifecycle');
-      assert(fileWorkflow?.tags.includes('files'));
-      assert(fileWorkflow?.tags.includes('lifecycle'));
+      const fileWorkflow = workflows.find((w) =>
+        w.name === "file_management_lifecycle"
+      );
+      assert(fileWorkflow?.tags.includes("files"));
+      assert(fileWorkflow?.tags.includes("lifecycle"));
 
       // Content generation should have content-related tags
-      const contentWorkflow = workflows.find((w) => w.name === 'content_generation_pipeline');
-      assert(contentWorkflow?.tags.includes('content'));
-      assert(contentWorkflow?.tags.includes('generation'));
+      const contentWorkflow = workflows.find((w) =>
+        w.name === "content_generation_pipeline"
+      );
+      assert(contentWorkflow?.tags.includes("content"));
+      assert(contentWorkflow?.tags.includes("generation"));
     });
 
-    it('should have realistic estimated durations', () => {
+    it("should have realistic estimated durations", () => {
       const workflows = WorkflowPlugin.workflows!;
 
       for (const workflow of workflows) {
@@ -137,26 +161,30 @@ describe('Workflow Integration Tests', () => {
       }
 
       // Content generation should be the longest (most complex)
-      const contentWorkflow = workflows.find((w) => w.name === 'content_generation_pipeline');
+      const contentWorkflow = workflows.find((w) =>
+        w.name === "content_generation_pipeline"
+      );
       assertEquals(contentWorkflow?.estimatedDuration, 45);
     });
   });
 
-  describe('End-to-End Workflow Execution', () => {
-    it('should execute data processing workflow end-to-end', async () => {
-      const workflow = WorkflowPlugin.workflows?.find((w) => w.name === 'data_processing_pipeline');
+  describe("End-to-End Workflow Execution", () => {
+    it("should execute data processing workflow end-to-end", async () => {
+      const workflow = WorkflowPlugin.workflows?.find((w) =>
+        w.name === "data_processing_pipeline"
+      );
       assertExists(workflow);
 
       const params = {
-        userId: 'integration-test',
+        userId: "integration-test",
         data: [
-          { product: 'Widget A', sales: 100, region: 'North' },
-          { product: 'Widget B', sales: 150, region: 'South' },
-          { product: 'Widget A', sales: 100, region: 'North' }, // Duplicate
+          { product: "Widget A", sales: 100, region: "North" },
+          { product: "Widget B", sales: 150, region: "South" },
+          { product: "Widget A", sales: 100, region: "North" }, // Duplicate
         ],
-        transformations: ['deduplicate', 'sort'],
-        outputFormat: 'json',
-        analysisType: 'statistical',
+        transformations: ["deduplicate", "sort"],
+        outputFormat: "json",
+        analysisType: "statistical",
       };
 
       const result = await workflow.executeWithValidation(params, context);
@@ -180,19 +208,19 @@ describe('Workflow Integration Tests', () => {
       assertExists(exportedData.data);
     });
 
-    it('should execute file management workflow end-to-end', async () => {
+    it("should execute file management workflow end-to-end", async () => {
       const workflow = WorkflowPlugin.workflows?.find((w) =>
-        w.name === 'file_management_lifecycle'
+        w.name === "file_management_lifecycle"
       );
       assertExists(workflow);
 
       const params = {
-        userId: 'integration-test',
-        fileName: 'integration-test.json',
+        userId: "integration-test",
+        fileName: "integration-test.json",
         content: '{"integration": "test", "valid": true}',
-        validationRules: ['not_empty', 'valid_json', 'max_size'],
+        validationRules: ["not_empty", "valid_json", "max_size"],
         processingOptions: {
-          format: 'pretty',
+          format: "pretty",
           addMetadata: true,
           sanitize: false,
         },
@@ -211,28 +239,34 @@ describe('Workflow Integration Tests', () => {
       assertExists(resultData.archive_info);
 
       // Test that JSON was prettified
-      assert(resultData.final_content.includes('\n'));
-      assert(resultData.final_content.includes('_metadata')); // Metadata was added
+      assert(resultData.final_content.includes("\n"));
+      assert(resultData.final_content.includes("_metadata")); // Metadata was added
 
       // Test archive information
-      assertEquals(resultData.archive_info.original_file.name, 'integration-test.json');
-      assertEquals(resultData.archive_info.processed_file.name, 'integration-test.json.processed');
+      assertEquals(
+        resultData.archive_info.original_file.name,
+        "integration-test.json",
+      );
+      assertEquals(
+        resultData.archive_info.processed_file.name,
+        "integration-test.json.processed",
+      );
     });
 
-    it('should execute content generation workflow end-to-end', async () => {
+    it("should execute content generation workflow end-to-end", async () => {
       const workflow = WorkflowPlugin.workflows?.find((w) =>
-        w.name === 'content_generation_pipeline'
+        w.name === "content_generation_pipeline"
       );
       assertExists(workflow);
 
       const params = {
-        userId: 'integration-test',
-        contentType: 'blog',
-        topic: 'Integration Testing Best Practices',
+        userId: "integration-test",
+        contentType: "blog",
+        topic: "Integration Testing Best Practices",
         requirements: {
           wordCount: 500,
-          tone: 'professional',
-          audience: 'software developers',
+          tone: "professional",
+          audience: "software developers",
           includeReferences: false,
         },
       };
@@ -251,18 +285,18 @@ describe('Workflow Integration Tests', () => {
 
       // Test content quality
       const finalContent = resultData.full_content;
-      assert(finalContent.includes('Integration Testing Best Practices'));
-      assert(finalContent.includes('# Understanding')); // Should have title
-      assert(finalContent.includes('##')); // Should have section headers
+      assert(finalContent.includes("Integration Testing Best Practices"));
+      assert(finalContent.includes("# Understanding")); // Should have title
+      assert(finalContent.includes("##")); // Should have section headers
 
       // Test publication info
-      assertEquals(resultData.publish_info.content_type, 'blog');
-      assertEquals(resultData.publish_info.metadata.author, 'integration-test');
+      assertEquals(resultData.publish_info.content_type, "blog");
+      assertEquals(resultData.publish_info.metadata.author, "integration-test");
     });
   });
 
-  describe('Tools and Workflows Integration', () => {
-    it('should have both tools and workflows available', () => {
+  describe("Tools and Workflows Integration", () => {
+    it("should have both tools and workflows available", () => {
       // Tools should be simple utility functions
       assert(WorkflowPlugin.tools!.length > 0);
 
@@ -273,48 +307,57 @@ describe('Workflow Integration Tests', () => {
       assert(WorkflowPlugin.workflows!.length >= WorkflowPlugin.tools!.length);
     });
 
-    it('should execute utility tools successfully', async () => {
-      const datetimeTool = WorkflowPlugin.tools?.find((t) => t.name === 'current_datetime');
+    it("should execute utility tools successfully", async () => {
+      const datetimeTool = WorkflowPlugin.tools?.find((t) =>
+        t.name === "current_datetime"
+      );
       assertExists(datetimeTool);
 
-      const result = await datetimeTool.handler({ timezone: 'UTC' });
+      const result = await datetimeTool.handler({ timezone: "UTC" });
 
       assertExists(result.content);
       assert(Array.isArray(result.content));
-      assertEquals(result.content[0]!.type, 'text');
+      assertEquals(result.content[0]!.type, "text");
 
       const data = JSON.parse((result.content[0] as any).text);
       assertExists(data.datetime);
-      assertEquals(data.timezone, 'UTC');
+      assertEquals(data.timezone, "UTC");
       assertExists(data.unix_timestamp);
     });
 
-    it('should demonstrate tool vs workflow usage patterns', async () => {
+    it("should demonstrate tool vs workflow usage patterns", async () => {
       // Tool: Quick, single operation
-      const jsonTool = WorkflowPlugin.tools?.find((t) => t.name === 'validate_json');
+      const jsonTool = WorkflowPlugin.tools?.find((t) =>
+        t.name === "validate_json"
+      );
       assertExists(jsonTool);
 
-      const toolResult = await jsonTool.handler({ json_string: '{"valid": true}' });
-      assertEquals(toolResult.content[0]!.text, '✅ JSON is valid');
+      const toolResult = await jsonTool.handler({
+        json_string: '{"valid": true}',
+      });
+      assertEquals(toolResult.content[0]!.text, "✅ JSON is valid");
 
       // Workflow: Complex, multi-step operation with the same JSON
       const fileWorkflow = WorkflowPlugin.workflows?.find((w) =>
-        w.name === 'file_management_lifecycle'
+        w.name === "file_management_lifecycle"
       );
       assertExists(fileWorkflow);
 
       const workflowParams = {
-        userId: 'comparison-test',
-        fileName: 'test.json',
+        userId: "comparison-test",
+        fileName: "test.json",
         content: '{"valid": true}',
-        validationRules: ['valid_json'],
-        processingOptions: { format: 'pretty' },
+        validationRules: ["valid_json"],
+        processingOptions: { format: "pretty" },
       };
 
-      const workflowResult = await fileWorkflow.executeWithValidation(workflowParams, context);
+      const workflowResult = await fileWorkflow.executeWithValidation(
+        workflowParams,
+        context,
+      );
 
       // Tool gives simple validation result
-      assert((toolResult.content[0] as any).text.includes('valid'));
+      assert((toolResult.content[0] as any).text.includes("valid"));
 
       // Workflow provides comprehensive file lifecycle management
       assertEquals(workflowResult.success, true);
@@ -325,41 +368,48 @@ describe('Workflow Integration Tests', () => {
     });
   });
 
-  describe('Error Handling Integration', () => {
-    it('should handle workflow parameter validation errors gracefully', async () => {
-      const workflow = WorkflowPlugin.workflows?.find((w) => w.name === 'data_processing_pipeline');
+  describe("Error Handling Integration", () => {
+    it("should handle workflow parameter validation errors gracefully", async () => {
+      const workflow = WorkflowPlugin.workflows?.find((w) =>
+        w.name === "data_processing_pipeline"
+      );
       assertExists(workflow);
 
       const invalidParams = {
-        userId: 'test-user',
+        userId: "test-user",
         // Missing required 'data' field
-        transformations: ['normalize'],
-        outputFormat: 'json',
+        transformations: ["normalize"],
+        outputFormat: "json",
       };
 
-      const result = await workflow.executeWithValidation(invalidParams, context);
+      const result = await workflow.executeWithValidation(
+        invalidParams,
+        context,
+      );
 
       assertEquals(result.success, false);
       assertExists(result.error);
-      assertEquals(result.error.type, 'validation');
-      assert(result.error.message.includes('Parameter validation failed'));
+      assertEquals(result.error.type, "validation");
+      assert(result.error.message.includes("Parameter validation failed"));
 
       // Should have failed steps with validation errors
       assert(result.failed_steps.length > 0);
-      assertEquals(result.failed_steps[0]!.operation, 'parameter_validation');
-      assertEquals(result.failed_steps[0]!.error_type, 'validation');
+      assertEquals(result.failed_steps[0]!.operation, "parameter_validation");
+      assertEquals(result.failed_steps[0]!.error_type, "validation");
     });
 
-    it('should handle workflow execution errors with proper recovery', async () => {
-      const workflow = WorkflowPlugin.workflows?.find((w) => w.name === 'data_processing_pipeline');
+    it("should handle workflow execution errors with proper recovery", async () => {
+      const workflow = WorkflowPlugin.workflows?.find((w) =>
+        w.name === "data_processing_pipeline"
+      );
       assertExists(workflow);
 
       const params = {
-        userId: 'test-user',
+        userId: "test-user",
         data: [], // Empty array should cause validation failure
-        transformations: ['normalize'],
-        outputFormat: 'json',
-        analysisType: 'summary',
+        transformations: ["normalize"],
+        outputFormat: "json",
+        analysisType: "summary",
       };
 
       const result = await workflow.executeWithValidation(params, context);
@@ -369,24 +419,24 @@ describe('Workflow Integration Tests', () => {
 
       // Should fail at data validation step
       const dataValidationFailure = result.failed_steps.find(
-        (step) => step.operation === 'validate_data',
+        (step) => step.operation === "validate_data",
       );
       assertExists(dataValidationFailure);
-      assert(dataValidationFailure.message.includes('non-empty array'));
+      assert(dataValidationFailure.message.includes("non-empty array"));
     });
 
-    it('should provide detailed error information for debugging', async () => {
+    it("should provide detailed error information for debugging", async () => {
       const workflow = WorkflowPlugin.workflows?.find((w) =>
-        w.name === 'file_management_lifecycle'
+        w.name === "file_management_lifecycle"
       );
       assertExists(workflow);
 
       const params = {
-        userId: 'test-user',
-        fileName: '', // Empty filename should cause creation failure
-        content: 'test content',
-        validationRules: ['not_empty'],
-        processingOptions: { format: 'normalize' },
+        userId: "test-user",
+        fileName: "", // Empty filename should cause creation failure
+        content: "test content",
+        validationRules: ["not_empty"],
+        processingOptions: { format: "normalize" },
       };
 
       const result = await workflow.executeWithValidation(params, context);
@@ -395,45 +445,49 @@ describe('Workflow Integration Tests', () => {
 
       // Should have detailed error in failed steps
       const creationFailure = result.failed_steps.find(
-        (step) => step.operation === 'parameter_validation',
+        (step) => step.operation === "parameter_validation",
       );
       assertExists(creationFailure);
-      assertEquals(creationFailure.error_type, 'validation');
-      assert(creationFailure.message.includes('String must contain at least 1 character(s)'));
+      assertEquals(creationFailure.error_type, "validation");
+      assert(
+        creationFailure.message.includes(
+          "String must contain at least 1 character(s)",
+        ),
+      );
       assertExists(creationFailure.timestamp);
     });
   });
 
-  describe('Performance and Monitoring Integration', () => {
-    it('should track performance metrics across all workflows', async () => {
+  describe("Performance and Monitoring Integration", () => {
+    it("should track performance metrics across all workflows", async () => {
       const workflows = WorkflowPlugin.workflows!;
 
       for (const workflow of workflows) {
         // Get basic parameters for each workflow type
         let params: any;
         switch (workflow.name) {
-          case 'data_processing_pipeline':
+          case "data_processing_pipeline":
             params = {
-              userId: 'perf-test',
-              data: [{ test: 'data' }],
-              transformations: ['normalize'],
-              outputFormat: 'json',
+              userId: "perf-test",
+              data: [{ test: "data" }],
+              transformations: ["normalize"],
+              outputFormat: "json",
             };
             break;
-          case 'file_management_lifecycle':
+          case "file_management_lifecycle":
             params = {
-              userId: 'perf-test',
-              fileName: 'perf-test.json',
+              userId: "perf-test",
+              fileName: "perf-test.json",
               content: '{"test": true}',
-              validationRules: ['valid_json'],
-              processingOptions: { format: 'pretty' },
+              validationRules: ["valid_json"],
+              processingOptions: { format: "pretty" },
             };
             break;
-          case 'content_generation_pipeline':
+          case "content_generation_pipeline":
             params = {
-              userId: 'perf-test',
-              contentType: 'blog',
-              topic: 'Performance Testing',
+              userId: "perf-test",
+              contentType: "blog",
+              topic: "Performance Testing",
               requirements: { wordCount: 300 },
             };
             break;
@@ -444,12 +498,12 @@ describe('Workflow Integration Tests', () => {
         assertEquals(result.success, true);
 
         // Check performance tracking
-        assert(typeof result.duration === 'number');
+        assert(typeof result.duration === "number");
         assert(result.duration > 0);
 
         // Each step should have timing
         result.completed_steps.forEach((step) => {
-          assert(typeof step.duration_ms === 'number');
+          assert(typeof step.duration_ms === "number");
           assert(step.duration_ms >= 0);
           assertExists(step.timestamp);
         });
@@ -460,35 +514,38 @@ describe('Workflow Integration Tests', () => {
       }
     });
 
-    it('should provide consistent logging across workflows', async () => {
-      const workflow = WorkflowPlugin.workflows?.find((w) => w.name === 'data_processing_pipeline');
+    it("should provide consistent logging across workflows", async () => {
+      const workflow = WorkflowPlugin.workflows?.find((w) =>
+        w.name === "data_processing_pipeline"
+      );
       assertExists(workflow);
 
       const params = {
-        userId: 'logging-test',
-        data: [{ test: 'logging' }],
-        transformations: ['normalize'],
-        outputFormat: 'json',
+        userId: "logging-test",
+        data: [{ test: "logging" }],
+        transformations: ["normalize"],
+        outputFormat: "json",
       };
 
       await workflow.executeWithValidation(params, context);
 
       const logCalls = logSpy.calls;
+      console.log("logCalls", logCalls);
       assert(logCalls.length > 0);
 
       // Should have consistent log format with workflow name and step info
       const workflowLogs = logCalls.filter((call) =>
-        call.args[0].includes('[data_processing_pipeline]') ||
-        call.args[0].includes('Starting data processing pipeline') ||
-        call.args[0].includes('Validating input data')
+        call.args[0].includes("[data_processing_pipeline]") ||
+        call.args[0].includes("Starting data processing pipeline") ||
+        call.args[0].includes("Validating input data")
       );
 
       assert(workflowLogs.length > 0);
     });
   });
 
-  describe('Plugin Architecture Validation', () => {
-    it('should follow correct plugin patterns', () => {
+  describe("Plugin Architecture Validation", () => {
+    it("should follow correct plugin patterns", () => {
       // Plugin should be exportable as default
       assertExists(WorkflowPlugin);
 
@@ -498,11 +555,11 @@ describe('Workflow Integration Tests', () => {
 
       // Workflows should be instantiated objects, not classes
       WorkflowPlugin.workflows.forEach((workflow) => {
-        assert(typeof workflow === 'object');
+        assert(typeof workflow === "object");
         assertExists(workflow.name);
         assertExists(workflow.version);
         assertExists(workflow.executeWithValidation);
-        assert(typeof workflow.executeWithValidation === 'function');
+        assert(typeof workflow.executeWithValidation === "function");
       });
 
       // Tools should have proper structure
@@ -510,22 +567,22 @@ describe('Workflow Integration Tests', () => {
         assertExists(tool.name);
         assertExists(tool.definition);
         assertExists(tool.handler);
-        assert(typeof tool.handler === 'function');
+        assert(typeof tool.handler === "function");
       });
     });
 
-    it('should be compatible with plugin manager expectations', () => {
+    it("should be compatible with plugin manager expectations", () => {
       // Test plugin manager interface compatibility
       const plugin = WorkflowPlugin;
 
       // Required plugin properties
-      assert(typeof plugin.name === 'string');
-      assert(typeof plugin.version === 'string');
-      assert(typeof plugin.description === 'string');
+      assert(typeof plugin.name === "string");
+      assert(typeof plugin.version === "string");
+      assert(typeof plugin.description === "string");
 
       // Optional but expected properties
-      assert(typeof plugin.author === 'string');
-      assert(typeof plugin.license === 'string');
+      assert(typeof plugin.author === "string");
+      assert(typeof plugin.license === "string");
       assert(Array.isArray(plugin.tags));
 
       // Plugin should have at least one type of registration
@@ -543,25 +600,42 @@ describe('Workflow Integration Tests', () => {
     });
   });
 
-  describe('Real-World Usage Scenarios', () => {
-    it('should handle typical data processing scenario', async () => {
-      const workflow = WorkflowPlugin.workflows?.find((w) => w.name === 'data_processing_pipeline');
+  describe("Real-World Usage Scenarios", () => {
+    it("should handle typical data processing scenario", async () => {
+      const workflow = WorkflowPlugin.workflows?.find((w) =>
+        w.name === "data_processing_pipeline"
+      );
       assertExists(workflow);
 
       // Simulate real customer data processing
       const customerData = [
-        { name: 'Alice Johnson', email: 'ALICE@EXAMPLE.COM', orders: 5, region: 'North' },
-        { name: 'Bob Smith', email: 'bob@example.com', orders: 3, region: 'South' },
-        { name: '', email: '', orders: 0, region: '' }, // Empty record
-        { name: 'Alice Johnson', email: 'ALICE@EXAMPLE.COM', orders: 5, region: 'North' }, // Duplicate
+        {
+          name: "Alice Johnson",
+          email: "ALICE@EXAMPLE.COM",
+          orders: 5,
+          region: "North",
+        },
+        {
+          name: "Bob Smith",
+          email: "bob@example.com",
+          orders: 3,
+          region: "South",
+        },
+        { name: "", email: "", orders: 0, region: "" }, // Empty record
+        {
+          name: "Alice Johnson",
+          email: "ALICE@EXAMPLE.COM",
+          orders: 5,
+          region: "North",
+        }, // Duplicate
       ];
 
       const params = {
-        userId: 'data-analyst',
+        userId: "data-analyst",
         data: customerData,
-        transformations: ['normalize', 'filter_empty', 'deduplicate', 'sort'],
-        outputFormat: 'csv',
-        analysisType: 'statistical',
+        transformations: ["normalize", "filter_empty", "deduplicate", "sort"],
+        outputFormat: "csv",
+        analysisType: "statistical",
       };
 
       const result = await workflow.executeWithValidation(params, context);
@@ -578,25 +652,25 @@ describe('Workflow Integration Tests', () => {
 
       // CSV output should be properly formatted
       const csvOutput = (result.data as any).exported_output;
-      assert(csvOutput.includes('name,email,orders,region'));
-      assert(csvOutput.includes('alice@example.com'));
+      assert(csvOutput.includes("name,email,orders,region"));
+      assert(csvOutput.includes("alice@example.com"));
     });
 
-    it('should handle typical content creation scenario', async () => {
+    it("should handle typical content creation scenario", async () => {
       const workflow = WorkflowPlugin.workflows?.find((w) =>
-        w.name === 'content_generation_pipeline'
+        w.name === "content_generation_pipeline"
       );
       assertExists(workflow);
 
       // Simulate real blog post creation
       const params = {
-        userId: 'content-manager',
-        contentType: 'blog',
-        topic: 'Remote Work Productivity Tips',
+        userId: "content-manager",
+        contentType: "blog",
+        topic: "Remote Work Productivity Tips",
         requirements: {
           wordCount: 800,
-          tone: 'friendly',
-          audience: 'remote workers',
+          tone: "friendly",
+          audience: "remote workers",
           includeReferences: true,
         },
       };
@@ -607,20 +681,22 @@ describe('Workflow Integration Tests', () => {
 
       // Content should meet requirements
       const finalContent = (result.data as any).full_content;
-      assert(finalContent.includes('Remote Work Productivity Tips'));
+      assert(finalContent.includes("Remote Work Productivity Tips"));
 
       // Should have proper structure
-      assert(finalContent.includes('# Understanding'));
-      assert(finalContent.includes('##'));
+      assert(finalContent.includes("# Understanding"));
+      assert(finalContent.includes("##"));
 
       // Review should identify content characteristics
-      const reviewStep = result.completed_steps.find((s: any) => s.operation === 'review_content');
+      const reviewStep = result.completed_steps.find((s: any) =>
+        s.operation === "review_content"
+      );
       assertExists(reviewStep);
       assertExists((reviewStep as any).data.word_count_check);
 
       // Publication should be ready
       const publishInfo = (result.data as any).publish_info;
-      assertEquals(publishInfo.metadata.audience, 'remote workers');
+      assertEquals(publishInfo.metadata.audience, "remote workers");
       assert(publishInfo.content_preview.length <= 203);
     });
   });

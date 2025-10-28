@@ -292,6 +292,31 @@ export class BeyondMcpServer {
   }
 
   /**
+   * Execute an operation within the context of a workflow (for concurrent workflow execution)
+   */
+  static async executeWithWorkflowContext<T>(
+    workflowContext: any,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    return BeyondMcpServer.workflowContextStorage.run(workflowContext, operation);
+  }
+
+  /**
+   * Get the current workflow context from AsyncLocalStorage
+   */
+  static getCurrentWorkflowContext(): any | null {
+    return BeyondMcpServer.workflowContextStorage.getStore() || null;
+  }
+
+  /**
+   * Get progressToken from current workflow context
+   */
+  static getCurrentProgressToken(): string | number | null {
+    const context = BeyondMcpServer.getCurrentWorkflowContext();
+    return context?.requestMetadata?.progressToken || null;
+  }
+
+  /**
    * Start the Beyond MCP server
    */
   async start(): Promise<void> {
