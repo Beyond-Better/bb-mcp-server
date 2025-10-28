@@ -306,6 +306,10 @@ export class ConfigManager {
         enableAuthentication: this.get('MCP_AUTH_HTTP_ENABLED', 'true') === 'true',
         skipAuthentication: (this.get('MCP_AUTH_HTTP_SKIP', 'false') as string) === 'true',
         requireAuthentication: this.get('MCP_AUTH_HTTP_REQUIRE', 'true') === 'true',
+        // MCP SDK Protocol Timeout Configuration
+        mcpRequestTimeout: parseInt(this.getEnvOptional('MCP_SDK_REQUEST_TIMEOUT', '60000')), // 60 seconds default (matches SDK default)
+        mcpResetTimeoutOnProgress: this.getEnvBoolean('MCP_SDK_RESET_TIMEOUT_ON_PROGRESS', false),
+        mcpMaxTotalTimeout: this.getEnvOptional('MCP_SDK_MAX_TOTAL_TIMEOUT', '') ? parseInt(this.getEnvOptional('MCP_SDK_MAX_TOTAL_TIMEOUT', '0')) : undefined,
       };
     } else {
       config.stdio = {
@@ -315,6 +319,10 @@ export class ConfigManager {
         // 🔒 STDIO authentication (discouraged by MCP spec)
         enableAuthentication: this.getEnvBoolean('MCP_AUTH_STDIO_ENABLED', false),
         skipAuthentication: this.getEnvBoolean('MCP_AUTH_STDIO_SKIP', false),
+        // MCP SDK Protocol Timeout Configuration
+        mcpRequestTimeout: parseInt(this.getEnvOptional('MCP_SDK_REQUEST_TIMEOUT', '60000')), // 60 seconds default (matches SDK default)
+        mcpResetTimeoutOnProgress: this.getEnvBoolean('MCP_SDK_RESET_TIMEOUT_ON_PROGRESS', false),
+        mcpMaxTotalTimeout: this.getEnvOptional('MCP_SDK_MAX_TOTAL_TIMEOUT', '') ? parseInt(this.getEnvOptional('MCP_SDK_MAX_TOTAL_TIMEOUT', '0')) : undefined,
       };
     }
 
