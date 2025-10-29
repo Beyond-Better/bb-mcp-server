@@ -30,13 +30,13 @@
  * - Multi-user authentication scenarios
  */
 
-import { assert, assertEquals, assertExists } from "@std/assert";
-import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
+import { assert, assertEquals, assertExists } from '@std/assert';
+import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
 
-import { KVManager } from "@beyondbetter/bb-mcp-server";
+import { KVManager } from '@beyondbetter/bb-mcp-server';
 // Import the plugin factory and dependencies
-import createPlugin from "../../src/plugins/ExamplePlugin.ts";
-import { ExampleTools } from "../../src/plugins/tools/ExampleTools.ts";
+import createPlugin from '../../src/plugins/ExamplePlugin.ts';
+import { ExampleTools } from '../../src/plugins/tools/ExampleTools.ts';
 
 // Import OAuth-aware test utilities
 import {
@@ -52,8 +52,8 @@ import {
   generateOAuthFailureScenarios,
   MockApiClient,
   MockOAuthConsumer,
-} from "../utils/test-helpers.ts";
-import type { AuditLogger, Logger } from "@beyondbetter/bb-mcp-server";
+} from '../utils/test-helpers.ts';
+import type { AuditLogger, Logger } from '@beyondbetter/bb-mcp-server';
 
 /**
  * ExampleTools OAuth Authentication Tests
@@ -61,7 +61,7 @@ import type { AuditLogger, Logger } from "@beyondbetter/bb-mcp-server";
  * These tests demonstrate comprehensive OAuth-aware tool testing
  * for the plugin array structure with external API integration.
  */
-describe("ExampleTools - OAuth Integration", () => {
+describe('ExampleTools - OAuth Integration', () => {
   let mockOAuth: MockOAuthConsumer;
   let mockApiClient: MockApiClient;
   let mockLogger: Logger;
@@ -100,8 +100,8 @@ describe("ExampleTools - OAuth Integration", () => {
     toolRegistrations = plugin.tools || [];
 
     // Verify plugin was created successfully
-    assertExists(plugin, "Plugin should be created");
-    assertExists(toolRegistrations, "Plugin should have tools array");
+    assertExists(plugin, 'Plugin should be created');
+    assertExists(toolRegistrations, 'Plugin should have tools array');
   });
 
   afterEach(async () => {
@@ -113,15 +113,15 @@ describe("ExampleTools - OAuth Integration", () => {
    *
    * Tests that verify OAuth-aware tools are properly defined in plugin structure.
    */
-  describe("Plugin Structure with OAuth Tools", () => {
-    it("should have OAuth-authenticated tools in plugin tools array", () => {
-      assertEquals(toolRegistrations.length, 4, "Should have 4 OAuth tools");
+  describe('Plugin Structure with OAuth Tools', () => {
+    it('should have OAuth-authenticated tools in plugin tools array', () => {
+      assertEquals(toolRegistrations.length, 4, 'Should have 4 OAuth tools');
 
       const expectedTools = [
-        "query_customers_example",
-        "create_order_example",
-        "get_order_status_example",
-        "get_api_info_example",
+        'query_customers_example',
+        'create_order_example',
+        'get_order_status_example',
+        'get_api_info_example',
       ];
 
       expectedTools.forEach((toolName) => {
@@ -136,37 +136,37 @@ describe("ExampleTools - OAuth Integration", () => {
         );
         assertExists(tool.handler, `Tool '${toolName}' should have handler`);
         assert(
-          typeof tool.handler === "function",
+          typeof tool.handler === 'function',
           `Tool '${toolName}' handler should be a function`,
         );
       });
     });
 
-    it("should have OAuth-specific metadata in tool definitions", () => {
+    it('should have OAuth-specific metadata in tool definitions', () => {
       toolRegistrations.forEach((tool: any) => {
         assertEquals(
           tool.definition.category,
-          "ExampleCorp",
-          "Should have ExampleCorp category",
+          'ExampleCorp',
+          'Should have ExampleCorp category',
         );
-        assert(tool.definition.tags.includes("api"), "Should have api tag");
-        assertExists(tool.definition.inputSchema, "Should have input schema");
+        assert(tool.definition.tags.includes('api'), 'Should have api tag');
+        assertExists(tool.definition.inputSchema, 'Should have input schema');
       });
     });
 
-    it("should have ExampleTools class metadata", () => {
-      assertEquals(exampleTools.name, "examplecorp-tools");
-      assertEquals(exampleTools.version, "1.0.0");
-      assertEquals(exampleTools.category, "business");
+    it('should have ExampleTools class metadata', () => {
+      assertEquals(exampleTools.name, 'examplecorp-tools');
+      assertEquals(exampleTools.version, '1.0.0');
+      assertEquals(exampleTools.category, 'business');
       assert(
-        exampleTools.tags.includes("examplecorp"),
-        "Should have examplecorp tag",
+        exampleTools.tags.includes('examplecorp'),
+        'Should have examplecorp tag',
       );
-      assert(exampleTools.tags.includes("api"), "Should have api tag");
+      assert(exampleTools.tags.includes('api'), 'Should have api tag');
       assertEquals(
         exampleTools.requiresAuth,
         true,
-        "Should require authentication",
+        'Should require authentication',
       );
     });
   });
@@ -176,16 +176,14 @@ describe("ExampleTools - OAuth Integration", () => {
    *
    * Tests that verify OAuth token management and authentication flows.
    */
-  describe("OAuth Authentication", () => {
-    it("should successfully authenticate with valid OAuth token", async () => {
-      const queryTool = toolRegistrations.find((t: any) =>
-        t.name === "query_customers_example"
-      );
+  describe('OAuth Authentication', () => {
+    it('should successfully authenticate with valid OAuth token', async () => {
+      const queryTool = toolRegistrations.find((t: any) => t.name === 'query_customers_example');
       assertExists(queryTool);
 
       const result = await queryTool.handler({
-        userId: "test-user",
-        search: "Acme",
+        userId: 'test-user',
+        search: 'Acme',
         limit: 10,
       });
 
@@ -193,67 +191,61 @@ describe("ExampleTools - OAuth Integration", () => {
       assertEquals(
         result.isError,
         undefined,
-        "Should not have error with valid auth",
+        'Should not have error with valid auth',
       );
       assertExists(result.content);
 
       // Verify OAuth token was used
-      assertAuthenticatedCall(result, mockOAuth, "test-user");
+      assertAuthenticatedCall(result, mockOAuth, 'test-user');
 
       // Verify API was called
-      assertApiClientCall(mockApiClient, "queryCustomers", 1);
+      assertApiClientCall(mockApiClient, 'queryCustomers', 1);
     });
 
-    it("should handle OAuth token missing error", async () => {
-      const queryTool = toolRegistrations.find((t: any) =>
-        t.name === "query_customers_example"
-      );
+    it('should handle OAuth token missing error', async () => {
+      const queryTool = toolRegistrations.find((t: any) => t.name === 'query_customers_example');
       assertExists(queryTool);
 
       const result = await queryTool.handler({
-        userId: "user-without-token", // User with no token
-        search: "test",
+        userId: 'user-without-token', // User with no token
+        search: 'test',
       });
 
       // Should return authentication error
-      assertAuthenticationError(result, "No OAuth token found");
+      assertAuthenticationError(result, 'No OAuth token found');
     });
 
-    it("should handle OAuth authentication failure", async () => {
+    it('should handle OAuth authentication failure', async () => {
       // Set up OAuth failure for specific user
-      mockOAuth.setAuthFailure("user-auth-failure", true);
+      mockOAuth.setAuthFailure('user-auth-failure', true);
 
-      const queryTool = toolRegistrations.find((t: any) =>
-        t.name === "query_customers_example"
-      );
+      const queryTool = toolRegistrations.find((t: any) => t.name === 'query_customers_example');
       assertExists(queryTool);
 
       const result = await queryTool.handler({
-        userId: "user-auth-failure",
-        search: "test",
+        userId: 'user-auth-failure',
+        search: 'test',
       });
 
       // Should return authentication error
-      assertAuthenticationError(result, "OAuth authentication failed");
+      assertAuthenticationError(result, 'OAuth authentication failed');
     });
 
-    it("should handle API client authentication errors", async () => {
+    it('should handle API client authentication errors', async () => {
       // Set up API failure
-      mockApiClient.setApiFailure("queryCustomers", true);
+      mockApiClient.setApiFailure('queryCustomers', true);
 
-      const queryTool = toolRegistrations.find((t: any) =>
-        t.name === "query_customers_example"
-      );
+      const queryTool = toolRegistrations.find((t: any) => t.name === 'query_customers_example');
       assertExists(queryTool);
 
       const result = await queryTool.handler({
-        userId: "test-user",
-        search: "test",
+        userId: 'test-user',
+        search: 'test',
       });
 
       // Should return API error
       assertEquals(result.isError, true);
-      assert(result.content[0].text.includes("API call failed"));
+      assert(result.content[0].text.includes('API call failed'));
     });
   });
 
@@ -262,20 +254,18 @@ describe("ExampleTools - OAuth Integration", () => {
    *
    * Tests for each individual OAuth-authenticated tool.
    */
-  describe("Query Customers Tool", () => {
+  describe('Query Customers Tool', () => {
     let queryTool: any;
 
     beforeEach(() => {
-      queryTool = toolRegistrations.find((t: any) =>
-        t.name === "query_customers_example"
-      );
-      assertExists(queryTool, "Query customers tool should exist");
+      queryTool = toolRegistrations.find((t: any) => t.name === 'query_customers_example');
+      assertExists(queryTool, 'Query customers tool should exist');
     });
 
-    it("should query customers with search parameter", async () => {
+    it('should query customers with search parameter', async () => {
       const result = await queryTool.handler({
-        userId: "test-user",
-        search: "Acme",
+        userId: 'test-user',
+        search: 'Acme',
         limit: 5,
       });
 
@@ -285,17 +275,17 @@ describe("ExampleTools - OAuth Integration", () => {
       assertExists(responseData.query);
       assertExists(responseData.results);
       assertExists(responseData.results.items);
-      assertEquals(responseData.query.search, "Acme");
+      assertEquals(responseData.query.search, 'Acme');
       assertEquals(responseData.query.limit, 5);
     });
 
-    it("should query customers with filters", async () => {
+    it('should query customers with filters', async () => {
       const result = await queryTool.handler({
-        userId: "test-user",
+        userId: 'test-user',
         filters: {
-          status: "active",
-          region: "US-West",
-          customerType: "business",
+          status: 'active',
+          region: 'US-West',
+          customerType: 'business',
         },
         limit: 10,
       });
@@ -303,17 +293,17 @@ describe("ExampleTools - OAuth Integration", () => {
       assertEquals(result.isError, undefined);
 
       const responseData = JSON.parse(result.content[0].text);
-      assertEquals(responseData.query.filters.status, "active");
+      assertEquals(responseData.query.filters.status, 'active');
 
       // Verify API client received correct filters
       const apiCalls = mockApiClient.getCallLog();
       const lastCall = apiCalls[apiCalls.length - 1];
-      assertEquals(lastCall!.params.filters.status, "active");
+      assertEquals(lastCall!.params.filters.status, 'active');
     });
 
-    it("should handle empty search results", async () => {
+    it('should handle empty search results', async () => {
       // Set up empty response
-      mockApiClient.setResponse("queryCustomers", {
+      mockApiClient.setResponse('queryCustomers', {
         items: [],
         totalCount: 0,
         page: 1,
@@ -321,8 +311,8 @@ describe("ExampleTools - OAuth Integration", () => {
       });
 
       const result = await queryTool.handler({
-        userId: "test-user",
-        search: "nonexistent",
+        userId: 'test-user',
+        search: 'nonexistent',
       });
 
       assertEquals(result.isError, undefined);
@@ -333,33 +323,31 @@ describe("ExampleTools - OAuth Integration", () => {
     });
   });
 
-  describe("Create Order Tool", () => {
+  describe('Create Order Tool', () => {
     let createOrderTool: any;
 
     beforeEach(() => {
-      createOrderTool = toolRegistrations.find((t: any) =>
-        t.name === "create_order_example"
-      );
-      assertExists(createOrderTool, "Create order tool should exist");
+      createOrderTool = toolRegistrations.find((t: any) => t.name === 'create_order_example');
+      assertExists(createOrderTool, 'Create order tool should exist');
     });
 
-    it("should create order with valid parameters", async () => {
+    it('should create order with valid parameters', async () => {
       const orderParams = {
-        userId: "test-user",
-        customerId: "cust_001",
+        userId: 'test-user',
+        customerId: 'cust_001',
         items: [
-          { productId: "prod_001", quantity: 2, unitPrice: 150.00 },
-          { productId: "prod_002", quantity: 1, unitPrice: 299.99 },
+          { productId: 'prod_001', quantity: 2, unitPrice: 150.00 },
+          { productId: 'prod_002', quantity: 1, unitPrice: 299.99 },
         ],
         shippingAddress: {
-          street: "123 Test Street",
-          city: "Test City",
-          state: "TS",
-          zipCode: "12345",
-          country: "US",
+          street: '123 Test Street',
+          city: 'Test City',
+          state: 'TS',
+          zipCode: '12345',
+          country: 'US',
         },
-        priority: "expedited",
-        notes: "Rush order for important client",
+        priority: 'expedited',
+        notes: 'Rush order for important client',
       };
 
       const result = await createOrderTool.handler(orderParams);
@@ -368,33 +356,31 @@ describe("ExampleTools - OAuth Integration", () => {
 
       const responseData = JSON.parse(result.content[0].text);
       assertExists(responseData.orderId);
-      assertEquals(responseData.status, "pending");
+      assertEquals(responseData.status, 'pending');
       assertExists(responseData.totalAmount);
       assertExists(responseData.trackingNumber);
 
       // Verify API client was called with correct parameters
       const apiCalls = mockApiClient.getCallLog();
-      const createOrderCall = apiCalls.find((call) =>
-        call.method === "createOrder"
-      );
+      const createOrderCall = apiCalls.find((call) => call.method === 'createOrder');
       assertExists(createOrderCall);
-      assertEquals(createOrderCall.params.customerId, "cust_001");
+      assertEquals(createOrderCall.params.customerId, 'cust_001');
       assertEquals(createOrderCall.params.items.length, 2);
     });
 
-    it("should calculate total amount correctly", async () => {
+    it('should calculate total amount correctly', async () => {
       const result = await createOrderTool.handler({
-        userId: "test-user",
-        customerId: "cust_001",
+        userId: 'test-user',
+        customerId: 'cust_001',
         items: [
-          { productId: "prod_001", quantity: 2, unitPrice: 100.00 }, // 200.00
-          { productId: "prod_002", quantity: 3, unitPrice: 50.00 }, // 150.00
+          { productId: 'prod_001', quantity: 2, unitPrice: 100.00 }, // 200.00
+          { productId: 'prod_002', quantity: 3, unitPrice: 50.00 }, // 150.00
         ],
         shippingAddress: {
-          street: "123 Test St",
-          city: "Test City",
-          state: "TS",
-          zipCode: "12345",
+          street: '123 Test St',
+          city: 'Test City',
+          state: 'TS',
+          zipCode: '12345',
         },
       });
 
@@ -404,89 +390,87 @@ describe("ExampleTools - OAuth Integration", () => {
       assertEquals(responseData.totalAmount, 350.00); // 200 + 150
     });
 
-    it("should handle order creation API failure", async () => {
-      mockApiClient.setApiFailure("createOrder", true);
+    it('should handle order creation API failure', async () => {
+      mockApiClient.setApiFailure('createOrder', true);
 
       const result = await createOrderTool.handler({
-        userId: "test-user",
-        customerId: "cust_001",
-        items: [{ productId: "prod_001", quantity: 1, unitPrice: 100.00 }],
+        userId: 'test-user',
+        customerId: 'cust_001',
+        items: [{ productId: 'prod_001', quantity: 1, unitPrice: 100.00 }],
         shippingAddress: {
-          street: "123 Test St",
-          city: "Test City",
-          state: "TS",
-          zipCode: "12345",
+          street: '123 Test St',
+          city: 'Test City',
+          state: 'TS',
+          zipCode: '12345',
         },
       });
 
       assertEquals(result.isError, true);
       assert(
-        result.content[0].text.includes("Order creation service unavailable"),
+        result.content[0].text.includes('Order creation service unavailable'),
       );
     });
   });
 
-  describe("Get Order Status Tool", () => {
+  describe('Get Order Status Tool', () => {
     let getOrderStatusTool: any;
 
     beforeEach(() => {
       getOrderStatusTool = toolRegistrations.find((t: any) =>
-        t.name === "get_order_status_example"
+        t.name === 'get_order_status_example'
       );
-      assertExists(getOrderStatusTool, "Get order status tool should exist");
+      assertExists(getOrderStatusTool, 'Get order status tool should exist');
     });
 
-    it("should get order status without history", async () => {
+    it('should get order status without history', async () => {
       const result = await getOrderStatusTool.handler({
-        userId: "test-user",
-        orderId: "order_12345",
+        userId: 'test-user',
+        orderId: 'order_12345',
         includeHistory: false,
       });
 
       assertEquals(result.isError, undefined);
 
       const responseData = JSON.parse(result.content[0].text);
-      assertEquals(responseData.orderId, "order_12345");
+      assertEquals(responseData.orderId, 'order_12345');
       assertExists(responseData.status);
       assertExists(responseData.trackingNumber);
       assertEquals(
         responseData.history,
         undefined,
-        "Should not include history when not requested",
+        'Should not include history when not requested',
       );
     });
 
-    it("should get order status with history", async () => {
+    it('should get order status with history', async () => {
       const result = await getOrderStatusTool.handler({
-        userId: "test-user",
-        orderId: "order_12345",
+        userId: 'test-user',
+        orderId: 'order_12345',
         includeHistory: true,
       });
 
       assertEquals(result.isError, undefined);
 
       const responseData = JSON.parse(result.content[0].text);
-      assertEquals(responseData.orderId, "order_12345");
+      assertEquals(responseData.orderId, 'order_12345');
       assertExists(
         responseData.history,
-        "Should include history when requested",
+        'Should include history when requested',
       );
       assert(Array.isArray(responseData.history));
       assert(responseData.history.length > 0);
     });
   });
 
-  describe("Get API Info Tool", () => {
+  describe('Get API Info Tool', () => {
     let getApiInfoTool: any;
 
     beforeEach(() => {
-      getApiInfoTool = toolRegistrations.find((t: any) =>
-        t.name === "get_api_info_example"
-      );
-      assertExists(getApiInfoTool, "Get API info tool should exist");
+      getApiInfoTool = toolRegistrations.find((t: any) => t.name === 'get_api_info_example');
+      assertExists(getApiInfoTool, 'Get API info tool should exist');
     });
 
-    it("should get API information without authentication", async () => {
+    it('should get API information without authentication', async () => {
       const result = await getApiInfoTool.handler({});
 
       assertEquals(result.isError, undefined);
@@ -494,19 +478,19 @@ describe("ExampleTools - OAuth Integration", () => {
       const responseData = JSON.parse(result.content[0].text);
       assertExists(responseData.name);
       assertExists(responseData.version);
-      assertEquals(responseData.status, "operational");
+      assertEquals(responseData.status, 'operational');
       assertExists(responseData.endpoints);
       assertExists(responseData.rateLimit);
       assertExists(responseData.connectionStatus);
     });
 
-    it("should handle API info service failure", async () => {
-      mockApiClient.setApiFailure("getApiInfo", true);
+    it('should handle API info service failure', async () => {
+      mockApiClient.setApiFailure('getApiInfo', true);
 
       const result = await getApiInfoTool.handler({});
 
       assertEquals(result.isError, true);
-      assert(result.content[0].text.includes("Service status unavailable"));
+      assert(result.content[0].text.includes('Service status unavailable'));
     });
   });
 
@@ -515,14 +499,12 @@ describe("ExampleTools - OAuth Integration", () => {
    *
    * Tests using generated test data to cover OAuth scenarios comprehensively.
    */
-  describe("Parameterized OAuth Testing", () => {
-    it("should handle all OAuth-authenticated tool scenarios", async () => {
+  describe('Parameterized OAuth Testing', () => {
+    it('should handle all OAuth-authenticated tool scenarios', async () => {
       const testParams = generateAuthenticatedToolTestParams();
 
       for (const scenario of testParams) {
-        const tool = toolRegistrations.find((t: any) =>
-          t.name === scenario.toolName
-        );
+        const tool = toolRegistrations.find((t: any) => t.name === scenario.toolName);
         assertExists(tool, `Tool ${scenario.toolName} should exist`);
 
         // Clear previous API calls
@@ -546,31 +528,29 @@ describe("ExampleTools - OAuth Integration", () => {
       }
     });
 
-    it("should handle all OAuth failure scenarios", async () => {
+    it('should handle all OAuth failure scenarios', async () => {
       const failureScenarios = generateOAuthFailureScenarios();
 
       for (const scenario of failureScenarios) {
         // Set up failure condition
         switch (scenario.failureType) {
-          case "no_token":
+          case 'no_token':
             // User already doesn't have token
             break;
-          case "expired_token":
-          case "invalid_token":
+          case 'expired_token':
+          case 'invalid_token':
             mockOAuth.setAuthFailure(scenario.userId, true);
             break;
-          case "api_failure":
-            mockApiClient.setApiFailure("queryCustomers", true);
+          case 'api_failure':
+            mockApiClient.setApiFailure('queryCustomers', true);
             break;
         }
 
         // Test with query customers tool
-        const queryTool = toolRegistrations.find((t: any) =>
-          t.name === "query_customers_example"
-        );
+        const queryTool = toolRegistrations.find((t: any) => t.name === 'query_customers_example');
         const result = await queryTool.handler({
           userId: scenario.userId,
-          search: "test",
+          search: 'test',
         });
 
         // Should return appropriate error
@@ -586,7 +566,7 @@ describe("ExampleTools - OAuth Integration", () => {
 
         // Clean up failure condition
         mockOAuth.setAuthFailure(scenario.userId, false);
-        mockApiClient.setApiFailure("queryCustomers", false);
+        mockApiClient.setApiFailure('queryCustomers', false);
       }
     });
   });
@@ -596,15 +576,13 @@ describe("ExampleTools - OAuth Integration", () => {
    *
    * Tests that verify end-to-end OAuth and API integration.
    */
-  describe("OAuth and API Integration", () => {
-    it("should complete full OAuth flow for complex operations", async () => {
+  describe('OAuth and API Integration', () => {
+    it('should complete full OAuth flow for complex operations', async () => {
       // Step 1: Query customers to find target customer
-      const queryTool = toolRegistrations.find((t: any) =>
-        t.name === "query_customers_example"
-      );
+      const queryTool = toolRegistrations.find((t: any) => t.name === 'query_customers_example');
       const queryResult = await queryTool.handler({
-        userId: "test-user",
-        search: "Acme",
+        userId: 'test-user',
+        search: 'Acme',
       });
 
       assertEquals(queryResult.isError, undefined);
@@ -612,18 +590,16 @@ describe("ExampleTools - OAuth Integration", () => {
       const customerId = queryData.results.items[0].id;
 
       // Step 2: Create order for that customer
-      const createOrderTool = toolRegistrations.find((t: any) =>
-        t.name === "create_order_example"
-      );
+      const createOrderTool = toolRegistrations.find((t: any) => t.name === 'create_order_example');
       const orderResult = await createOrderTool.handler({
-        userId: "test-user",
+        userId: 'test-user',
         customerId: customerId,
-        items: [{ productId: "prod_001", quantity: 1, unitPrice: 299.99 }],
+        items: [{ productId: 'prod_001', quantity: 1, unitPrice: 299.99 }],
         shippingAddress: {
-          street: "123 Test St",
-          city: "Test City",
-          state: "TS",
-          zipCode: "12345",
+          street: '123 Test St',
+          city: 'Test City',
+          state: 'TS',
+          zipCode: '12345',
         },
       });
 
@@ -632,11 +608,9 @@ describe("ExampleTools - OAuth Integration", () => {
       const orderId = orderData.orderId;
 
       // Step 3: Check order status
-      const statusTool = toolRegistrations.find((t: any) =>
-        t.name === "get_order_status_example"
-      );
+      const statusTool = toolRegistrations.find((t: any) => t.name === 'get_order_status_example');
       const statusResult = await statusTool.handler({
-        userId: "test-user",
+        userId: 'test-user',
         orderId: orderId,
         includeHistory: true,
       });
@@ -647,45 +621,43 @@ describe("ExampleTools - OAuth Integration", () => {
       assertEquals(
         mockApiClient.getCallCount(),
         3,
-        "Should have made 3 API calls",
+        'Should have made 3 API calls',
       );
 
       const apiCalls = mockApiClient.getCallLog();
       assertEquals(
-        apiCalls.every((call) => call.userId === "test-user"),
+        apiCalls.every((call) => call.userId === 'test-user'),
         true,
-        "All API calls should use same user context",
+        'All API calls should use same user context',
       );
     });
 
-    it("should handle OAuth token refresh during long operations", async () => {
+    it('should handle OAuth token refresh during long operations', async () => {
       // Set up token that will expire soon
-      mockOAuth.setTokenForUser("test-user", {
-        access_token: "expiring_token",
-        refresh_token: "refresh_token_123",
+      mockOAuth.setTokenForUser('test-user', {
+        access_token: 'expiring_token',
+        refresh_token: 'refresh_token_123',
         expires_at: Date.now() + 100, // Expires in 100ms
-        token_type: "Bearer",
+        token_type: 'Bearer',
       });
 
       // Wait for token to expire
       await new Promise((resolve) => setTimeout(resolve, 150));
 
       // Make API call that should trigger token refresh
-      const queryTool = toolRegistrations.find((t: any) =>
-        t.name === "query_customers_example"
-      );
+      const queryTool = toolRegistrations.find((t: any) => t.name === 'query_customers_example');
 
       // This should still work due to token refresh
       const result = await queryTool.handler({
-        userId: "test-user",
-        search: "test",
+        userId: 'test-user',
+        search: 'test',
       });
 
       // Should succeed even with expired initial token
       assertEquals(
         result.isError,
         undefined,
-        "Should succeed with token refresh",
+        'Should succeed with token refresh',
       );
     });
   });

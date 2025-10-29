@@ -215,7 +215,7 @@ Deno.test('WorkflowRegistry - workflow registration', async () => {
   assertEquals(registration.name, 'test_workflow_a');
   assertEquals(registration.version, '1.0.0');
   assertEquals(registration.category, 'utility');
-  
+
   await workflowDependencies.kvManager.close();
 });
 
@@ -237,7 +237,7 @@ Deno.test('WorkflowRegistry - invalid workflow registration', async () => {
   // Should not be registered
   assertEquals(registry.hasWorkflow(''), false);
   assertEquals(registry.getWorkflowNames().length, 0);
-  
+
   await workflowDependencies.kvManager.close();
 });
 
@@ -261,7 +261,7 @@ Deno.test('WorkflowRegistry - workflow overwriting', async () => {
   // Should be the second workflow
   const retrieved = registry.getWorkflow('test_workflow_a');
   assertEquals(retrieved, workflow2);
-  
+
   await workflowDependencies.kvManager.close();
 });
 
@@ -288,7 +288,7 @@ Deno.test('WorkflowRegistry - category-based retrieval', async () => {
 
   const dataWorkflows = registry.getWorkflowsByCategory('data');
   assertEquals(dataWorkflows.length, 0); // No workflows in this category
-  
+
   await workflowDependencies.kvManager.close();
 });
 
@@ -318,7 +318,7 @@ Deno.test('WorkflowRegistry - tag-based retrieval', async () => {
 
   const nonExistentWorkflows = registry.getWorkflowsByTag('nonexistent');
   assertEquals(nonExistentWorkflows.length, 0);
-  
+
   await workflowDependencies.kvManager.close();
 });
 
@@ -356,7 +356,7 @@ Deno.test('WorkflowRegistry - search workflows', async () => {
   // Case insensitive search
   const caseResults = registry.searchWorkflows('FIRST');
   assertEquals(caseResults.length, 1);
-  
+
   await workflowDependencies.kvManager.close();
 });
 
@@ -387,7 +387,7 @@ Deno.test('WorkflowRegistry - workflow unregistration', async () => {
   // Try to unregister non-existent workflow
   const failSuccess = registry.unregister('nonexistent');
   assertEquals(failSuccess, false);
-  
+
   await workflowDependencies.kvManager.close();
 });
 
@@ -415,7 +415,7 @@ Deno.test('WorkflowRegistry - clear registry', async () => {
   // Should be empty
   assertEquals(registry.getWorkflowNames().length, 0);
   assertEquals(registry.getAllRegistrations().length, 0);
-  
+
   await workflowDependencies.kvManager.close();
 });
 
@@ -448,7 +448,7 @@ Deno.test('WorkflowRegistry - metrics tracking', async () => {
   assertEquals(updatedMetrics.averageDuration, 150); // (100 + 200 + 150) / 3
   assertEquals(updatedMetrics.errorRate, 1 / 3); // 1 failure out of 3 total
   assertExists(updatedMetrics.lastExecuted);
-  
+
   await workflowDependencies.kvManager.close();
 });
 
@@ -471,7 +471,7 @@ Deno.test('WorkflowRegistry - statistics', async () => {
   assertEquals(stats.averageEstimatedDuration, 60); // Only workflowB has duration
   assertEquals(stats.categories.utility, 1);
   assertEquals(stats.categories.automation, 1);
-  
+
   await workflowDependencies.kvManager.close();
 });
 

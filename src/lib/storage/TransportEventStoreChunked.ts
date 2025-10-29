@@ -219,7 +219,7 @@ export class TransportEventStoreChunked extends TransportEventStore {
   private encodeBase64(str: string): string {
     // Convert string to UTF-8 bytes
     const utf8Bytes = new TextEncoder().encode(str);
-    
+
     // Convert bytes to binary string in chunks to avoid stack overflow
     let binaryString = '';
     const chunkSize = 8192;
@@ -227,7 +227,7 @@ export class TransportEventStoreChunked extends TransportEventStore {
       const chunk = utf8Bytes.subarray(i, i + chunkSize);
       binaryString += String.fromCharCode(...chunk);
     }
-    
+
     // Now safe to use btoa on the binary string (all values 0-255)
     return btoa(binaryString);
   }
@@ -239,13 +239,13 @@ export class TransportEventStoreChunked extends TransportEventStore {
   private decodeBase64(base64: string): string {
     // Decode base64 to binary string
     const binaryString = atob(base64);
-    
+
     // Convert binary string to bytes
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i);
     }
-    
+
     // Decode UTF-8 bytes to string
     return new TextDecoder().decode(bytes);
   }

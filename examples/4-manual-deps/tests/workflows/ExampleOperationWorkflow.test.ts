@@ -23,26 +23,13 @@
  * 7. Test notification and audit integration
  */
 
-import {
-  assert,
-  assertEquals,
-  assertExists,
-} from "https://deno.land/std@0.208.0/assert/mod.ts";
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  it,
-} from "https://deno.land/std@0.208.0/testing/bdd.ts";
-import {
-  type Spy,
-  spy,
-  stub,
-} from "https://deno.land/std@0.208.0/testing/mock.ts";
-import { ConfigManager, KVManager } from "@beyondbetter/bb-mcp-server";
+import { assert, assertEquals, assertExists } from 'https://deno.land/std@0.208.0/assert/mod.ts';
+import { afterEach, beforeEach, describe, it } from 'https://deno.land/std@0.208.0/testing/bdd.ts';
+import { type Spy, spy, stub } from 'https://deno.land/std@0.208.0/testing/mock.ts';
+import { ConfigManager, KVManager } from '@beyondbetter/bb-mcp-server';
 
 // Import workflow directly (no plugin in manual-deps)
-import { ExampleOperationWorkflow } from "../../src/workflows/ExampleOperationWorkflow.ts";
+import { ExampleOperationWorkflow } from '../../src/workflows/ExampleOperationWorkflow.ts';
 
 // Import OAuth-aware test utilities
 import {
@@ -53,9 +40,9 @@ import {
   createMockOAuthConsumer,
   MockApiClient,
   MockOAuthConsumer,
-} from "../utils/test-helpers.ts";
-import { SpyLogger } from "@beyondbetter/bb-mcp-server/testing";
-import { getResultData } from "../utils/type-helpers.ts";
+} from '../utils/test-helpers.ts';
+import { SpyLogger } from '@beyondbetter/bb-mcp-server/testing';
+import { getResultData } from '../utils/type-helpers.ts';
 
 /**
  * Enhanced Mock API Client for Operation Workflow Testing
@@ -72,10 +59,10 @@ class MockOperationApiClient extends MockApiClient {
     customerData: any,
     userId: string,
   ): Promise<any> {
-    this.logCall("createCustomer", customerData, userId);
+    this.logCall('createCustomer', customerData, userId);
 
-    if (this.getFailureStatus("createCustomer")) {
-      throw new Error("Customer creation failed: Service unavailable");
+    if (this.getFailureStatus('createCustomer')) {
+      throw new Error('Customer creation failed: Service unavailable');
     }
 
     return {
@@ -83,7 +70,7 @@ class MockOperationApiClient extends MockApiClient {
       name: customerData.name,
       email: customerData.email,
       address: customerData.address,
-      customerType: customerData.customerType || "individual",
+      customerType: customerData.customerType || 'individual',
       createdAt: new Date().toISOString(),
     };
   }
@@ -92,13 +79,13 @@ class MockOperationApiClient extends MockApiClient {
     accessToken: string,
     customerId: string,
   ): Promise<void> {
-    this.logCall("deleteCustomer", { customerId }, "system");
+    this.logCall('deleteCustomer', { customerId }, 'system');
 
-    if (this.getFailureStatus("deleteCustomer")) {
-      throw new Error("Customer deletion failed: Service unavailable");
+    if (this.getFailureStatus('deleteCustomer')) {
+      throw new Error('Customer deletion failed: Service unavailable');
     }
 
-    this.rollbackLog.push({ action: "delete_customer", data: { customerId } });
+    this.rollbackLog.push({ action: 'delete_customer', data: { customerId } });
   }
 
   // Order operations
@@ -106,8 +93,8 @@ class MockOperationApiClient extends MockApiClient {
     accessToken: string,
     orderId: string,
   ): Promise<void> {
-    this.logCall("cancelOrder", { orderId }, "system");
-    this.rollbackLog.push({ action: "cancel_order", data: { orderId } });
+    this.logCall('cancelOrder', { orderId }, 'system');
+    this.rollbackLog.push({ action: 'cancel_order', data: { orderId } });
   }
 
   // Inventory operations
@@ -116,7 +103,7 @@ class MockOperationApiClient extends MockApiClient {
     productIds: string[],
     userId: string,
   ): Promise<any> {
-    this.logCall("getInventoryLevels", { productIds }, userId);
+    this.logCall('getInventoryLevels', { productIds }, userId);
 
     return productIds.map((id) => ({
       productId: id,
@@ -130,10 +117,10 @@ class MockOperationApiClient extends MockApiClient {
     updateData: any,
     userId: string,
   ): Promise<any> {
-    this.logCall("bulkUpdateInventory", updateData, userId);
+    this.logCall('bulkUpdateInventory', updateData, userId);
 
-    if (this.getFailureStatus("bulkUpdateInventory")) {
-      throw new Error("Bulk inventory update failed: Database error");
+    if (this.getFailureStatus('bulkUpdateInventory')) {
+      throw new Error('Bulk inventory update failed: Database error');
     }
 
     return {
@@ -148,8 +135,8 @@ class MockOperationApiClient extends MockApiClient {
     accessToken: string,
     inventory: Record<string, number>,
   ): Promise<void> {
-    this.logCall("restoreInventoryLevels", { inventory }, "system");
-    this.rollbackLog.push({ action: "restore_inventory", data: { inventory } });
+    this.logCall('restoreInventoryLevels', { inventory }, 'system');
+    this.rollbackLog.push({ action: 'restore_inventory', data: { inventory } });
   }
 
   // Refund operations
@@ -158,10 +145,10 @@ class MockOperationApiClient extends MockApiClient {
     refundData: any,
     userId: string,
   ): Promise<any> {
-    this.logCall("processRefund", refundData, userId);
+    this.logCall('processRefund', refundData, userId);
 
-    if (this.getFailureStatus("processRefund")) {
-      throw new Error("Refund processing failed: Payment service error");
+    if (this.getFailureStatus('processRefund')) {
+      throw new Error('Refund processing failed: Payment service error');
     }
 
     return {
@@ -169,7 +156,7 @@ class MockOperationApiClient extends MockApiClient {
       orderId: refundData.orderId,
       amount: refundData.refundAmount || 299.99,
       reason: refundData.reason,
-      status: "processed",
+      status: 'processed',
       processedAt: new Date().toISOString(),
     };
   }
@@ -180,13 +167,13 @@ class MockOperationApiClient extends MockApiClient {
     migrationData: any,
     userId: string,
   ): Promise<any> {
-    this.logCall("validateDataMigration", migrationData, userId);
+    this.logCall('validateDataMigration', migrationData, userId);
 
     return {
       valid: true,
       sourceRecords: 1000,
       targetCapacity: 5000,
-      estimatedDuration: "15 minutes",
+      estimatedDuration: '15 minutes',
       warnings: [],
     };
   }
@@ -196,17 +183,17 @@ class MockOperationApiClient extends MockApiClient {
     migrationData: any,
     userId: string,
   ): Promise<any> {
-    this.logCall("executeDataMigration", migrationData, userId);
+    this.logCall('executeDataMigration', migrationData, userId);
 
-    if (this.getFailureStatus("executeDataMigration")) {
-      throw new Error("Data migration failed: Connection timeout");
+    if (this.getFailureStatus('executeDataMigration')) {
+      throw new Error('Data migration failed: Connection timeout');
     }
 
     return {
       migrationId: `migration_${Date.now()}`,
       recordsMigrated: 1000,
       recordsFailed: 0,
-      duration: "12 minutes",
+      duration: '12 minutes',
       rollbackAvailable: true,
       completedAt: new Date().toISOString(),
     };
@@ -253,7 +240,7 @@ type WorkflowContext = any;
  * These tests demonstrate comprehensive multi-step OAuth-aware workflow testing
  * with rollback capabilities and complex business operations.
  */
-describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
+describe('ExampleOperationWorkflow - Multi-Step OAuth Operations', () => {
   let mockOAuth: MockOAuthConsumer;
   let mockApiClient: MockOperationApiClient;
   let mockLogger: SpyLogger;
@@ -276,7 +263,7 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
     mockApiClient.setOAuthConsumer(mockOAuth);
 
     // Set up logging spy
-    logSpy = spy(mockLogger, "info");
+    logSpy = spy(mockLogger, 'info');
 
     // Create workflow directly (no plugin in manual-deps)
     workflow = new ExampleOperationWorkflow({
@@ -289,7 +276,7 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
 
     assertExists(
       workflow,
-      "ExampleOperationWorkflow should be created",
+      'ExampleOperationWorkflow should be created',
     );
 
     // Create authenticated workflow context
@@ -300,15 +287,15 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
     // Stub sendNotification to bypass beyondMcpServer requirement
     sendNotificationStub = stub(
       workflow as any,
-      "sendNotification",
+      'sendNotification',
       async (request: any) => {
         // Log the notification like the real implementation would
         // Determine type based on notification level: "error" = failure, "notice" = completion
-        const type = request.level === "error" ? "failure" : "completion";
-        mockLogger.info("Notification sent", {
+        const type = request.level === 'error' ? 'failure' : 'completion';
+        mockLogger.info('Notification sent', {
           type,
           level: request.level,
-          message: request.data?.params || "Operation completed",
+          message: request.data?.params || 'Operation completed',
         });
       },
     );
@@ -324,68 +311,68 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
   /**
    * WORKFLOW REGISTRATION AND METADATA
    */
-  describe("Multi-Step Workflow Registration", () => {
-    it("should have correct multi-step workflow metadata", () => {
-      assertEquals(workflow.name, "example_operation");
-      assertEquals(workflow.version, "1.0.0");
-      assertEquals(workflow.category, "operation");
+  describe('Multi-Step Workflow Registration', () => {
+    it('should have correct multi-step workflow metadata', () => {
+      assertEquals(workflow.name, 'example_operation');
+      assertEquals(workflow.version, '1.0.0');
+      assertEquals(workflow.category, 'operation');
       assert(Array.isArray(workflow.tags));
-      assert(workflow.tags.includes("operation"));
-      assert(workflow.tags.includes("multi-step"));
+      assert(workflow.tags.includes('operation'));
+      assert(workflow.tags.includes('multi-step'));
     });
 
-    it("should return proper registration with complex parameter schema", () => {
+    it('should return proper registration with complex parameter schema', () => {
       const registration = workflow.getRegistration();
 
-      assertEquals(registration.name, "example_operation");
-      assertEquals(registration.displayName, "ExampleCorp Operation Workflow");
+      assertEquals(registration.name, 'example_operation');
+      assertEquals(registration.displayName, 'ExampleCorp Operation Workflow');
       assertEquals(registration.estimatedDuration, 180); // 3 minutes
       assertExists(
         registration.parameterSchema,
-        "Should include complex parameter schema",
+        'Should include complex parameter schema',
       );
     });
 
-    it("should provide comprehensive multi-operation overview", () => {
+    it('should provide comprehensive multi-operation overview', () => {
       const overview = workflow.getOverview();
 
-      assert(overview.includes("complex ExampleCorp business operations"));
-      assert(overview.includes("create_customer_with_order"));
-      assert(overview.includes("bulk_update_inventory"));
-      assert(overview.includes("process_refund"));
-      assert(overview.includes("migrate_data"));
-      assert(overview.includes("Multi-step execution with rollback"));
+      assert(overview.includes('complex ExampleCorp business operations'));
+      assert(overview.includes('create_customer_with_order'));
+      assert(overview.includes('bulk_update_inventory'));
+      assert(overview.includes('process_refund'));
+      assert(overview.includes('migrate_data'));
+      assert(overview.includes('Multi-step execution with rollback'));
     });
   });
 
   /**
    * DISCRIMINATED UNION PARAMETER VALIDATION
    */
-  describe("Discriminated Union Parameter Validation", () => {
-    it("should validate create_customer_with_order parameters", async () => {
+  describe('Discriminated Union Parameter Validation', () => {
+    it('should validate create_customer_with_order parameters', async () => {
       const validParams = {
-        userId: "test-user",
-        operationType: "create_customer_with_order",
+        userId: 'test-user',
+        operationType: 'create_customer_with_order',
         operationData: {
-          type: "create_customer_with_order",
+          type: 'create_customer_with_order',
           customer: {
-            name: "Acme Corporation",
-            email: "contact@acme.com",
+            name: 'Acme Corporation',
+            email: 'contact@acme.com',
             address: {
-              street: "123 Business Ave",
-              city: "Business City",
-              state: "BC",
-              zipCode: "12345",
-              country: "US",
+              street: '123 Business Ave',
+              city: 'Business City',
+              state: 'BC',
+              zipCode: '12345',
+              country: 'US',
             },
-            customerType: "business",
+            customerType: 'business',
           },
           order: {
             items: [
-              { productId: "prod_001", quantity: 2, unitPrice: 150.00 },
+              { productId: 'prod_001', quantity: 2, unitPrice: 150.00 },
             ],
-            shippingMethod: "expedited",
-            notes: "Urgent delivery required",
+            shippingMethod: 'expedited',
+            notes: 'Urgent delivery required',
           },
         },
       };
@@ -394,21 +381,21 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
       assertEquals(result.valid, true);
       const data = getResultData(result);
       assertExists(data);
-      assertEquals(data.operationType, "create_customer_with_order");
-      assertEquals(data.operationData.type, "create_customer_with_order");
+      assertEquals(data.operationType, 'create_customer_with_order');
+      assertEquals(data.operationData.type, 'create_customer_with_order');
     });
 
-    it("should validate bulk_update_inventory parameters", async () => {
+    it('should validate bulk_update_inventory parameters', async () => {
       const validParams = {
-        userId: "test-user",
-        operationType: "bulk_update_inventory",
+        userId: 'test-user',
+        operationType: 'bulk_update_inventory',
         operationData: {
-          type: "bulk_update_inventory",
+          type: 'bulk_update_inventory',
           updates: [
-            { productId: "prod_001", quantity: 50, operation: "add" },
-            { productId: "prod_002", quantity: 100, operation: "set" },
+            { productId: 'prod_001', quantity: 50, operation: 'add' },
+            { productId: 'prod_002', quantity: 100, operation: 'set' },
           ],
-          reason: "Quarterly inventory adjustment",
+          reason: 'Quarterly inventory adjustment',
         },
         executionOptions: {
           rollbackOnFailure: true,
@@ -423,20 +410,20 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
       assertEquals(data.executionOptions.rollbackOnFailure, true);
     });
 
-    it("should validate process_refund parameters", async () => {
+    it('should validate process_refund parameters', async () => {
       const validParams = {
-        userId: "test-user",
-        operationType: "process_refund",
+        userId: 'test-user',
+        operationType: 'process_refund',
         operationData: {
-          type: "process_refund",
-          orderId: "order_12345",
+          type: 'process_refund',
+          orderId: 'order_12345',
           refundAmount: 150.00,
-          refundReason: "Customer not satisfied with product quality",
+          refundReason: 'Customer not satisfied with product quality',
           notifyCustomer: true,
         },
         notifications: {
           notifyOnCompletion: true,
-          notificationChannels: ["email", "slack"],
+          notificationChannels: ['email', 'slack'],
         },
       };
 
@@ -447,15 +434,15 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
       assertEquals(data.notifications.notifyOnCompletion, true);
     });
 
-    it("should validate migrate_data parameters", async () => {
+    it('should validate migrate_data parameters', async () => {
       const validParams = {
-        userId: "test-user",
-        operationType: "migrate_data",
+        userId: 'test-user',
+        operationType: 'migrate_data',
         operationData: {
-          type: "migrate_data",
-          sourceSystem: "legacy_erp",
-          targetSystem: "modern_crm",
-          dataTypes: ["customers", "orders"],
+          type: 'migrate_data',
+          sourceSystem: 'legacy_erp',
+          targetSystem: 'modern_crm',
+          dataTypes: ['customers', 'orders'],
           batchSize: 500,
           validateOnly: true,
         },
@@ -468,12 +455,12 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
       assertEquals(data.operationData.validateOnly, true);
     });
 
-    it("should fail validation for mismatched discriminated union", async () => {
+    it('should fail validation for mismatched discriminated union', async () => {
       const invalidParams = {
-        userId: "test-user",
-        operationType: "create_customer_with_order",
+        userId: 'test-user',
+        operationType: 'create_customer_with_order',
         operationData: {
-          type: "bulk_update_inventory", // Wrong type for operation
+          type: 'bulk_update_inventory', // Wrong type for operation
           updates: [],
         },
       };
@@ -488,11 +475,11 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
       assert(Array.isArray(result.errors));
       // Check for the actual validation errors from discriminated union mismatch
       const hasRequiredFieldError = result.errors.some((err: any) =>
-        err.message.includes("Required") && err.path.includes("reason")
+        err.message.includes('Required') && err.path.includes('reason')
       );
       const hasArrayMinError = result.errors.some((err: any) =>
-        err.message.includes("Array must contain at least") &&
-        err.path.includes("updates")
+        err.message.includes('Array must contain at least') &&
+        err.path.includes('updates')
       );
       // console.log('🔍 ERROR CHECK:', {
       //   hasRequiredFieldError,
@@ -502,7 +489,7 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
       // });
       assert(
         hasRequiredFieldError || hasArrayMinError,
-        "Should have validation errors from discriminated union mismatch",
+        'Should have validation errors from discriminated union mismatch',
       );
     });
   });
@@ -510,28 +497,28 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
   /**
    * MULTI-STEP OAUTH OPERATION EXECUTION
    */
-  describe("Multi-Step OAuth Operations", () => {
-    it("should execute create_customer_with_order operation", async () => {
+  describe('Multi-Step OAuth Operations', () => {
+    it('should execute create_customer_with_order operation', async () => {
       const params = {
-        userId: "test-user",
-        operationType: "create_customer_with_order",
+        userId: 'test-user',
+        operationType: 'create_customer_with_order',
         operationData: {
-          type: "create_customer_with_order",
+          type: 'create_customer_with_order',
           customer: {
-            name: "Test Customer",
-            email: "test@example.com",
+            name: 'Test Customer',
+            email: 'test@example.com',
             address: {
-              street: "123 Test St",
-              city: "Test City",
-              state: "TS",
-              zipCode: "12345",
+              street: '123 Test St',
+              city: 'Test City',
+              state: 'TS',
+              zipCode: '12345',
             },
           },
           order: {
             items: [
-              { productId: "prod_001", quantity: 1, unitPrice: 299.99 },
+              { productId: 'prod_001', quantity: 1, unitPrice: 299.99 },
             ],
-            shippingMethod: "standard",
+            shippingMethod: 'standard',
           },
         },
       };
@@ -548,24 +535,24 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
       assertExists(data.rollbackInfo);
 
       // Verify both API calls were made in sequence
-      assertEquals(mockApiClient.getCallCount("createCustomer"), 1);
-      assertEquals(mockApiClient.getCallCount("createOrder"), 1);
+      assertEquals(mockApiClient.getCallCount('createCustomer'), 1);
+      assertEquals(mockApiClient.getCallCount('createOrder'), 1);
 
       // Verify OAuth was used for both operations
-      assert(mockOAuth.hasValidToken("test-user"));
+      assert(mockOAuth.hasValidToken('test-user'));
     });
 
-    it("should execute bulk_update_inventory operation", async () => {
+    it('should execute bulk_update_inventory operation', async () => {
       const params = {
-        userId: "test-user",
-        operationType: "bulk_update_inventory",
+        userId: 'test-user',
+        operationType: 'bulk_update_inventory',
         operationData: {
-          type: "bulk_update_inventory",
+          type: 'bulk_update_inventory',
           updates: [
-            { productId: "prod_001", quantity: 50, operation: "add" },
-            { productId: "prod_002", quantity: 25, operation: "subtract" },
+            { productId: 'prod_001', quantity: 50, operation: 'add' },
+            { productId: 'prod_002', quantity: 25, operation: 'subtract' },
           ],
-          reason: "Stock adjustment after audit",
+          reason: 'Stock adjustment after audit',
         },
       };
 
@@ -577,19 +564,19 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
       assertEquals(data.result.updated, 2);
 
       // Verify inventory operations were called
-      assertEquals(mockApiClient.getCallCount("getInventoryLevels"), 1);
-      assertEquals(mockApiClient.getCallCount("bulkUpdateInventory"), 1);
+      assertEquals(mockApiClient.getCallCount('getInventoryLevels'), 1);
+      assertEquals(mockApiClient.getCallCount('bulkUpdateInventory'), 1);
     });
 
-    it("should execute process_refund operation", async () => {
+    it('should execute process_refund operation', async () => {
       const params = {
-        userId: "test-user",
-        operationType: "process_refund",
+        userId: 'test-user',
+        operationType: 'process_refund',
         operationData: {
-          type: "process_refund",
-          orderId: "order_12345",
+          type: 'process_refund',
+          orderId: 'order_12345',
           refundAmount: 199.99,
-          refundReason: "Defective product",
+          refundReason: 'Defective product',
           notifyCustomer: true,
         },
       };
@@ -599,22 +586,22 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
       assertEquals(result.success, true);
       const data = getResultData(result);
       assertExists(data.result.id);
-      assertEquals(data.result.status, "processed");
+      assertEquals(data.result.status, 'processed');
       assertEquals(data.result.amount, 199.99);
 
       // Verify refund processing was called
-      assertEquals(mockApiClient.getCallCount("processRefund"), 1);
+      assertEquals(mockApiClient.getCallCount('processRefund'), 1);
     });
 
-    it("should execute data migration validation", async () => {
+    it('should execute data migration validation', async () => {
       const params = {
-        userId: "test-user",
-        operationType: "migrate_data",
+        userId: 'test-user',
+        operationType: 'migrate_data',
         operationData: {
-          type: "migrate_data",
-          sourceSystem: "old_system",
-          targetSystem: "new_system",
-          dataTypes: ["customers"],
+          type: 'migrate_data',
+          sourceSystem: 'old_system',
+          targetSystem: 'new_system',
+          dataTypes: ['customers'],
           validateOnly: true,
         },
       };
@@ -627,37 +614,37 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
       assertExists(data.result.sourceRecords);
 
       // Should only validate, not execute migration
-      assertEquals(mockApiClient.getCallCount("validateDataMigration"), 1);
-      assertEquals(mockApiClient.getCallCount("executeDataMigration"), 0);
+      assertEquals(mockApiClient.getCallCount('validateDataMigration'), 1);
+      assertEquals(mockApiClient.getCallCount('executeDataMigration'), 0);
     });
   });
 
   /**
    * ROLLBACK MECHANISM TESTING
    */
-  describe("Rollback Mechanisms", () => {
-    it("should perform rollback on customer creation failure", async () => {
+  describe('Rollback Mechanisms', () => {
+    it('should perform rollback on customer creation failure', async () => {
       // Set up failure on order creation (second step)
-      mockApiClient.setApiFailure("createOrder", true);
+      mockApiClient.setApiFailure('createOrder', true);
 
       const params = {
-        userId: "test-user",
-        operationType: "create_customer_with_order",
+        userId: 'test-user',
+        operationType: 'create_customer_with_order',
         operationData: {
-          type: "create_customer_with_order",
+          type: 'create_customer_with_order',
           customer: {
-            name: "Test Customer",
-            email: "test@example.com",
+            name: 'Test Customer',
+            email: 'test@example.com',
             address: {
-              street: "123 Test St",
-              city: "Test City",
-              state: "TS",
-              zipCode: "12345",
+              street: '123 Test St',
+              city: 'Test City',
+              state: 'TS',
+              zipCode: '12345',
             },
           },
           order: {
             items: [
-              { productId: "prod_001", quantity: 1, unitPrice: 299.99 },
+              { productId: 'prod_001', quantity: 1, unitPrice: 299.99 },
             ],
           },
         },
@@ -676,31 +663,31 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
       // Verify rollback actions were performed
       const rollbackLog = mockApiClient.getRollbackLog();
       assert(rollbackLog.length > 0);
-      assert(rollbackLog.some((action) => action.action === "delete_customer"));
+      assert(rollbackLog.some((action) => action.action === 'delete_customer'));
     });
 
-    it("should skip rollback when disabled", async () => {
+    it('should skip rollback when disabled', async () => {
       // Set up failure on order creation
-      mockApiClient.setApiFailure("createOrder", true);
+      mockApiClient.setApiFailure('createOrder', true);
 
       const params = {
-        userId: "test-user",
-        operationType: "create_customer_with_order",
+        userId: 'test-user',
+        operationType: 'create_customer_with_order',
         operationData: {
-          type: "create_customer_with_order",
+          type: 'create_customer_with_order',
           customer: {
-            name: "Test Customer",
-            email: "test@example.com",
+            name: 'Test Customer',
+            email: 'test@example.com',
             address: {
-              street: "123 Test St",
-              city: "Test City",
-              state: "TS",
-              zipCode: "12345",
+              street: '123 Test St',
+              city: 'Test City',
+              state: 'TS',
+              zipCode: '12345',
             },
           },
           order: {
             items: [
-              { productId: "prod_001", quantity: 1, unitPrice: 299.99 },
+              { productId: 'prod_001', quantity: 1, unitPrice: 299.99 },
             ],
           },
         },
@@ -720,29 +707,29 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
       assertEquals(rollbackLog.length, 0);
     });
 
-    it("should handle rollback failure gracefully", async () => {
+    it('should handle rollback failure gracefully', async () => {
       // Set up failure on both operation and rollback
-      mockApiClient.setApiFailure("createOrder", true);
-      mockApiClient.setApiFailure("deleteCustomer", true);
+      mockApiClient.setApiFailure('createOrder', true);
+      mockApiClient.setApiFailure('deleteCustomer', true);
 
       const params = {
-        userId: "test-user",
-        operationType: "create_customer_with_order",
+        userId: 'test-user',
+        operationType: 'create_customer_with_order',
         operationData: {
-          type: "create_customer_with_order",
+          type: 'create_customer_with_order',
           customer: {
-            name: "Test Customer",
-            email: "test@example.com",
+            name: 'Test Customer',
+            email: 'test@example.com',
             address: {
-              street: "123 Test St",
-              city: "Test City",
-              state: "TS",
-              zipCode: "12345",
+              street: '123 Test St',
+              city: 'Test City',
+              state: 'TS',
+              zipCode: '12345',
             },
           },
           order: {
             items: [
-              { productId: "prod_001", quantity: 1, unitPrice: 299.99 },
+              { productId: 'prod_001', quantity: 1, unitPrice: 299.99 },
             ],
           },
         },
@@ -758,7 +745,7 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
       // Should log rollback failures but not throw
       const errorLogs = mockLogger.errorCalls;
       assert(
-        errorLogs.some((call) => call[0].includes("Rollback action failed")),
+        errorLogs.some((call) => call[0].includes('Rollback action failed')),
       );
     });
   });
@@ -766,27 +753,27 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
   /**
    * DRY RUN AND EXECUTION PLANNING
    */
-  describe("Dry Run and Execution Planning", () => {
-    it("should perform dry run with execution planning", async () => {
+  describe('Dry Run and Execution Planning', () => {
+    it('should perform dry run with execution planning', async () => {
       const params = {
-        userId: "test-user",
+        userId: 'test-user',
         dryRun: true,
-        operationType: "create_customer_with_order",
+        operationType: 'create_customer_with_order',
         operationData: {
-          type: "create_customer_with_order",
+          type: 'create_customer_with_order',
           customer: {
-            name: "Test Customer",
-            email: "test@example.com",
+            name: 'Test Customer',
+            email: 'test@example.com',
             address: {
-              street: "123 Test St",
-              city: "Test City",
-              state: "TS",
-              zipCode: "12345",
+              street: '123 Test St',
+              city: 'Test City',
+              state: 'TS',
+              zipCode: '12345',
             },
           },
           order: {
             items: [
-              { productId: "prod_001", quantity: 1, unitPrice: 299.99 },
+              { productId: 'prod_001', quantity: 1, unitPrice: 299.99 },
             ],
           },
         },
@@ -803,26 +790,26 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
       assertExists(data.resourceRequirements);
 
       // Should validate API connectivity
-      assertEquals(mockApiClient.getCallCount("healthCheck"), 1);
+      assertEquals(mockApiClient.getCallCount('healthCheck'), 1);
 
       // Should not perform actual operations
-      assertEquals(mockApiClient.getCallCount("createCustomer"), 0);
-      assertEquals(mockApiClient.getCallCount("createOrder"), 0);
+      assertEquals(mockApiClient.getCallCount('createCustomer'), 0);
+      assertEquals(mockApiClient.getCallCount('createOrder'), 0);
     });
 
-    it("should generate appropriate execution plan for complex operations", async () => {
+    it('should generate appropriate execution plan for complex operations', async () => {
       const params = {
-        userId: "test-user",
+        userId: 'test-user',
         dryRun: true,
-        operationType: "bulk_update_inventory",
+        operationType: 'bulk_update_inventory',
         operationData: {
-          type: "bulk_update_inventory",
+          type: 'bulk_update_inventory',
           updates: Array(150).fill(null).map((_, i) => ({
             productId: `prod_${i}`,
             quantity: 10,
-            operation: "add",
+            operation: 'add',
           })),
-          reason: "Large inventory adjustment",
+          reason: 'Large inventory adjustment',
         },
       };
 
@@ -830,7 +817,7 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
 
       assertEquals(result.success, true);
       const data = getResultData(result);
-      assertEquals(data.executionPlan.operationType, "bulk_update_inventory");
+      assertEquals(data.executionPlan.operationType, 'bulk_update_inventory');
       assertEquals(data.executionPlan.rollbackEnabled, true);
       assertExists(data.resourceRequirements.apiCalls);
 
@@ -842,17 +829,17 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
   /**
    * PERMISSION AND AUTHORIZATION
    */
-  describe("Permission and Authorization", () => {
-    it("should validate permissions for operation types", async () => {
+  describe('Permission and Authorization', () => {
+    it('should validate permissions for operation types', async () => {
       const params = {
-        userId: "test-user",
+        userId: 'test-user',
         dryRun: true,
-        operationType: "migrate_data",
+        operationType: 'migrate_data',
         operationData: {
-          type: "migrate_data",
-          sourceSystem: "old",
-          targetSystem: "new",
-          dataTypes: ["customers"],
+          type: 'migrate_data',
+          sourceSystem: 'old',
+          targetSystem: 'new',
+          dataTypes: ['customers'],
         },
       };
 
@@ -865,36 +852,36 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
       assertExists(data.permissionCheck.requiredRoles);
 
       // Migration should require admin role
-      assert(data.permissionCheck.requiredRoles.includes("admin"));
+      assert(data.permissionCheck.requiredRoles.includes('admin'));
     });
   });
 
   /**
    * ERROR HANDLING IN MULTI-STEP OPERATIONS
    */
-  describe("Multi-Step Error Handling", () => {
-    it("should handle OAuth failure in multi-step operation", async () => {
+  describe('Multi-Step Error Handling', () => {
+    it('should handle OAuth failure in multi-step operation', async () => {
       // Set up OAuth failure
-      mockOAuth.setAuthFailure("auth-fail-user", true);
+      mockOAuth.setAuthFailure('auth-fail-user', true);
 
       const params = {
-        userId: "auth-fail-user",
-        operationType: "create_customer_with_order",
+        userId: 'auth-fail-user',
+        operationType: 'create_customer_with_order',
         operationData: {
-          type: "create_customer_with_order",
+          type: 'create_customer_with_order',
           customer: {
-            name: "Test Customer",
-            email: "test@example.com",
+            name: 'Test Customer',
+            email: 'test@example.com',
             address: {
-              street: "123 Test St",
-              city: "Test City",
-              state: "TS",
-              zipCode: "12345",
+              street: '123 Test St',
+              city: 'Test City',
+              state: 'TS',
+              zipCode: '12345',
             },
           },
           order: {
             items: [
-              { productId: "prod_001", quantity: 1, unitPrice: 299.99 },
+              { productId: 'prod_001', quantity: 1, unitPrice: 299.99 },
             ],
           },
         },
@@ -904,24 +891,24 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
 
       assertEquals(result.success, false);
       assertExists(result.error);
-      assertEquals(result.error.type, "system_error");
-      assert(result.error.message.includes("OAuth authentication failed"));
+      assertEquals(result.error.type, 'system_error');
+      assert(result.error.message.includes('OAuth authentication failed'));
       assertEquals(result.failed_steps.length, 1);
     });
 
-    it("should provide detailed error information for step failures", async () => {
+    it('should provide detailed error information for step failures', async () => {
       // Set up API failure
-      mockApiClient.setApiFailure("bulkUpdateInventory", true);
+      mockApiClient.setApiFailure('bulkUpdateInventory', true);
 
       const params = {
-        userId: "test-user",
-        operationType: "bulk_update_inventory",
+        userId: 'test-user',
+        operationType: 'bulk_update_inventory',
         operationData: {
-          type: "bulk_update_inventory",
+          type: 'bulk_update_inventory',
           updates: [
-            { productId: "prod_001", quantity: 50, operation: "add" },
+            { productId: 'prod_001', quantity: 50, operation: 'add' },
           ],
-          reason: "Test update",
+          reason: 'Test update',
         },
       };
 
@@ -929,9 +916,9 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
 
       assertEquals(result.success, false);
       assertExists(result.error);
-      assert(result.error.message.includes("Database error"));
+      assert(result.error.message.includes('Database error'));
       assertEquals(result.failed_steps.length, 1);
-      assertEquals(result.failed_steps[0]!.error_type, "system_error");
+      assertEquals(result.failed_steps[0]!.error_type, 'system_error');
       assertExists(result.failed_steps[0]!.timestamp);
     });
   });
@@ -939,19 +926,19 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
   /**
    * NOTIFICATION INTEGRATION
    */
-  describe("Notification Integration", () => {
-    it("should log notification sending for completion", async () => {
+  describe('Notification Integration', () => {
+    it('should log notification sending for completion', async () => {
       const params = {
-        userId: "test-user",
-        operationType: "process_refund",
+        userId: 'test-user',
+        operationType: 'process_refund',
         operationData: {
-          type: "process_refund",
-          orderId: "order_12345",
-          refundReason: "Product defect",
+          type: 'process_refund',
+          orderId: 'order_12345',
+          refundReason: 'Product defect',
         },
         notifications: {
           notifyOnCompletion: true,
-          notificationChannels: ["email", "slack"],
+          notificationChannels: ['email', 'slack'],
         },
       };
 
@@ -961,28 +948,26 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
 
       // Should log notification sending
       const logCalls = logSpy.calls;
-      const notificationLog = logCalls.find((call) =>
-        call.args[0].includes("Notification sent")
-      );
+      const notificationLog = logCalls.find((call) => call.args[0].includes('Notification sent'));
       assertExists(notificationLog);
-      assertEquals(notificationLog.args[1].type, "completion");
+      assertEquals(notificationLog.args[1].type, 'completion');
     });
 
-    it("should log notification sending for failure", async () => {
+    it('should log notification sending for failure', async () => {
       // Set up API failure
-      mockApiClient.setApiFailure("processRefund", true);
+      mockApiClient.setApiFailure('processRefund', true);
 
       const params = {
-        userId: "test-user",
-        operationType: "process_refund",
+        userId: 'test-user',
+        operationType: 'process_refund',
         operationData: {
-          type: "process_refund",
-          orderId: "order_12345",
-          refundReason: "Product defect",
+          type: 'process_refund',
+          orderId: 'order_12345',
+          refundReason: 'Product defect',
         },
         notifications: {
           notifyOnFailure: true,
-          notificationChannels: ["email"],
+          notificationChannels: ['email'],
         },
       };
 
@@ -992,11 +977,9 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
 
       // Should log failure notification
       const logCalls = logSpy.calls;
-      const notificationLog = logCalls.find((call) =>
-        call.args[0].includes("Notification sent")
-      );
+      const notificationLog = logCalls.find((call) => call.args[0].includes('Notification sent'));
       assertExists(notificationLog);
-      assertEquals(notificationLog.args[1].type, "failure");
+      assertEquals(notificationLog.args[1].type, 'failure');
     });
   });
 });

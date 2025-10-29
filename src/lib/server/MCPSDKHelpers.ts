@@ -134,14 +134,16 @@ export class BeyondMcpSDKHelpers {
 
     // progressToken is REQUIRED by MCP spec for client to associate progress with request
     if (!request.progressToken) {
-      this.logger.warn('MCPSDKHelpers: progressToken missing - notification may not be associated with request');
+      this.logger.warn(
+        'MCPSDKHelpers: progressToken missing - notification may not be associated with request',
+      );
     }
 
     try {
       await this.sdkMcpServer.server.notification({
         method: 'notifications/progress',
         params: {
-          progressToken: request.progressToken!,  // Required by MCP spec
+          progressToken: request.progressToken!, // Required by MCP spec
           progress: request.progress,
           total: 100,
           ...(request.message && { message: request.message }),

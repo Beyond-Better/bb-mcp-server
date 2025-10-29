@@ -201,7 +201,7 @@ Deno.test('WorkflowBase - parameter validation with Zod', async () => {
   const defaultResult = await workflow.validateParameters(defaultParams);
   assertEquals(defaultResult.valid, true);
   assertEquals(defaultResult.data?.count, 1); // default value applied
-  
+
   await kvManager.close();
   // kvManager = undefined;
 });

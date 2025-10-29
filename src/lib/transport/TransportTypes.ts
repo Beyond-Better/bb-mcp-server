@@ -75,7 +75,7 @@ export interface StdioTransportConfig {
   // 🔒 Authentication configuration (discouraged by MCP spec)
   enableAuthentication?: boolean; // STDIO SHOULD NOT use OAuth per MCP spec
   skipAuthentication?: boolean; // Skip auth even if OAuth components available
-  
+
   // 🎯 MCP SDK Protocol Timeout Configuration (NEW)
   mcpRequestTimeout?: number; // MCP protocol-level timeout in milliseconds (default: 60000)
   mcpResetTimeoutOnProgress?: boolean; // Reset MCP timeout on progress notifications (default: false)

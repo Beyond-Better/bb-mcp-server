@@ -239,7 +239,7 @@ ${toolData.overviews}
     extra?: Record<string, unknown>,
   ): Promise<CallToolResult> {
     try {
-      this.logger.info('WorkflowTools: Executing workflow', {args, extra});
+      this.logger.info('WorkflowTools: Executing workflow', { args, extra });
       const { workflow_name, parameters } = args;
 
       //this.logger.info('WorkflowTools: Executing workflow', { workflowNames: this.workflowRegistry.getWorkflowNames()});
@@ -280,7 +280,7 @@ ${toolData.overviews}
         auditLogger: this.auditLogger,
         //beyondMcpServer: BeyondMcpServer.getInstance(),
         logger: this.logger,
-        requestMetadata: (extra?._meta || {}) as Record<string, unknown>,  // Map _meta to requestMetadata for WorkflowContext
+        requestMetadata: (extra?._meta || {}) as Record<string, unknown>, // Map _meta to requestMetadata for WorkflowContext
         // Authentication context from AsyncLocalStorage
         authenticatedUserId: authContext?.authenticatedUserId,
         clientId: authContext?.clientId,
@@ -296,7 +296,7 @@ ${toolData.overviews}
       //   workflowContext,
       //   () => workflow.executeWithValidation(parameters, workflowContext),
       // );
-      const result = await workflow.executeWithValidation(parameters, workflowContext );
+      const result = await workflow.executeWithValidation(parameters, workflowContext);
 
       return {
         content: [

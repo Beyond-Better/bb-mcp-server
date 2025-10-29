@@ -326,10 +326,10 @@ export interface SendNotificationRequest {
 }
 
 export interface SendNotificationProgressRequest {
-    progress: number,
-    progressToken?: string | number,  // Required by MCP spec for client association
-    message?: string,
-    details?: Record<string, unknown>,
+  progress: number;
+  progressToken?: string | number; // Required by MCP spec for client association
+  message?: string;
+  details?: Record<string, unknown>;
 }
 
 /**

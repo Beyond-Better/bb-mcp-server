@@ -26,14 +26,14 @@ import { afterEach, beforeEach, describe, it } from 'https://deno.land/std@0.208
 // Import plugin factory and components
 import createPlugin from '../../src/plugins/ExamplePlugin.ts';
 
-import { KVManager } from "@beyondbetter/bb-mcp-server";
+import { KVManager } from '@beyondbetter/bb-mcp-server';
 // Import OAuth-aware test utilities
 import {
   createAuthenticatedWorkflowContext,
   createConnectedMocks,
   createMockAuditLogger,
-  createMockLogger,
   createMockKVManager,
+  createMockLogger,
   MockApiClient,
   MockOAuthConsumer,
 } from '../utils/test-helpers.ts';
@@ -152,8 +152,8 @@ describe('Plugin OAuth Integration', () => {
         oauthConsumer: null,
         logger: mockLogger,
         auditLogger: mockLogger,
-       kvManager: mockKVManager,
-     } as any);
+        kvManager: mockKVManager,
+      } as any);
 
       // Should create plugin but with warnings
       assertExists(pluginWithoutOAuth);

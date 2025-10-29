@@ -40,8 +40,8 @@ import {
   type CreateMessageResult,
   type ElicitInputRequest,
   type ElicitInputResult,
-  type SendNotificationRequest,
   type SendNotificationProgressRequest,
+  type SendNotificationRequest,
   type ToolDefinition,
   type ToolHandler,
   ToolHandlerMode,
@@ -79,7 +79,7 @@ export class BeyondMcpServer {
 
   // AsyncLocalStorage for request context
   private static contextStorage = new AsyncLocalStorage<BeyondMcpRequestContext>();
-  
+
   // AsyncLocalStorage for workflow context (for concurrent workflow execution)
   private static workflowContextStorage = new AsyncLocalStorage<any>();
 
