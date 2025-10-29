@@ -309,7 +309,7 @@ export class ConfigManager {
         // MCP SDK Protocol Timeout Configuration
         mcpRequestTimeout: parseInt(this.getEnvOptional('MCP_SDK_REQUEST_TIMEOUT', '60000')), // 60 seconds default (matches SDK default)
         mcpResetTimeoutOnProgress: this.getEnvBoolean('MCP_SDK_RESET_TIMEOUT_ON_PROGRESS', false),
-        mcpMaxTotalTimeout: this.getEnvOptional('MCP_SDK_MAX_TOTAL_TIMEOUT', '') ? parseInt(this.getEnvOptional('MCP_SDK_MAX_TOTAL_TIMEOUT', '0')) : undefined,
+        mcpMaxTotalTimeout: this.getEnvOptional('MCP_SDK_MAX_TOTAL_TIMEOUT', '') ? parseInt(this.getEnvOptional('MCP_SDK_MAX_TOTAL_TIMEOUT', '0')) : 0,
       };
     } else {
       config.stdio = {
@@ -322,7 +322,7 @@ export class ConfigManager {
         // MCP SDK Protocol Timeout Configuration
         mcpRequestTimeout: parseInt(this.getEnvOptional('MCP_SDK_REQUEST_TIMEOUT', '60000')), // 60 seconds default (matches SDK default)
         mcpResetTimeoutOnProgress: this.getEnvBoolean('MCP_SDK_RESET_TIMEOUT_ON_PROGRESS', false),
-        mcpMaxTotalTimeout: this.getEnvOptional('MCP_SDK_MAX_TOTAL_TIMEOUT', '') ? parseInt(this.getEnvOptional('MCP_SDK_MAX_TOTAL_TIMEOUT', '0')) : undefined,
+        mcpMaxTotalTimeout: this.getEnvOptional('MCP_SDK_MAX_TOTAL_TIMEOUT', '') ? parseInt(this.getEnvOptional('MCP_SDK_MAX_TOTAL_TIMEOUT', '0')) : 0,
       };
     }
 
