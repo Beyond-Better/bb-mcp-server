@@ -9,6 +9,7 @@
 import { z, type ZodSchema } from 'zod';
 import type { ConfigManager } from '../config/ConfigManager.ts';
 import type { Logger } from '../utils/Logger.ts';
+import { toError } from '../utils/Error.ts';
 //import type { AuditLogger } from '../utils/AuditLogger.ts';
 import type { KVManager } from '../storage/KVManager.ts';
 //import type { ErrorHandler } from '../utils/ErrorHandler.ts';
@@ -363,8 +364,8 @@ export abstract class WorkflowBase {
       });
       return result;
     } catch (error) {
-      this.logError('Failed to send elicitation input request', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+      this.logError('Failed to send elicitation input request', toError(error), {
+        request,
       });
       // Re-throw to force consumers to handle the error explicitly
       throw new Error(

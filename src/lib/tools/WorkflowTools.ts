@@ -278,7 +278,7 @@ ${toolData.overviews}
         workflowName: workflow_name,
         startTime: new Date(),
         auditLogger: this.auditLogger,
-        beyondMcpServer: BeyondMcpServer.getInstance(),
+        //beyondMcpServer: BeyondMcpServer.getInstance(),
         logger: this.logger,
         requestMetadata: (extra?._meta || {}) as Record<string, unknown>,  // Map _meta to requestMetadata for WorkflowContext
         // Authentication context from AsyncLocalStorage
@@ -291,11 +291,12 @@ ${toolData.overviews}
         thirdPartyClient: undefined,
       };
 
-      // Execute workflow within AsyncLocalStorage context for concurrent execution safety
-      const result = await BeyondMcpServer.executeWithWorkflowContext(
-        workflowContext,
-        () => workflow.executeWithValidation(parameters, workflowContext),
-      );
+      // // Execute workflow within AsyncLocalStorage context for concurrent execution safety
+      // const result = await BeyondMcpServer.executeWithWorkflowContext(
+      //   workflowContext,
+      //   () => workflow.executeWithValidation(parameters, workflowContext),
+      // );
+      const result = await workflow.executeWithValidation(parameters, workflowContext );
 
       return {
         content: [

@@ -85,6 +85,7 @@ export interface WorkflowContext {
   // Request metadata
   parameterUserId: string | undefined;
   _meta: Record<string, unknown>;
+  requestMetadata: Record<string, unknown>;
 
   // Authentication context
   authenticatedUserId: string | undefined;
