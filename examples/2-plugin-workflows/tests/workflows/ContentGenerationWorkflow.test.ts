@@ -32,11 +32,13 @@ describe('ContentGenerationWorkflow', () => {
     workflow = contentGenerationWorkflow;
 
     mockLogger = createMockLogger();
-    logSpy = spy(mockLogger, 'info');
+    logSpy = spy(mockLogger, "info");
+    context = createTestContext({ logger: mockLogger });
 
-    context = createTestContext({
-      logger: mockLogger,
-    });
+    const workflows = WorkflowPlugin.workflows!;
+    for (const workflow of workflows) {
+      workflow.setLogger(mockLogger);
+    }
   });
 
   afterEach(() => {

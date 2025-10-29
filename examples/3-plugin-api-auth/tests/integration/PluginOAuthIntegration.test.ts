@@ -21,17 +21,19 @@
  */
 
 import { assert, assertEquals, assertExists } from 'https://deno.land/std@0.208.0/assert/mod.ts';
-import { beforeEach, describe, it } from 'https://deno.land/std@0.208.0/testing/bdd.ts';
+import { afterEach, beforeEach, describe, it } from 'https://deno.land/std@0.208.0/testing/bdd.ts';
 
 // Import plugin factory and components
 import createPlugin from '../../src/plugins/ExamplePlugin.ts';
 
+import { KVManager } from "@beyondbetter/bb-mcp-server";
 // Import OAuth-aware test utilities
 import {
   createAuthenticatedWorkflowContext,
   createConnectedMocks,
   createMockAuditLogger,
   createMockLogger,
+  createMockKVManager,
   MockApiClient,
   MockOAuthConsumer,
 } from '../utils/test-helpers.ts';
@@ -48,13 +50,15 @@ describe('Plugin OAuth Integration', () => {
   let mockApiClient: MockApiClient;
   let mockLogger: SpyLogger;
   let mockAuditLogger: SpyAuditLogger;
+  let mockKVManager: KVManager;
   let plugin: any;
   let dependencies: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Set up logger and audit logger first
     mockLogger = createMockLogger();
     mockAuditLogger = createMockAuditLogger();
+    mockKVManager = await createMockKVManager();
 
     // Set up comprehensive OAuth and API mocks with proper wiring
     const mocks = createConnectedMocks(mockAuditLogger);
@@ -67,10 +71,15 @@ describe('Plugin OAuth Integration', () => {
       oauthConsumer: mockOAuth,
       logger: mockLogger,
       auditLogger: mockAuditLogger,
+      kvManager: mockKVManager,
     };
 
     // Create plugin with dependencies
     plugin = createPlugin(dependencies as any);
+  });
+
+  afterEach(async () => {
+    await mockKVManager.close();
   });
 
   /**
@@ -143,7 +152,8 @@ describe('Plugin OAuth Integration', () => {
         oauthConsumer: null,
         logger: mockLogger,
         auditLogger: mockLogger,
-      } as any);
+       kvManager: mockKVManager,
+     } as any);
 
       // Should create plugin but with warnings
       assertExists(pluginWithoutOAuth);

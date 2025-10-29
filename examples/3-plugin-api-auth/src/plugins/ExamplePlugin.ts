@@ -13,15 +13,15 @@ import type {
   ToolRegistry,
   WorkflowBase,
   WorkflowRegistry,
-} from '@beyondbetter/bb-mcp-server';
-import { ExampleQueryWorkflow } from '../plugins/workflows/ExampleQueryWorkflow.ts';
-import { ExampleOperationWorkflow } from '../plugins/workflows/ExampleOperationWorkflow.ts';
-import type { ExampleQueryWorkflowDependencies } from '../plugins/workflows/ExampleQueryWorkflow.ts';
-import type { ExampleOperationWorkflowDependencies } from '../plugins/workflows/ExampleOperationWorkflow.ts';
-import type { ExampleApiClient } from '../api/ExampleApiClient.ts';
-import { ExampleTools } from '../plugins/tools/ExampleTools.ts';
-import type { ExampleToolsDependencies } from '../plugins/tools/ExampleTools.ts';
-import type { ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts';
+} from "@beyondbetter/bb-mcp-server";
+import { ExampleQueryWorkflow } from "../plugins/workflows/ExampleQueryWorkflow.ts";
+import { ExampleOperationWorkflow } from "../plugins/workflows/ExampleOperationWorkflow.ts";
+import type { ExampleQueryWorkflowDependencies } from "../plugins/workflows/ExampleQueryWorkflow.ts";
+import type { ExampleOperationWorkflowDependencies } from "../plugins/workflows/ExampleOperationWorkflow.ts";
+import type { ExampleApiClient } from "../api/ExampleApiClient.ts";
+import { ExampleTools } from "../plugins/tools/ExampleTools.ts";
+import type { ExampleToolsDependencies } from "../plugins/tools/ExampleTools.ts";
+import type { ExampleOAuthConsumer } from "../auth/ExampleOAuthConsumer.ts";
 
 /**
  * Plugin dependencies interface
@@ -41,16 +41,17 @@ export interface ExamplePluginDependencies {
  * and registration by the bb-mcp-server plugin system.
  */
 class ExampleCorpPlugin implements AppPlugin {
-  name = 'example-corp-plugin';
-  version = '1.0.0';
-  description = 'ExampleCorp business workflows and tools plugin for bb-mcp-server';
-  author = 'ExampleCorp Integration Team';
-  license = 'MIT';
-  tags = ['examplecorp', 'business', 'query', 'operation', 'api'];
+  name = "example-corp-plugin";
+  version = "1.0.0";
+  description =
+    "ExampleCorp business workflows and tools plugin for bb-mcp-server";
+  author = "ExampleCorp Integration Team";
+  license = "MIT";
+  tags = ["examplecorp", "business", "query", "operation", "api"];
 
   workflows: WorkflowBase[] = [];
   tools: ToolRegistration[] = [];
-  dependencies = ['@beyondbetter/bb-mcp-server'];
+  dependencies = ["@beyondbetter/bb-mcp-server"];
 
   /**
    * Initialize the plugin with registry
@@ -65,7 +66,7 @@ class ExampleCorpPlugin implements AppPlugin {
     dependencies.logger.info(`${this.name} plugin initialized`, {
       workflows: this.workflows.length,
       tools: this.tools.length,
-      note: 'Tools and workflows registered by PluginManager',
+      note: "Tools and workflows registered by PluginManager",
     });
   }
 
@@ -83,32 +84,45 @@ class ExampleCorpPlugin implements AppPlugin {
  * Factory function to create plugin instance
  * This pattern allows for dependency injection during plugin creation
  */
-export default function createPlugin(dependencies: AppServerDependencies): AppPlugin {
+export default function createPlugin(
+  dependencies: AppServerDependencies,
+): AppPlugin {
   const plugin = new ExampleCorpPlugin();
 
   // Initialize the plugin synchronously for simple use cases
   // Note: For async initialization, use the initialize() method
-  const { thirdpartyApiClient, oauthConsumer, logger, auditLogger } = dependencies;
+  const {
+    thirdpartyApiClient,
+    oauthConsumer,
+    configManager,
+    logger,
+    auditLogger,
+    kvManager,
+  } = dependencies;
 
   // Validate required dependencies
   if (!thirdpartyApiClient || !oauthConsumer) {
-    logger.warn('ExamplePlugin: Missing required dependencies', {
+    logger.warn("ExamplePlugin: Missing required dependencies", {
       hasApiClient: !!thirdpartyApiClient,
       hasOAuthConsumer: !!oauthConsumer,
-      impact: 'Some tools and workflows may not function correctly',
+      impact: "Some tools and workflows may not function correctly",
     });
   }
 
   // Create workflows
   const queryWorkflowDeps: ExampleQueryWorkflowDependencies = {
     apiClient: thirdpartyApiClient,
+    configManager,
     logger,
+    kvManager,
     oauthConsumer,
   };
 
   const operationWorkflowDeps: ExampleOperationWorkflowDependencies = {
     apiClient: thirdpartyApiClient,
+    configManager,
     logger,
+    kvManager,
     oauthConsumer,
   };
 
@@ -128,7 +142,9 @@ export default function createPlugin(dependencies: AppServerDependencies): AppPl
 
     plugin.tools = createExampleTools(exampleToolsDependencies);
   } else {
-    logger.warn('ExamplePlugin: Skipping tool creation due to missing dependencies');
+    logger.warn(
+      "ExamplePlugin: Skipping tool creation due to missing dependencies",
+    );
     plugin.tools = [];
   }
 
@@ -140,7 +156,9 @@ export default function createPlugin(dependencies: AppServerDependencies): AppPl
  * Returns tool objects that PluginManager can register
  * Now works with the ToolBase class and ToolRegistration interface
  */
-function createExampleTools(dependencies: ExampleToolsDependencies): ToolRegistration[] {
+function createExampleTools(
+  dependencies: ExampleToolsDependencies,
+): ToolRegistration[] {
   const exampleTools = new ExampleTools(dependencies);
 
   // Get tool registrations from the ToolBase class

@@ -27,8 +27,8 @@
  */
 
 import { assertEquals, assertExists } from '@std/assert';
-import { createMockAuditLogger, createMockLogger } from '@beyondbetter/bb-mcp-server/testing';
-export { createMockAuditLogger, createMockLogger };
+import { createMockAuditLogger, createMockLogger, createMockConfigManager, createMockKVManager } from '@beyondbetter/bb-mcp-server/testing';
+export { createMockAuditLogger, createMockLogger, createMockConfigManager, createMockKVManager };
 
 /**
  * Mock OAuth Consumer Implementation

@@ -530,7 +530,6 @@ describe("Workflow Integration Tests", () => {
       await workflow.executeWithValidation(params, context);
 
       const logCalls = logSpy.calls;
-      console.log("logCalls", logCalls);
       assert(logCalls.length > 0);
 
       // Should have consistent log format with workflow name and step info

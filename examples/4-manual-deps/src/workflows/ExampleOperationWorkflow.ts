@@ -9,17 +9,23 @@
  */
 
 // 🎯 Library imports - workflow infrastructure
-import { Logger, WorkflowBase } from '@beyondbetter/bb-mcp-server';
-import type { WorkflowContext, WorkflowResult } from '@beyondbetter/bb-mcp-server';
-import { z } from 'zod'; // Library provides Zod integration
+import {
+  WorkflowBase,
+  type WorkflowDependencies,
+} from "@beyondbetter/bb-mcp-server";
+import type {
+  WorkflowContext,
+  WorkflowResult,
+} from "@beyondbetter/bb-mcp-server";
+import { z } from "zod"; // Library provides Zod integration
 
 // 🎯 Consumer-specific imports
-import { ExampleApiClient } from '../api/ExampleApiClient.ts';
-import { ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts';
+import { ExampleApiClient } from "../api/ExampleApiClient.ts";
+import { ExampleOAuthConsumer } from "../auth/ExampleOAuthConsumer.ts";
 
-export interface ExampleOperationWorkflowDependencies {
+export interface ExampleOperationWorkflowDependencies
+  extends WorkflowDependencies {
   apiClient: ExampleApiClient;
-  logger: Logger;
   oauthConsumer: ExampleOAuthConsumer;
 }
 
@@ -32,39 +38,39 @@ export interface ExampleOperationWorkflowDependencies {
  */
 export class ExampleOperationWorkflow extends WorkflowBase {
   // 🎯 Required workflow metadata (library enforces these)
-  readonly name = 'example_operation';
-  readonly version = '1.0.0';
+  readonly name = "example_operation";
+  readonly version = "1.0.0";
   readonly description =
-    '🛠️ Execute complex ExampleCorp business operations with multi-step processing and rollback capabilities';
-  readonly category = 'operation' as const;
+    "🛠️ Execute complex ExampleCorp business operations with multi-step processing and rollback capabilities";
+  readonly category = "operation" as const;
   override readonly tags = [
-    'operation',
-    'business',
-    'examplecorp',
-    'multi-step',
+    "operation",
+    "business",
+    "examplecorp",
+    "multi-step",
   ];
 
   // 🎯 Library-enforced parameter validation schema
   readonly parameterSchema = z.object({
     // Required for all workflows
-    userId: z.string().describe('User ID for authentication and audit logging'),
+    userId: z.string().describe("User ID for authentication and audit logging"),
     requestId: z.string().optional().describe(
-      'Optional request ID for tracking',
+      "Optional request ID for tracking",
     ),
-    dryRun: z.boolean().optional().default(false).describe('Dry run mode'),
+    dryRun: z.boolean().optional().default(false).describe("Dry run mode"),
     // Operation type and configuration
     operationType: z.enum([
-      'create_customer_with_order',
-      'bulk_update_inventory',
-      'process_refund',
-      'migrate_data',
-    ]).describe('Type of operation to execute'),
+      "create_customer_with_order",
+      "bulk_update_inventory",
+      "process_refund",
+      "migrate_data",
+    ]).describe("Type of operation to execute"),
 
     // Operation-specific parameters (discriminated union pattern)
-    operationData: z.discriminatedUnion('type', [
+    operationData: z.discriminatedUnion("type", [
       // Create customer with order operation
       z.object({
-        type: z.literal('create_customer_with_order'),
+        type: z.literal("create_customer_with_order"),
         customer: z.object({
           name: z.string().min(1),
           email: z.string().email(),
@@ -74,10 +80,10 @@ export class ExampleOperationWorkflow extends WorkflowBase {
             city: z.string(),
             state: z.string(),
             zipCode: z.string(),
-            country: z.string().default('US'),
+            country: z.string().default("US"),
           }),
-          customerType: z.enum(['individual', 'business']).default(
-            'individual',
+          customerType: z.enum(["individual", "business"]).default(
+            "individual",
           ),
         }),
         order: z.object({
@@ -86,26 +92,26 @@ export class ExampleOperationWorkflow extends WorkflowBase {
             quantity: z.number().int().min(1),
             unitPrice: z.number().min(0),
           })).min(1),
-          shippingMethod: z.enum(['standard', 'expedited', 'overnight'])
-            .default('standard'),
+          shippingMethod: z.enum(["standard", "expedited", "overnight"])
+            .default("standard"),
           notes: z.string().optional(),
         }),
       }),
 
       // Bulk inventory update operation
       z.object({
-        type: z.literal('bulk_update_inventory'),
+        type: z.literal("bulk_update_inventory"),
         updates: z.array(z.object({
           productId: z.string(),
           quantity: z.number().int(),
-          operation: z.enum(['set', 'add', 'subtract']).default('set'),
+          operation: z.enum(["set", "add", "subtract"]).default("set"),
         })).min(1).max(1000), // Reasonable batch size
-        reason: z.string().describe('Reason for inventory update'),
+        reason: z.string().describe("Reason for inventory update"),
       }),
 
       // Process refund operation
       z.object({
-        type: z.literal('process_refund'),
+        type: z.literal("process_refund"),
         orderId: z.string(),
         refundAmount: z.number().min(0).optional(),
         refundItems: z.array(z.object({
@@ -119,39 +125,39 @@ export class ExampleOperationWorkflow extends WorkflowBase {
 
       // Data migration operation
       z.object({
-        type: z.literal('migrate_data'),
+        type: z.literal("migrate_data"),
         sourceSystem: z.string(),
         targetSystem: z.string(),
         dataTypes: z.array(
-          z.enum(['customers', 'orders', 'products', 'inventory']),
+          z.enum(["customers", "orders", "products", "inventory"]),
         ).min(1),
         batchSize: z.number().int().min(1).max(1000).default(100),
         validateOnly: z.boolean().default(false),
       }),
-    ]).describe('Operation-specific data and parameters'),
+    ]).describe("Operation-specific data and parameters"),
 
     // Execution options
     executionOptions: z.object({
       timeout: z.number().int().min(1).max(3600).optional().default(300)
-        .describe('Operation timeout in seconds'),
+        .describe("Operation timeout in seconds"),
       retryAttempts: z.number().int().min(0).max(5).optional().default(2)
-        .describe('Number of retry attempts on failure'),
+        .describe("Number of retry attempts on failure"),
       rollbackOnFailure: z.boolean().optional().default(true).describe(
-        'Whether to rollback changes on failure',
+        "Whether to rollback changes on failure",
       ),
       continueOnPartialFailure: z.boolean().optional().default(false).describe(
-        'Continue processing if some items fail',
+        "Continue processing if some items fail",
       ),
-    }).optional().describe('Execution configuration options'),
+    }).optional().describe("Execution configuration options"),
 
     // Notification settings
     notifications: z.object({
       notifyOnCompletion: z.boolean().default(false),
       notifyOnFailure: z.boolean().default(true),
-      notificationChannels: z.array(z.enum(['email', 'slack', 'webhook']))
+      notificationChannels: z.array(z.enum(["email", "slack", "webhook"]))
         .optional(),
       customRecipients: z.array(z.string().email()).optional(),
-    }).optional().describe('Notification configuration'),
+    }).optional().describe("Notification configuration"),
     // Note: userId, requestId, dryRun already defined above
   }).refine(
     (data) => {
@@ -165,21 +171,19 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       return data.operationType === data.operationData.type;
     },
     {
-      message: 'operationType must match operationData.type',
-      path: ['operationData', 'type'],
+      message: "operationType must match operationData.type",
+      path: ["operationData", "type"],
     },
   );
 
   private apiClient: ExampleApiClient;
   private oauthConsumer: ExampleOAuthConsumer;
-  private logger: Logger;
 
   constructor(dependencies: ExampleOperationWorkflowDependencies) {
-    super(); // 🎯 Initialize library base class
+    super(dependencies); // 🎯 Initialize library base class
 
     this.apiClient = dependencies.apiClient;
     this.oauthConsumer = dependencies.oauthConsumer;
-    this.logger = dependencies.logger;
   }
 
   /**
@@ -188,14 +192,14 @@ export class ExampleOperationWorkflow extends WorkflowBase {
   getRegistration() {
     return {
       name: this.name,
-      displayName: 'ExampleCorp Operation Workflow',
+      displayName: "ExampleCorp Operation Workflow",
       description: this.description,
       version: this.version,
       category: this.category,
       requiresAuth: this.requiresAuth,
       estimatedDuration: this.estimatedDuration || 180,
       tags: this.tags,
-      author: 'ExampleCorp Integration Team',
+      author: "ExampleCorp Integration Team",
       parameterSchema: this.parameterSchema, // Include parameter schema for get_schema_for_workflow tool
     };
   }
@@ -225,10 +229,12 @@ export class ExampleOperationWorkflow extends WorkflowBase {
     params: z.infer<typeof this.parameterSchema>,
   ): Promise<WorkflowResult> {
     const startTime = performance.now();
-    const operationId = `op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const operationId = `op_${Date.now()}_${
+      Math.random().toString(36).substr(2, 9)
+    }`;
 
     try {
-      this.logger.info('ExampleCorp operation workflow started', {
+      this.logger.info("ExampleCorp operation workflow started", {
         workflowName: this.name,
         operationType: params.operationType,
         operationId,
@@ -265,10 +271,10 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       // 🎯 Handle operation failure - return error result immediately
       if (!operationResult.success) {
         this.logger.error(
-          'ExampleCorp operation workflow failed',
+          "ExampleCorp operation workflow failed",
           operationResult.error instanceof Error
             ? operationResult.error
-            : new Error(operationResult.error?.message || 'Operation failed'),
+            : new Error(operationResult.error?.message || "Operation failed"),
           {
             workflowName: this.name,
             operationType: params.operationType,
@@ -280,7 +286,10 @@ export class ExampleOperationWorkflow extends WorkflowBase {
 
         // 🎯 Send failure notifications if configured
         if (params.notifications?.notifyOnFailure) {
-          await this.sendNotification(params, operationResult, 'failure');
+          await this.sendNotification({
+            level: "error",
+            data: { params, operationResult },
+          });
         }
 
         return {
@@ -291,8 +300,8 @@ export class ExampleOperationWorkflow extends WorkflowBase {
             rollbackInfo: operationResult.rollbackInfo,
           },
           error: {
-            type: 'system_error' as const,
-            message: operationResult.error?.message || 'Operation failed',
+            type: "system_error" as const,
+            message: operationResult.error?.message || "Operation failed",
             details: operationResult.error?.details,
             code: operationResult.error?.code,
             stack: operationResult.error?.stack,
@@ -301,8 +310,8 @@ export class ExampleOperationWorkflow extends WorkflowBase {
           completed_steps: [],
           failed_steps: [{
             operation: params.operationType,
-            error_type: 'system_error' as const,
-            message: operationResult.error?.message || 'Operation failed',
+            error_type: "system_error" as const,
+            message: operationResult.error?.message || "Operation failed",
             timestamp: new Date().toISOString(),
           }],
           metadata: {
@@ -314,7 +323,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
         };
       }
 
-      this.logger.info('ExampleCorp operation workflow completed', {
+      this.logger.info("ExampleCorp operation workflow completed", {
         workflowName: this.name,
         operationType: params.operationType,
         operationId,
@@ -325,7 +334,10 @@ export class ExampleOperationWorkflow extends WorkflowBase {
 
       // 🎯 Send notifications if configured
       if (params.notifications?.notifyOnCompletion) {
-        await this.sendNotification(params, operationResult, 'completion');
+        await this.sendNotification({
+          level: "notice",
+          data: { params, operationResult },
+        });
       }
 
       // 🎯 Return structured workflow result (success case)
@@ -357,7 +369,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       const executionTime = performance.now() - startTime;
 
       this.logger.error(
-        'ExampleCorp operation workflow failed',
+        "ExampleCorp operation workflow failed",
         error instanceof Error ? error : new Error(String(error)),
         {
           workflowName: this.name,
@@ -370,11 +382,10 @@ export class ExampleOperationWorkflow extends WorkflowBase {
 
       // 🎯 Send failure notifications if configured
       if (params.notifications?.notifyOnFailure) {
-        await this.sendNotification(
-          params,
-          { success: false, error },
-          'failure',
-        );
+        await this.sendNotification({
+          level: "error",
+          data: { params, operationResult: { success: false, error } },
+        });
       }
 
       // 🎯 Return structured error result
@@ -386,12 +397,13 @@ export class ExampleOperationWorkflow extends WorkflowBase {
           rollbackInfo: {
             rollbackPerformed: false,
             rollbackActions: 0,
-            rollbackEnabled: params.executionOptions?.rollbackOnFailure !== false,
+            rollbackEnabled:
+              params.executionOptions?.rollbackOnFailure !== false,
           },
         },
         error: {
-          type: 'system_error' as const,
-          message: error instanceof Error ? error.message : 'Unknown error',
+          type: "system_error" as const,
+          message: error instanceof Error ? error.message : "Unknown error",
           details: error instanceof Error ? error.stack : undefined,
           code: undefined,
           stack: error instanceof Error ? error.stack : undefined,
@@ -400,9 +412,11 @@ export class ExampleOperationWorkflow extends WorkflowBase {
         completed_steps: [],
         failed_steps: [{
           operation: params.operationType,
-          error_type: 'system_error' as const,
-          message: error instanceof Error ? error.message : 'Unknown error',
-          ...(error instanceof Error && error.stack ? { details: error.stack } : {}),
+          error_type: "system_error" as const,
+          message: error instanceof Error ? error.message : "Unknown error",
+          ...(error instanceof Error && error.stack
+            ? { details: error.stack }
+            : {}),
           timestamp: new Date().toISOString(),
         }],
         metadata: {
@@ -435,7 +449,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
     const apiStatus = await this.apiClient.healthCheck();
     // console.log("🔍 API Health Check:", apiStatus);
     if (!apiStatus.healthy) {
-      throw new Error('ExampleCorp API is not accessible');
+      throw new Error("ExampleCorp API is not accessible");
     }
 
     // Generate execution plan
@@ -457,7 +471,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
         resourceRequirements: this.calculateResourceRequirements(params),
       },
       completed_steps: [{
-        operation: 'dry_run_validation',
+        operation: "dry_run_validation",
         success: true,
         data: { executionPlan, permissionCheck },
         duration_ms: 200,
@@ -466,7 +480,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       failed_steps: [],
       metadata: {
         workflowName: this.name,
-        mode: 'dry_run',
+        mode: "dry_run",
         operationId,
         timestamp: new Date().toISOString(),
       },
@@ -504,7 +518,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
     try {
       // 🎯 Execute operation based on type
       switch (params.operationType) {
-        case 'create_customer_with_order':
+        case "create_customer_with_order":
           return await this.executeCreateCustomerWithOrder(
             params,
             operationId,
@@ -512,7 +526,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
             rollbackActions,
           );
 
-        case 'bulk_update_inventory':
+        case "bulk_update_inventory":
           return await this.executeBulkInventoryUpdate(
             params,
             operationId,
@@ -520,7 +534,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
             rollbackActions,
           );
 
-        case 'process_refund':
+        case "process_refund":
           return await this.executeProcessRefund(
             params,
             operationId,
@@ -528,7 +542,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
             rollbackActions,
           );
 
-        case 'migrate_data':
+        case "migrate_data":
           return await this.executeDataMigration(
             params,
             operationId,
@@ -543,12 +557,13 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       }
     } catch (error) {
       // 🎯 Determine if rollback should be performed
-      const shouldRollback = params.executionOptions?.rollbackOnFailure !== false &&
+      const shouldRollback =
+        params.executionOptions?.rollbackOnFailure !== false &&
         rollbackActions.length > 0;
 
       // 🎯 Perform rollback if enabled and rollback actions exist
       if (shouldRollback) {
-        this.logger.warn('Operation failed, performing rollback', {
+        this.logger.warn("Operation failed, performing rollback", {
           operationId,
           rollbackActions: rollbackActions.length,
         });
@@ -557,8 +572,10 @@ export class ExampleOperationWorkflow extends WorkflowBase {
           await this.performRollback(rollbackActions, operationId, userId);
         } catch (rollbackError) {
           this.logger.error(
-            'Rollback failed',
-            rollbackError instanceof Error ? rollbackError : new Error(String(rollbackError)),
+            "Rollback failed",
+            rollbackError instanceof Error
+              ? rollbackError
+              : new Error(String(rollbackError)),
             {
               operationId,
             },
@@ -590,14 +607,14 @@ export class ExampleOperationWorkflow extends WorkflowBase {
   ): Promise<{ success: boolean; data: any; steps: any[]; rollbackInfo: any }> {
     const operationData = params.operationData as Extract<
       typeof params.operationData,
-      { type: 'create_customer_with_order' }
+      { type: "create_customer_with_order" }
     >;
 
     // 🎯 Get OAuth access token
     const accessToken = await this.oauthConsumer.getAccessToken(params.userId);
 
     // Step 1: Create customer
-    this.logger.debug('Creating customer', { operationId });
+    this.logger.debug("Creating customer", { operationId });
     const customerData: any = {
       name: operationData.customer.name,
       email: operationData.customer.email,
@@ -613,17 +630,17 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       params.userId,
     );
     steps.push({
-      step: 'create_customer',
+      step: "create_customer",
       result: customer,
       timestamp: new Date().toISOString(),
     });
     rollbackActions.push({
-      action: 'delete_customer',
+      action: "delete_customer",
       customerId: customer.id,
     });
 
     // Step 2: Create order for customer
-    this.logger.debug('Creating order for customer', {
+    this.logger.debug("Creating order for customer", {
       operationId,
       customerId: customer.id,
     });
@@ -641,11 +658,11 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       params.userId,
     );
     steps.push({
-      step: 'create_order',
+      step: "create_order",
       result: order,
       timestamp: new Date().toISOString(),
     });
-    rollbackActions.push({ action: 'cancel_order', orderId: order.id });
+    rollbackActions.push({ action: "cancel_order", orderId: order.id });
 
     return {
       success: true,
@@ -673,7 +690,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
   ): Promise<{ success: boolean; data: any; steps: any[]; rollbackInfo: any }> {
     const operationData = params.operationData as Extract<
       typeof params.operationData,
-      { type: 'bulk_update_inventory' }
+      { type: "bulk_update_inventory" }
     >;
 
     // 🎯 Get OAuth access token
@@ -688,7 +705,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
 
     // Prepare rollback actions
     rollbackActions.push({
-      action: 'restore_inventory',
+      action: "restore_inventory",
       inventory: currentInventory,
     });
 
@@ -699,7 +716,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
     }, params.userId);
 
     steps.push({
-      step: 'bulk_inventory_update',
+      step: "bulk_inventory_update",
       result: updateResult,
       timestamp: new Date().toISOString(),
     });
@@ -726,7 +743,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
   ): Promise<{ success: boolean; data: any; steps: any[]; rollbackInfo: any }> {
     const operationData = params.operationData as Extract<
       typeof params.operationData,
-      { type: 'process_refund' }
+      { type: "process_refund" }
     >;
 
     // 🎯 Get OAuth access token
@@ -750,16 +767,16 @@ export class ExampleOperationWorkflow extends WorkflowBase {
     );
 
     steps.push({
-      step: 'process_refund',
+      step: "process_refund",
       result: refund,
       timestamp: new Date().toISOString(),
     });
 
     // Note: Refunds typically cannot be automatically rolled back
     rollbackActions.push({
-      action: 'manual_review_required',
+      action: "manual_review_required",
       refundId: refund.id,
-      note: 'Refund rollback requires manual intervention',
+      note: "Refund rollback requires manual intervention",
     });
 
     return {
@@ -769,7 +786,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       rollbackInfo: {
         rollbackActionsAvailable: 0, // Manual intervention required
         rollbackEnabled: false,
-        note: 'Refund operations require manual rollback',
+        note: "Refund operations require manual rollback",
       },
     };
   }
@@ -785,7 +802,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
   ): Promise<{ success: boolean; data: any; steps: any[]; rollbackInfo: any }> {
     const operationData = params.operationData as Extract<
       typeof params.operationData,
-      { type: 'migrate_data' }
+      { type: "migrate_data" }
     >;
 
     // 🎯 Get OAuth access token
@@ -799,7 +816,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
         params.userId,
       );
       steps.push({
-        step: 'validate_migration',
+        step: "validate_migration",
         result: validation,
         timestamp: new Date().toISOString(),
       });
@@ -818,7 +835,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
         params.userId,
       );
       steps.push({
-        step: 'execute_migration',
+        step: "execute_migration",
         result: migration,
         timestamp: new Date().toISOString(),
       });
@@ -852,7 +869,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
         await this.executeRollbackAction(action, operationId, userId);
       } catch (error) {
         this.logger.error(
-          'Rollback action failed',
+          "Rollback action failed",
           error instanceof Error ? error : new Error(String(error)),
           {
             operationId,
@@ -872,7 +889,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
     operationId: string,
     userId: string,
   ): Promise<void> {
-    this.logger.debug('Executing rollback action', {
+    this.logger.debug("Executing rollback action", {
       operationId,
       action: action.action,
     });
@@ -881,20 +898,20 @@ export class ExampleOperationWorkflow extends WorkflowBase {
     const accessToken = await this.oauthConsumer.getAccessToken(userId);
 
     switch (action.action) {
-      case 'delete_customer':
+      case "delete_customer":
         await this.apiClient.deleteCustomer(accessToken, action.customerId);
         break;
-      case 'cancel_order':
+      case "cancel_order":
         await this.apiClient.cancelOrder(accessToken, action.orderId);
         break;
-      case 'restore_inventory':
+      case "restore_inventory":
         await this.apiClient.restoreInventoryLevels(
           accessToken,
           action.inventory,
         );
         break;
       default:
-        this.logger.warn('Unknown rollback action', {
+        this.logger.warn("Unknown rollback action", {
           operationId,
           action: action.action,
         });
@@ -908,10 +925,10 @@ export class ExampleOperationWorkflow extends WorkflowBase {
     params: z.infer<typeof this.parameterSchema>,
   ): Promise<any> {
     const baseSteps = {
-      create_customer_with_order: ['create_customer', 'create_order'],
-      bulk_update_inventory: ['get_current_inventory', 'bulk_update_inventory'],
-      process_refund: ['validate_order', 'process_refund'],
-      migrate_data: ['validate_migration', 'execute_migration'],
+      create_customer_with_order: ["create_customer", "create_order"],
+      bulk_update_inventory: ["get_current_inventory", "bulk_update_inventory"],
+      process_refund: ["validate_order", "process_refund"],
+      migrate_data: ["validate_migration", "execute_migration"],
     }[params.operationType] || [];
 
     return {
@@ -933,7 +950,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
     return {
       hasPermission: true,
       requiredRoles: this.getRequiredRoles(params.operationType),
-      userRoles: ['user', 'operator'], // Would come from auth context
+      userRoles: ["user", "operator"], // Would come from auth context
     };
   }
 
@@ -942,11 +959,11 @@ export class ExampleOperationWorkflow extends WorkflowBase {
    */
   private getRequiredRoles(operationType: string): string[] {
     return {
-      create_customer_with_order: ['user'],
-      bulk_update_inventory: ['operator', 'admin'],
-      process_refund: ['operator', 'admin'],
-      migrate_data: ['admin'],
-    }[operationType] || ['user'];
+      create_customer_with_order: ["user"],
+      bulk_update_inventory: ["operator", "admin"],
+      process_refund: ["operator", "admin"],
+      migrate_data: ["admin"],
+    }[operationType] || ["user"];
   }
 
   /**
@@ -956,13 +973,13 @@ export class ExampleOperationWorkflow extends WorkflowBase {
     params: z.infer<typeof this.parameterSchema>,
   ): string {
     const estimates = {
-      create_customer_with_order: '10-30 seconds',
-      bulk_update_inventory: '1-5 minutes',
-      process_refund: '30-60 seconds',
-      migrate_data: '5-60 minutes',
+      create_customer_with_order: "10-30 seconds",
+      bulk_update_inventory: "1-5 minutes",
+      process_refund: "30-60 seconds",
+      migrate_data: "5-60 minutes",
     };
 
-    return estimates[params.operationType] || '1-5 minutes';
+    return estimates[params.operationType] || "1-5 minutes";
   }
 
   /**
@@ -973,8 +990,8 @@ export class ExampleOperationWorkflow extends WorkflowBase {
   ): any {
     return {
       apiCalls: this.estimateApiCalls(params),
-      memoryUsage: 'low',
-      networkBandwidth: 'medium',
+      memoryUsage: "low",
+      networkBandwidth: "medium",
       executionTime: this.estimateExecutionTime(params),
     };
   }
@@ -986,40 +1003,23 @@ export class ExampleOperationWorkflow extends WorkflowBase {
     params: z.infer<typeof this.parameterSchema>,
   ): number {
     switch (params.operationType) {
-      case 'create_customer_with_order':
+      case "create_customer_with_order":
         return 2; // create customer + create order
-      case 'bulk_update_inventory':
-        const updates = params.operationData.type === 'bulk_update_inventory'
+      case "bulk_update_inventory":
+        const updates = params.operationData.type === "bulk_update_inventory"
           ? params.operationData.updates
           : [];
         return Math.ceil(updates.length / 100) + 1; // batch API calls
-      case 'process_refund':
+      case "process_refund":
         return 2; // validate order + process refund
-      case 'migrate_data':
-        const dataTypes = params.operationData.type === 'migrate_data'
+      case "migrate_data":
+        const dataTypes = params.operationData.type === "migrate_data"
           ? params.operationData.dataTypes
           : [];
         return dataTypes.length * 2; // read + write for each data type
       default:
         return 1;
     }
-  }
-
-  /**
-   * Send notification
-   */
-  private async sendNotification(
-    params: z.infer<typeof this.parameterSchema>,
-    result: any,
-    type: 'completion' | 'failure',
-  ): Promise<void> {
-    // In a real implementation, this would send actual notifications
-    this.logger.info('Notification sent', {
-      type,
-      operationType: params.operationType,
-      channels: params.notifications?.notificationChannels || ['email'],
-      recipients: params.notifications?.customRecipients || [],
-    });
   }
 }
 

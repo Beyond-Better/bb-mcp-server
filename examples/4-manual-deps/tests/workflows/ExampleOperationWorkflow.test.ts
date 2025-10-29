@@ -314,10 +314,11 @@ describe("ExampleOperationWorkflow - Multi-Step OAuth Operations", () => {
     );
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     logSpy.restore();
     sendNotificationStub?.restore();
     mockApiClient.clearRollbackLog();
+    await mockKVManager.close();
   });
 
   /**

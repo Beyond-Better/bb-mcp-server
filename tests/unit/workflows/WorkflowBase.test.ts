@@ -5,7 +5,7 @@
 import { assert, assertEquals, assertExists } from '@std/assert';
 import { z } from 'zod';
 
-import { WorkflowBase } from '../../../src/lib/workflows/WorkflowBase.ts';
+import { WorkflowBase, WorkflowDependencies } from '../../../src/lib/workflows/WorkflowBase.ts';
 import type {
   WorkflowContext,
   WorkflowRegistration,
@@ -14,6 +14,7 @@ import type {
 import { Logger } from '../../../src/lib/utils/Logger.ts';
 import { AuditLogger } from '../../../src/lib/utils/AuditLogger.ts';
 import { KVManager } from '../../../src/lib/storage/KVManager.ts';
+import { createMockConfigManager, createMockKVManager } from '../../utils/test-helpers.ts';
 
 // Test workflow implementation
 class TestWorkflow extends WorkflowBase {
@@ -31,6 +32,10 @@ class TestWorkflow extends WorkflowBase {
     count: z.number().int().positive().default(1),
     optional: z.string().optional(),
   });
+
+  constructor(dependencies: WorkflowDependencies) {
+    super(dependencies);
+  }
 
   getRegistration(): WorkflowRegistration {
     return {
@@ -156,7 +161,10 @@ function createTestContext(
 }
 
 Deno.test('WorkflowBase - parameter validation with Zod', async () => {
-  const workflow = new TestWorkflow();
+  const logger = new Logger({ level: 'debug', format: 'text' });
+  const configManager = await createMockConfigManager();
+  const kvManager = await createMockKVManager();
+  const workflow = new TestWorkflow({ logger, configManager, kvManager });
 
   // Valid parameters
   const validParams = {
@@ -193,11 +201,15 @@ Deno.test('WorkflowBase - parameter validation with Zod', async () => {
   const defaultResult = await workflow.validateParameters(defaultParams);
   assertEquals(defaultResult.valid, true);
   assertEquals(defaultResult.data?.count, 1); // default value applied
+  
+  await kvManager.close();
+  // kvManager = undefined;
 });
 
 Deno.test('WorkflowBase - successful execution with validation', async () => {
   const logger = new Logger({ level: 'debug', format: 'text' });
-  const kvManager = new KVManager();
+  const configManager = await createMockConfigManager();
+  const kvManager = await createMockKVManager();
   const auditLogger = new AuditLogger({
     enabled: true,
     logCalls: {
@@ -212,7 +224,7 @@ Deno.test('WorkflowBase - successful execution with validation', async () => {
   }, logger);
   const context = createTestContext(logger, auditLogger, kvManager);
 
-  const workflow = new TestWorkflow();
+  const workflow = new TestWorkflow({ logger, configManager, kvManager });
   const params = {
     userId: 'test-user',
     message: 'hello world',
@@ -220,6 +232,7 @@ Deno.test('WorkflowBase - successful execution with validation', async () => {
   };
 
   const result = await workflow.executeWithValidation(params, context);
+  console.log('result', result);
 
   assertEquals(result.success, true);
   assertExists(result.duration);
@@ -234,11 +247,17 @@ Deno.test('WorkflowBase - successful execution with validation', async () => {
     assertEquals(result.completed_steps[i]!.success, true);
     assertExists(result.completed_steps[i]!.timestamp);
   }
+
+  await kvManager.close();
+  // kvManager = undefined;
 });
 
 Deno.test('WorkflowBase - parameter validation errors', async () => {
+  const logger = new Logger({ level: 'debug', format: 'text' });
+  const configManager = await createMockConfigManager();
+  const kvManager = await createMockKVManager();
   const context = createTestContext();
-  const workflow = new TestWorkflow();
+  const workflow = new TestWorkflow({ logger, configManager, kvManager });
 
   const invalidParams = {
     userId: '', // empty string - should fail min(1) validation
@@ -254,13 +273,18 @@ Deno.test('WorkflowBase - parameter validation errors', async () => {
   assert(result.failed_steps.length > 0);
   assertEquals(result.failed_steps[0]!.error_type, 'validation');
   assert(result.error.message.includes('Parameter validation failed'));
+
+  await kvManager.close();
+  // kvManager = undefined;
 });
 
 Deno.test('WorkflowBase - execution error handling', async () => {
   const logger = new Logger({ level: 'debug', format: 'text' });
+  const configManager = await createMockConfigManager();
+  const kvManager = await createMockKVManager();
   const context = createTestContext(logger);
 
-  const workflow = new FailingTestWorkflow();
+  const workflow = new FailingTestWorkflow({ logger, configManager, kvManager });
   const params = {
     userId: 'test-user',
   };
@@ -274,10 +298,16 @@ Deno.test('WorkflowBase - execution error handling', async () => {
   assertExists(result.duration);
   assertEquals(result.failed_steps.length, 1);
   assertEquals(result.failed_steps[0]!.operation, 'failing_workflow');
+
+  await kvManager.close();
+  // kvManager = undefined;
 });
 
 Deno.test('WorkflowBase - safe execution wrapper', async () => {
-  const workflow = new TestWorkflow();
+  const logger = new Logger({ level: 'debug', format: 'text' });
+  const configManager = await createMockConfigManager();
+  const kvManager = await createMockKVManager();
+  const workflow = new TestWorkflow({ logger, configManager, kvManager });
   const context = createTestContext(); // Mock workflow context
   (workflow as any).context = context;
   (workflow as any).resources = [];
@@ -302,10 +332,16 @@ Deno.test('WorkflowBase - safe execution wrapper', async () => {
   assertEquals(failResult.success, false);
   assertExists(failResult.error);
   assertEquals(failResult.error?.message, 'Operation failed');
+
+  await kvManager.close();
+  // kvManager = undefined;
 });
 
 Deno.test('WorkflowBase - resource tracking', async () => {
-  const workflow = new TestWorkflow();
+  const logger = new Logger({ level: 'debug', format: 'text' });
+  const configManager = await createMockConfigManager();
+  const kvManager = await createMockKVManager();
+  const workflow = new TestWorkflow({ logger, configManager, kvManager });
   const context = createTestContext(); // Set up workflow context
   (workflow as any).context = context;
   (workflow as any).resources = [];
@@ -329,10 +365,16 @@ Deno.test('WorkflowBase - resource tracking', async () => {
   assertEquals(resources[0].status, 'success');
   assert(resources[0].duration_ms > 0);
   assertEquals(resources[0].metadata?.endpoint, '/test');
+
+  await kvManager.close();
+  // kvManager = undefined;
 });
 
 Deno.test('WorkflowBase - error classification', async () => {
-  const workflow = new TestWorkflow();
+  const logger = new Logger({ level: 'debug', format: 'text' });
+  const configManager = await createMockConfigManager();
+  const kvManager = await createMockKVManager();
+  const workflow = new TestWorkflow({ logger, configManager, kvManager });
 
   // Test different error types
   const validationError = new Error('validation failed for field');
@@ -349,10 +391,16 @@ Deno.test('WorkflowBase - error classification', async () => {
 
   const unknownError = new Error('something went wrong');
   assertEquals((workflow as any).classifyError(unknownError), 'system_error');
+
+  await kvManager.close();
+  // kvManager = undefined;
 });
 
 Deno.test('WorkflowBase - workflow registration', async () => {
-  const workflow = new TestWorkflow();
+  const logger = new Logger({ level: 'debug', format: 'text' });
+  const configManager = await createMockConfigManager();
+  const kvManager = await createMockKVManager();
+  const workflow = new TestWorkflow({ logger, configManager, kvManager });
   const registration = workflow.getRegistration();
 
   assertEquals(registration.name, 'test_workflow');
@@ -362,6 +410,9 @@ Deno.test('WorkflowBase - workflow registration', async () => {
   assertEquals(registration.estimatedDuration, 30);
   assert(registration.tags?.includes('test'));
   assert(registration.tags?.includes('utility'));
+
+  await kvManager.close();
+  // kvManager = undefined;
 });
 
 Deno.test('WorkflowBase - logging integration', async () => {
@@ -384,7 +435,9 @@ Deno.test('WorkflowBase - logging integration', async () => {
   } as unknown as Logger;
 
   const context = createTestContext(mockLogger);
-  const workflow = new TestWorkflow();
+  const configManager = await createMockConfigManager();
+  const kvManager = await createMockKVManager();
+  const workflow = new TestWorkflow({ logger: mockLogger, configManager, kvManager });
 
   const params = {
     userId: 'test-user',
@@ -397,4 +450,7 @@ Deno.test('WorkflowBase - logging integration', async () => {
   // Check that logging occurred
   assert(logs.some((log) => log.includes('Workflow starting')));
   assert(logs.some((log) => log.includes('Workflow completed')));
+
+  await kvManager.close();
+  // kvManager = undefined;
 });

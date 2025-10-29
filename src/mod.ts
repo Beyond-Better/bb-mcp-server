@@ -32,7 +32,7 @@ export { BaseApiClient } from './lib/clients/BaseApiClient.ts';
 export type { ToolContext, ToolResult } from './lib/tools/ToolBase.ts';
 export { ToolBase } from './lib/tools/ToolBase.ts';
 export { ToolRegistry } from './lib/tools/ToolRegistry.ts';
-export { WorkflowBase } from './lib/workflows/WorkflowBase.ts';
+export { WorkflowBase, type WorkflowDependencies } from './lib/workflows/WorkflowBase.ts';
 export { WorkflowRegistry } from './lib/workflows/WorkflowRegistry.ts';
 export { PluginManager } from './lib/plugins/PluginManager.ts';
 
@@ -275,6 +275,8 @@ export type {
   CreateMessageResult,
   ElicitInputRequest,
   ElicitInputResult,
+  SendNotificationRequest,
+  SendNotificationProgressRequest,
   InferZodSchema,
   MCPConfigValidationResult,
   MCPRateLimitInfo,

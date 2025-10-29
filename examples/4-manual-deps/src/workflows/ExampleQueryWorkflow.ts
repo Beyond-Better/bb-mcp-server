@@ -9,7 +9,7 @@
  */
 
 // 🎯 Library imports - workflow infrastructure
-import { Logger, WorkflowBase } from '@beyondbetter/bb-mcp-server';
+import { WorkflowBase, type WorkflowDependencies } from '@beyondbetter/bb-mcp-server';
 import type { WorkflowContext, WorkflowResult } from '@beyondbetter/bb-mcp-server';
 import { z } from 'zod'; // Library provides Zod integration
 
@@ -17,9 +17,8 @@ import { z } from 'zod'; // Library provides Zod integration
 import { ExampleApiClient } from '../api/ExampleApiClient.ts';
 import { ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts';
 
-export interface ExampleQueryWorkflowDependencies {
+export interface ExampleQueryWorkflowDependencies extends WorkflowDependencies {
   apiClient: ExampleApiClient;
-  logger: Logger;
   oauthConsumer: ExampleOAuthConsumer;
 }
 
@@ -92,14 +91,12 @@ export class ExampleQueryWorkflow extends WorkflowBase {
 
   private apiClient: ExampleApiClient;
   private oauthConsumer: ExampleOAuthConsumer;
-  private logger: Logger;
 
   constructor(dependencies: ExampleQueryWorkflowDependencies) {
-    super(); // 🎯 Initialize library base class
+    super(dependencies); // 🎯 Initialize library base class
 
     this.apiClient = dependencies.apiClient;
     this.oauthConsumer = dependencies.oauthConsumer;
-    this.logger = dependencies.logger;
   }
 
   /**
