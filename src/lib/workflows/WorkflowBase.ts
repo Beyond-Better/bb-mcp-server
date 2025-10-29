@@ -373,6 +373,24 @@ export abstract class WorkflowBase {
     }
   }
 
+  /**
+   * Check if an elicitation response indicates approval
+   *
+   * Safely checks the action field to determine if the user approved the request.
+   * This should be used instead of checking Object.keys(response).length to avoid
+   * treating rejection responses as approval.
+   *
+   * @param response - The elicitation response to check
+   * @returns true if approved, false if rejected or invalid
+   */
+  protected isElicitationApproved(response: ElicitInputResult | undefined | null): boolean {
+    if (!response) {
+      return false;
+    }
+    // Explicitly check action field - only 'accept' means approval
+    return response.action === 'accept';
+  }
+
   protected async sendNotification(
     request: SendNotificationRequest,
     sessionId?: string,

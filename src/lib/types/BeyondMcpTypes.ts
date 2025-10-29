@@ -271,8 +271,26 @@ export interface ElicitInputRequest {
   requestedSchema: unknown;
 }
 
+/**
+ * Result from MCP elicitation request
+ *
+ * IMPORTANT: When elicitInput throws an error, consumers should handle it
+ * explicitly rather than assuming a rejection response.
+ *
+ * To safely check for approval, use WorkflowBase.isElicitationApproved()
+ * instead of checking Object.keys(result).length which can incorrectly
+ * treat rejection as approval.
+ */
 export interface ElicitInputResult {
+  /**
+   * User's decision
+   * - 'accept': User approved the request
+   * - 'reject': User declined the request (mapped from MCP SDK's 'decline')
+   */
   action: 'accept' | 'reject';
+  /**
+   * Optional content provided by the user
+   */
   content?: unknown;
 }
 
