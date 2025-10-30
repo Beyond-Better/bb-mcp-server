@@ -31,8 +31,9 @@
  */
 
 import { assert, assertEquals, assertExists } from '@std/assert';
-import { beforeEach, describe, it } from '@std/testing/bdd';
+import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
 
+import { KVManager } from '@beyondbetter/bb-mcp-server';
 // Import the plugin factory and dependencies
 import createPlugin from '../../src/plugins/ExamplePlugin.ts';
 import { ExampleTools } from '../../src/plugins/tools/ExampleTools.ts';
@@ -44,6 +45,7 @@ import {
   assertAuthenticationError,
   createMockApiClient,
   createMockAuditLogger,
+  createMockKVManager,
   createMockLogger,
   createMockOAuthConsumer,
   generateAuthenticatedToolTestParams,
@@ -64,16 +66,18 @@ describe('ExampleTools - OAuth Integration', () => {
   let mockApiClient: MockApiClient;
   let mockLogger: Logger;
   let mockAuditLogger: AuditLogger;
+  let mockKVManager: KVManager;
   let exampleTools: ExampleTools;
   let plugin: any;
   let toolRegistrations: any[];
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Set up OAuth and API mocks
     mockOAuth = createMockOAuthConsumer();
     mockApiClient = createMockApiClient();
     mockLogger = createMockLogger();
     mockAuditLogger = createMockAuditLogger();
+    mockKVManager = await createMockKVManager();
 
     // Create plugin with mocked dependencies
     plugin = createPlugin({
@@ -81,6 +85,7 @@ describe('ExampleTools - OAuth Integration', () => {
       oauthConsumer: mockOAuth,
       logger: mockLogger,
       auditLogger: mockAuditLogger,
+      kvManager: mockKVManager,
     } as any);
 
     // Create ExampleTools instance for direct testing
@@ -97,6 +102,10 @@ describe('ExampleTools - OAuth Integration', () => {
     // Verify plugin was created successfully
     assertExists(plugin, 'Plugin should be created');
     assertExists(toolRegistrations, 'Plugin should have tools array');
+  });
+
+  afterEach(async () => {
+    await mockKVManager.close();
   });
 
   /**
@@ -117,8 +126,14 @@ describe('ExampleTools - OAuth Integration', () => {
 
       expectedTools.forEach((toolName) => {
         const tool = toolRegistrations.find((t: any) => t.name === toolName);
-        assertExists(tool, `Tool '${toolName}' should exist in plugin tools array`);
-        assertExists(tool.definition, `Tool '${toolName}' should have definition`);
+        assertExists(
+          tool,
+          `Tool '${toolName}' should exist in plugin tools array`,
+        );
+        assertExists(
+          tool.definition,
+          `Tool '${toolName}' should have definition`,
+        );
         assertExists(tool.handler, `Tool '${toolName}' should have handler`);
         assert(
           typeof tool.handler === 'function',
@@ -129,7 +144,11 @@ describe('ExampleTools - OAuth Integration', () => {
 
     it('should have OAuth-specific metadata in tool definitions', () => {
       toolRegistrations.forEach((tool: any) => {
-        assertEquals(tool.definition.category, 'ExampleCorp', 'Should have ExampleCorp category');
+        assertEquals(
+          tool.definition.category,
+          'ExampleCorp',
+          'Should have ExampleCorp category',
+        );
         assert(tool.definition.tags.includes('api'), 'Should have api tag');
         assertExists(tool.definition.inputSchema, 'Should have input schema');
       });
@@ -139,9 +158,16 @@ describe('ExampleTools - OAuth Integration', () => {
       assertEquals(exampleTools.name, 'examplecorp-tools');
       assertEquals(exampleTools.version, '1.0.0');
       assertEquals(exampleTools.category, 'business');
-      assert(exampleTools.tags.includes('examplecorp'), 'Should have examplecorp tag');
+      assert(
+        exampleTools.tags.includes('examplecorp'),
+        'Should have examplecorp tag',
+      );
       assert(exampleTools.tags.includes('api'), 'Should have api tag');
-      assertEquals(exampleTools.requiresAuth, true, 'Should require authentication');
+      assertEquals(
+        exampleTools.requiresAuth,
+        true,
+        'Should require authentication',
+      );
     });
   });
 
@@ -162,7 +188,11 @@ describe('ExampleTools - OAuth Integration', () => {
       });
 
       // Should succeed with valid token
-      assertEquals(result.isError, undefined, 'Should not have error with valid auth');
+      assertEquals(
+        result.isError,
+        undefined,
+        'Should not have error with valid auth',
+      );
       assertExists(result.content);
 
       // Verify OAuth token was used
@@ -376,7 +406,9 @@ describe('ExampleTools - OAuth Integration', () => {
       });
 
       assertEquals(result.isError, true);
-      assert(result.content[0].text.includes('Order creation service unavailable'));
+      assert(
+        result.content[0].text.includes('Order creation service unavailable'),
+      );
     });
   });
 
@@ -421,7 +453,10 @@ describe('ExampleTools - OAuth Integration', () => {
 
       const responseData = JSON.parse(result.content[0].text);
       assertEquals(responseData.orderId, 'order_12345');
-      assertExists(responseData.history, 'Should include history when requested');
+      assertExists(
+        responseData.history,
+        'Should include history when requested',
+      );
       assert(Array.isArray(responseData.history));
       assert(responseData.history.length > 0);
     });
@@ -519,7 +554,11 @@ describe('ExampleTools - OAuth Integration', () => {
         });
 
         // Should return appropriate error
-        assertEquals(result.isError, true, `Scenario '${scenario.name}' should return error`);
+        assertEquals(
+          result.isError,
+          true,
+          `Scenario '${scenario.name}' should return error`,
+        );
         assert(
           result.content[0].text.includes(scenario.expectedError),
           `Scenario '${scenario.name}' should contain expected error text`,
@@ -579,7 +618,11 @@ describe('ExampleTools - OAuth Integration', () => {
       assertEquals(statusResult.isError, undefined);
 
       // Verify all operations used the same OAuth token
-      assertEquals(mockApiClient.getCallCount(), 3, 'Should have made 3 API calls');
+      assertEquals(
+        mockApiClient.getCallCount(),
+        3,
+        'Should have made 3 API calls',
+      );
 
       const apiCalls = mockApiClient.getCallLog();
       assertEquals(
@@ -611,7 +654,11 @@ describe('ExampleTools - OAuth Integration', () => {
       });
 
       // Should succeed even with expired initial token
-      assertEquals(result.isError, undefined, 'Should succeed with token refresh');
+      assertEquals(
+        result.isError,
+        undefined,
+        'Should succeed with token refresh',
+      );
     });
   });
 });

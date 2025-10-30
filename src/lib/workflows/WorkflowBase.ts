@@ -7,8 +7,11 @@
  */
 
 import { z, type ZodSchema } from 'zod';
-//import type { Logger } from '../utils/Logger.ts';
+import type { ConfigManager } from '../config/ConfigManager.ts';
+import type { Logger } from '../utils/Logger.ts';
+import { toError } from '../utils/Error.ts';
 //import type { AuditLogger } from '../utils/AuditLogger.ts';
+import type { KVManager } from '../storage/KVManager.ts';
 //import type { ErrorHandler } from '../utils/ErrorHandler.ts';
 import type {
   //BaseWorkflowParameters,
@@ -22,8 +25,28 @@ import type {
   WorkflowValidationError,
   WorkflowValidationResult,
 } from '../types/WorkflowTypes.ts';
+import {
+  type CreateMessageRequest,
+  type CreateMessageResult,
+  type ElicitInputRequest,
+  type ElicitInputResult,
+  type SendNotificationProgressRequest,
+  type SendNotificationRequest,
+} from '../types/BeyondMcpTypes.ts';
+import { BeyondMcpServer } from '../server/BeyondMcpServer.ts';
+import {
+  getConfigManager,
+  //getKvManager,
+  getLogger,
+} from '../server/DependencyHelpers.ts';
 
 import type { PluginCategory, RateLimitConfig } from '../types/PluginTypes.ts';
+
+export interface WorkflowDependencies {
+  logger: Logger;
+  configManager: ConfigManager;
+  kvManager: KVManager;
+}
 
 /**
  * Abstract base class for all workflows
@@ -31,7 +54,6 @@ import type { PluginCategory, RateLimitConfig } from '../types/PluginTypes.ts';
  * Enhanced with Zod validation, better error handling, and integration
  */
 export abstract class WorkflowBase {
-  protected context?: WorkflowContext;
   protected startTime?: number;
   protected resources: WorkflowResource[] = [];
 
@@ -50,6 +72,43 @@ export abstract class WorkflowBase {
   // Zod schema for parameter validation
   abstract readonly parameterSchema: ZodSchema<any>;
 
+  protected logger!: Logger;
+  protected configManager!: ConfigManager;
+  protected _kvManager: KVManager | undefined;
+  public readonly initialized: Promise<void>;
+
+  constructor(dependencies?: WorkflowDependencies) {
+    if (dependencies?.configManager && dependencies?.kvManager) {
+      this.configManager = dependencies.configManager;
+      this.logger = dependencies?.logger ?? getLogger(this.configManager);
+      this._kvManager = dependencies.kvManager;
+      this.logger.info('WorkflowBase: Initialized');
+      this.initialized = Promise.resolve();
+    } else {
+      this.initialized = (async () => {
+        try {
+          this.configManager = dependencies?.configManager ?? await getConfigManager();
+          this.logger = dependencies?.logger ?? getLogger(this.configManager);
+          //this._kvManager = dependencies?.kvManager ??
+          //  await getKvManager(this.configManager, this.logger);
+          this.logger.info('WorkflowBase: Initialized');
+        } catch (error) {
+          // Handle initialization errors appropriately
+          console.error('Failed to initialize workflow dependencies:', error);
+          throw error;
+        }
+      })();
+    }
+
+    //this.configManager = dependencies?.configManager ?? await getConfigManager();
+    //this.logger = dependencies?.logger ?? getLogger(this.configManager);
+    //this.kvManager = dependencies?.kvManager ?? getKvManager(this.configManager, this.logger);
+    //this.logger.info('WorkflowBase: Initialized');
+  }
+  private async ensureInitialized() {
+    await this.initialized;
+  }
+
   /**
    * Get workflow registration information
    */
@@ -59,6 +118,20 @@ export abstract class WorkflowBase {
    * Get workflow overview for tool descriptions
    */
   abstract getOverview(): string;
+
+  // used by tests to set spyLogger
+  public setLogger(logger: Logger) {
+    this.logger = logger;
+  }
+  // used by tests to be able to clean up databases
+  public async clearKVManager() {
+    if (this._kvManager) await this._kvManager.close();
+  }
+
+  public get kvManager(): KVManager | undefined {
+    // this._kvManager = await getKvManager(this.configManager, this.logger);
+    return this._kvManager;
+  }
 
   /**
    * Execute the workflow implementation
@@ -72,9 +145,9 @@ export abstract class WorkflowBase {
    * Enhanced main execution with validation, logging, and error handling
    */
   async executeWithValidation(params: unknown, context: WorkflowContext): Promise<WorkflowResult> {
-    this.context = context;
     this.startTime = performance.now();
     this.resources = [];
+    await this.ensureInitialized();
 
     try {
       // Log workflow start
@@ -84,7 +157,7 @@ export abstract class WorkflowBase {
         userId: context.userId,
         requestId: context.requestId,
         dryRun: (params as any)?.dryRun,
-      });
+      }, context);
 
       // Validate parameters
       const validation = await this.validateParameters(params);
@@ -96,14 +169,20 @@ export abstract class WorkflowBase {
       if (validation.warnings && validation.warnings.length > 0) {
         this.logWarn('Parameter validation warnings', {
           warnings: validation.warnings,
-        });
+        }, context);
       }
 
       // Before execution hook
       await this.onBeforeExecute?.(validation.data!, context);
 
+      // Execute workflow within AsyncLocalStorage context for concurrent execution safety
+      const result = await BeyondMcpServer.executeWithWorkflowContext(
+        context,
+        () => this.executeWorkflow(validation.data!, context),
+      );
+
       // Execute workflow
-      const result = await this.executeWorkflow(validation.data!, context);
+      //const result = await this.executeWorkflow(validation.data!, context);
 
       // After execution hook
       await this.onAfterExecute?.(result, context);
@@ -118,7 +197,7 @@ export abstract class WorkflowBase {
         completed_steps: result.completed_steps.length,
         failed_steps: result.failed_steps.length,
         resources_used: this.resources.length,
-      });
+      }, context);
 
       // Add performance data to result
       return {
@@ -173,6 +252,237 @@ export abstract class WorkflowBase {
         valid: false,
         errors,
       };
+    }
+  }
+
+  /**
+   * Track resource usage
+   */
+  protected trackResource(
+    type: WorkflowResource['type'],
+    name: string,
+    startTime: number,
+    status: WorkflowResource['status'],
+    metadata?: Record<string, unknown>,
+  ): void {
+    this.resources.push({
+      type,
+      name,
+      duration_ms: performance.now() - startTime,
+      status,
+      metadata,
+    });
+  }
+
+  /**
+   * Safe execution wrapper with resource tracking
+   */
+  protected async safeExecute<T>(
+    operationName: string,
+    operation: () => Promise<T>,
+    resourceType: WorkflowResource['type'] = 'api_call',
+  ): Promise<{ success: boolean; data?: T; error?: FailedStep }> {
+    const startTime = performance.now();
+    await this.ensureInitialized();
+
+    try {
+      const data = await operation();
+
+      // Track successful resource usage
+      this.trackResource(resourceType, operationName, startTime, 'success');
+
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      // Track failed resource usage
+      this.trackResource(resourceType, operationName, startTime, 'failure', {
+        error: errorMessage,
+      });
+
+      const failedStep: FailedStep = {
+        operation: operationName,
+        error_type: this.classifyError(error),
+        message: errorMessage,
+        details: (error instanceof Error ? error.stack : undefined) || 'No details available',
+        timestamp: new Date().toISOString(),
+      };
+
+      return {
+        success: false,
+        error: failedStep,
+      };
+    }
+  }
+
+  protected async createMessage(
+    request: CreateMessageRequest,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
+  ): Promise<CreateMessageResult> {
+    const beyondMcpServer = BeyondMcpServer.getInstance();
+    if (!beyondMcpServer) {
+      this.logError('Cannot request sampling - no beyondMcpServer');
+      return {};
+    }
+
+    try {
+      const result = await beyondMcpServer.createMessage(
+        request,
+        options,
+      );
+
+      this.logDebug('Sampling request sent', {
+        request,
+        sessionId: options.sessionId,
+      });
+      return result;
+    } catch (error) {
+      this.logWarn('Failed to send Sampling request', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return {};
+    }
+  }
+
+  /**
+   * Send elicitation input request to client
+   *
+   * @param request - { message: string; requestedSchema: unknown }
+   * @param message - Optional message describing current progress
+   * @param sessionId - Optional sessionId
+   */
+
+  protected async elicitInput(
+    request: ElicitInputRequest,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
+  ): Promise<ElicitInputResult> {
+    const beyondMcpServer = BeyondMcpServer.getInstance();
+    if (!beyondMcpServer) {
+      this.logError('Cannot elicit input - no beyondMcpServer');
+      throw new Error('Cannot elicit input - BeyondMcpServer not initialized');
+    }
+
+    try {
+      const result = await beyondMcpServer.elicitInput(
+        request,
+        options,
+      );
+
+      this.logDebug('Elicitation request sent', {
+        request,
+        sessionId: options.sessionId,
+      });
+      return result;
+    } catch (error) {
+      this.logError('Failed to send elicitation input request', toError(error), {
+        request,
+      });
+      // Re-throw to force consumers to handle the error explicitly
+      throw new Error(
+        `Elicitation request failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * Check if an elicitation response indicates approval
+   *
+   * Safely checks the action field to determine if the user approved the request.
+   * This should be used instead of checking Object.keys(response).length to avoid
+   * treating rejection responses as approval.
+   *
+   * @param response - The elicitation response to check
+   * @returns true if approved, false if rejected or invalid
+   */
+  protected isElicitationApproved(response: ElicitInputResult | undefined | null): boolean {
+    if (!response) {
+      return false;
+    }
+    // Explicitly check action field - only 'accept' means approval
+    return response.action === 'accept';
+  }
+
+  protected async sendNotification(
+    request: SendNotificationRequest,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
+  ): Promise<void> {
+    const beyondMcpServer = BeyondMcpServer.getInstance();
+    if (!beyondMcpServer) {
+      this.logError('Cannot send notification - no beyondMcpServer');
+      return;
+    }
+
+    try {
+      await beyondMcpServer.sendNotification(
+        request,
+        options,
+      );
+
+      this.logDebug('Notification sent', {
+        request,
+        sessionId: options.sessionId,
+      });
+    } catch (error) {
+      this.logWarn('Failed to send notification', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
+   * Send progress notification to client (prevents timeout with resetTimeoutOnProgress)
+   * Call this periodically during long-running operations
+   *
+   * @param progress - Progress value (0-100)
+   * @param message - Optional message describing current progress
+   * @param details - Optional additional details
+   * @param sessionId - Optional sessionId
+   */
+  protected async sendNotificationProgress(
+    request: SendNotificationProgressRequest,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
+  ): Promise<void> {
+    const beyondMcpServer = BeyondMcpServer.getInstance();
+    if (!beyondMcpServer) {
+      this.logError('Cannot send progress - no beyondMcpServer');
+      return;
+    }
+
+    // Automatically extract progressToken from AsyncLocalStorage if not provided
+    // This is concurrency-safe - each workflow execution has its own context
+    if (!request.progressToken) {
+      const progressToken = BeyondMcpServer.getCurrentProgressToken();
+      if (progressToken) {
+        request = { ...request, progressToken };
+        this.logDebug('Auto-extracted progressToken from AsyncLocalStorage', { progressToken });
+      } else {
+        this.logWarn(
+          'No progressToken found in request or AsyncLocalStorage - progress may not be tracked by client',
+        );
+      }
+    }
+    this.logInfo('Sending Progress notification', {
+      request,
+      sessionId: options.sessionId,
+    });
+
+    try {
+      await beyondMcpServer.sendNotificationProgress(
+        request,
+        options,
+      );
+
+      this.logDebug('Progress notification sent', {
+        request,
+        sessionId: options.sessionId,
+      });
+    } catch (error) {
+      this.logWarn('Failed to send progress notification', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   }
 
@@ -273,69 +583,6 @@ export abstract class WorkflowBase {
       timestamp: new Date().toISOString(),
     };
   }
-
-  /**
-   * Track resource usage
-   */
-  protected trackResource(
-    type: WorkflowResource['type'],
-    name: string,
-    startTime: number,
-    status: WorkflowResource['status'],
-    metadata?: Record<string, unknown>,
-  ): void {
-    this.resources.push({
-      type,
-      name,
-      duration_ms: performance.now() - startTime,
-      status,
-      metadata,
-    });
-  }
-
-  /**
-   * Safe execution wrapper with resource tracking
-   */
-  protected async safeExecute<T>(
-    operationName: string,
-    operation: () => Promise<T>,
-    resourceType: WorkflowResource['type'] = 'api_call',
-  ): Promise<{ success: boolean; data?: T; error?: FailedStep }> {
-    const startTime = performance.now();
-
-    try {
-      const data = await operation();
-
-      // Track successful resource usage
-      this.trackResource(resourceType, operationName, startTime, 'success');
-
-      return {
-        success: true,
-        data,
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-      // Track failed resource usage
-      this.trackResource(resourceType, operationName, startTime, 'failure', {
-        error: errorMessage,
-      });
-
-      const failedStep: FailedStep = {
-        operation: operationName,
-        error_type: this.classifyError(error),
-        message: errorMessage,
-        details: (error instanceof Error ? error.stack : undefined) || 'No details available',
-        timestamp: new Date().toISOString(),
-      };
-
-      return {
-        success: false,
-        error: failedStep,
-      };
-    }
-  }
-
   /**
    * Classify errors for better error handling
    */
@@ -399,39 +646,62 @@ export abstract class WorkflowBase {
 
   /**
    * Enhanced logging helpers with integration
+   * Uses AsyncLocalStorage as fallback for concurrent execution safety
    */
-  protected logInfo(message: string, data?: Record<string, unknown>): void {
-    this.context?.logger?.info(`WorkflowBase: [${this.name}] ${message}`, {
+  protected logInfo(
+    message: string,
+    data?: Record<string, unknown>,
+    contextParam?: WorkflowContext,
+  ): void {
+    // Try this.context first (synchronous path), fall back to AsyncLocalStorage
+    const context = contextParam ?? BeyondMcpServer.getCurrentWorkflowContext();
+    this.logger.info(`WorkflowBase: [${this.name}] ${message}`, {
       workflow: this.name,
-      userId: this.context.userId,
-      requestId: this.context.requestId,
+      userId: context?.userId,
+      requestId: context?.requestId,
       ...data,
     });
   }
 
-  protected logWarn(message: string, data?: Record<string, unknown>): void {
-    this.context?.logger?.warn(`WorkflowBase: [${this.name}] ${message}`, {
+  protected logWarn(
+    message: string,
+    data?: Record<string, unknown>,
+    contextParam?: WorkflowContext,
+  ): void {
+    const context = contextParam ?? BeyondMcpServer.getCurrentWorkflowContext();
+    this.logger.warn(`WorkflowBase: [${this.name}] ${message}`, {
       workflow: this.name,
-      userId: this.context.userId,
-      requestId: this.context.requestId,
+      userId: context?.userId,
+      requestId: context?.requestId,
       ...data,
     });
   }
 
-  protected logError(message: string, error?: Error, data?: Record<string, unknown>): void {
-    this.context?.logger?.error(`WorkflowBase: [${this.name}] ${message}`, error, {
+  protected logError(
+    message: string,
+    error?: Error,
+    data?: Record<string, unknown>,
+    contextParam?: WorkflowContext,
+  ): void {
+    const context = contextParam ?? BeyondMcpServer.getCurrentWorkflowContext();
+    this.logger.error(`WorkflowBase: [${this.name}] ${message}`, error, {
       workflow: this.name,
-      userId: this.context.userId,
-      requestId: this.context.requestId,
+      userId: context?.userId,
+      requestId: context?.requestId,
       ...data,
     });
   }
 
-  protected logDebug(message: string, data?: Record<string, unknown>): void {
-    this.context?.logger?.debug(`WorkflowBase: [${this.name}] ${message}`, {
+  protected logDebug(
+    message: string,
+    data?: Record<string, unknown>,
+    contextParam?: WorkflowContext,
+  ): void {
+    const context = contextParam ?? BeyondMcpServer.getCurrentWorkflowContext();
+    this.logger.debug(`WorkflowBase: [${this.name}] ${message}`, {
       workflow: this.name,
-      userId: this.context.userId,
-      requestId: this.context.requestId,
+      userId: context?.userId,
+      requestId: context?.requestId,
       ...data,
     });
   }

@@ -83,12 +83,21 @@ class ExampleCorpPlugin implements AppPlugin {
  * Factory function to create plugin instance
  * This pattern allows for dependency injection during plugin creation
  */
-export default function createPlugin(dependencies: AppServerDependencies): AppPlugin {
+export default function createPlugin(
+  dependencies: AppServerDependencies,
+): AppPlugin {
   const plugin = new ExampleCorpPlugin();
 
   // Initialize the plugin synchronously for simple use cases
   // Note: For async initialization, use the initialize() method
-  const { thirdpartyApiClient, oauthConsumer, logger, auditLogger } = dependencies;
+  const {
+    thirdpartyApiClient,
+    oauthConsumer,
+    configManager,
+    logger,
+    auditLogger,
+    kvManager,
+  } = dependencies;
 
   // Validate required dependencies
   if (!thirdpartyApiClient || !oauthConsumer) {
@@ -102,13 +111,17 @@ export default function createPlugin(dependencies: AppServerDependencies): AppPl
   // Create workflows
   const queryWorkflowDeps: ExampleQueryWorkflowDependencies = {
     apiClient: thirdpartyApiClient,
+    configManager,
     logger,
+    kvManager,
     oauthConsumer,
   };
 
   const operationWorkflowDeps: ExampleOperationWorkflowDependencies = {
     apiClient: thirdpartyApiClient,
+    configManager,
     logger,
+    kvManager,
     oauthConsumer,
   };
 
@@ -128,7 +141,9 @@ export default function createPlugin(dependencies: AppServerDependencies): AppPl
 
     plugin.tools = createExampleTools(exampleToolsDependencies);
   } else {
-    logger.warn('ExamplePlugin: Skipping tool creation due to missing dependencies');
+    logger.warn(
+      'ExamplePlugin: Skipping tool creation due to missing dependencies',
+    );
     plugin.tools = [];
   }
 
@@ -140,7 +155,9 @@ export default function createPlugin(dependencies: AppServerDependencies): AppPl
  * Returns tool objects that PluginManager can register
  * Now works with the ToolBase class and ToolRegistration interface
  */
-function createExampleTools(dependencies: ExampleToolsDependencies): ToolRegistration[] {
+function createExampleTools(
+  dependencies: ExampleToolsDependencies,
+): ToolRegistration[] {
   const exampleTools = new ExampleTools(dependencies);
 
   // Get tool registrations from the ToolBase class

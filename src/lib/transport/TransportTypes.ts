@@ -42,7 +42,7 @@ export interface HttpTransportConfig {
   maxConcurrentSessions: number;
   enableSessionPersistence: boolean;
   enableSessionRestore?: boolean;
-  requestTimeout: number;
+  requestTimeout: number; // HTTP request/response timeout (NOT MCP protocol timeout)
   maxRequestSize: number;
   // 🚨 Compatibility configuration - DO NOT DISABLE
   preserveCompatibilityMode: boolean;
@@ -61,6 +61,10 @@ export interface HttpTransportConfig {
   enableAuthentication?: boolean; // Auto-enabled if oauthProvider available
   skipAuthentication?: boolean; // Skip auth even if OAuth components available
   requireAuthentication?: boolean; // Require auth for all endpoints (except open endpoints)
+  // 🎯 MCP SDK Protocol Timeout Configuration (NEW)
+  mcpRequestTimeout?: number; // MCP protocol-level timeout in milliseconds (default: 60000)
+  mcpResetTimeoutOnProgress?: boolean; // Reset MCP timeout on progress notifications (default: false)
+  mcpMaxTotalTimeout?: number; // Maximum total timeout regardless of progress (optional)
 }
 
 export interface StdioTransportConfig {
@@ -71,6 +75,11 @@ export interface StdioTransportConfig {
   // 🔒 Authentication configuration (discouraged by MCP spec)
   enableAuthentication?: boolean; // STDIO SHOULD NOT use OAuth per MCP spec
   skipAuthentication?: boolean; // Skip auth even if OAuth components available
+
+  // 🎯 MCP SDK Protocol Timeout Configuration (NEW)
+  mcpRequestTimeout?: number; // MCP protocol-level timeout in milliseconds (default: 60000)
+  mcpResetTimeoutOnProgress?: boolean; // Reset MCP timeout on progress notifications (default: false)
+  mcpMaxTotalTimeout?: number; // Maximum total timeout regardless of progress (optional)
 }
 
 export interface SessionConfig {

@@ -33,14 +33,20 @@ describe('ContentGenerationWorkflow', () => {
 
     mockLogger = createMockLogger();
     logSpy = spy(mockLogger, 'info');
+    context = createTestContext({ logger: mockLogger });
 
-    context = createTestContext({
-      logger: mockLogger,
-    });
+    const workflows = WorkflowPlugin.workflows!;
+    for (const workflow of workflows) {
+      workflow.setLogger(mockLogger);
+    }
   });
 
   afterEach(() => {
     logSpy.restore();
+    // const workflows = WorkflowPlugin.workflows!;
+    // for (const workflow of workflows) {
+    //   await workflow.clearKVManager();
+    // }
   });
 
   describe('Workflow Registration', () => {

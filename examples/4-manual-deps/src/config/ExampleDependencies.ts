@@ -293,12 +293,16 @@ export async function createManualDependencies(
   const queryWorkflow = new ExampleQueryWorkflow({
     apiClient: thirdpartyApiClient,
     logger: logger,
+    configManager: configManager,
+    kvManager: kvManager,
     oauthConsumer: oauthConsumer,
   });
 
   const operationWorkflow = new ExampleOperationWorkflow({
     apiClient: thirdpartyApiClient,
     logger: logger,
+    configManager: configManager,
+    kvManager: kvManager,
     oauthConsumer: oauthConsumer,
   });
 

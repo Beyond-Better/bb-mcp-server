@@ -361,7 +361,7 @@ describe('MCP Server Complete Integration', () => {
           temperature: 0.7,
         };
 
-        const result = await beyondMcpServer.createMessage(samplingRequest);
+        const result = await beyondMcpServer.createMessage(samplingRequest, {});
 
         assertExists(result);
         assertEquals(result.model, 'test-model');
@@ -385,7 +385,7 @@ describe('MCP Server Complete Integration', () => {
           },
         };
 
-        const result = await beyondMcpServer.elicitInput(elicitationRequest);
+        const result = await beyondMcpServer.elicitInput(elicitationRequest, {});
 
         assertExists(result);
         assertEquals(result.action, 'accept');

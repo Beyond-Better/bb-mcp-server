@@ -25,7 +25,11 @@
 
 import { assert, assertEquals, assertExists } from 'https://deno.land/std@0.208.0/assert/mod.ts';
 import { afterEach, beforeEach, describe, it } from 'https://deno.land/std@0.208.0/testing/bdd.ts';
-import { type Spy, spy } from 'https://deno.land/std@0.208.0/testing/mock.ts';
+import { type Spy, spy, stub } from 'https://deno.land/std@0.208.0/testing/mock.ts';
+import {
+  //ConfigManager,
+  KVManager,
+} from '@beyondbetter/bb-mcp-server';
 
 // Import the plugin to get workflows
 import createPlugin from '../../src/plugins/ExamplePlugin.ts';
@@ -35,6 +39,8 @@ import { ExampleOperationWorkflow } from '../../src/plugins/workflows/ExampleOpe
 import {
   createAuthenticatedWorkflowContext,
   createMockAuditLogger,
+  //createMockConfigManager,
+  createMockKVManager,
   createMockLogger,
   createMockOAuthConsumer,
   MockApiClient,
@@ -74,7 +80,10 @@ class MockOperationApiClient extends MockApiClient {
     };
   }
 
-  override async deleteCustomer(accessToken: string, customerId: string): Promise<void> {
+  override async deleteCustomer(
+    accessToken: string,
+    customerId: string,
+  ): Promise<void> {
     this.logCall('deleteCustomer', { customerId }, 'system');
 
     if (this.getFailureStatus('deleteCustomer')) {
@@ -85,7 +94,10 @@ class MockOperationApiClient extends MockApiClient {
   }
 
   // Order operations
-  override async cancelOrder(accessToken: string, orderId: string): Promise<void> {
+  override async cancelOrder(
+    accessToken: string,
+    orderId: string,
+  ): Promise<void> {
     this.logCall('cancelOrder', { orderId }, 'system');
     this.rollbackLog.push({ action: 'cancel_order', data: { orderId } });
   }
@@ -133,7 +145,11 @@ class MockOperationApiClient extends MockApiClient {
   }
 
   // Refund operations
-  override async processRefund(accessToken: string, refundData: any, userId: string): Promise<any> {
+  override async processRefund(
+    accessToken: string,
+    refundData: any,
+    userId: string,
+  ): Promise<any> {
     this.logCall('processRefund', refundData, userId);
 
     if (this.getFailureStatus('processRefund')) {
@@ -233,18 +249,23 @@ describe('ExampleOperationWorkflow - Multi-Step OAuth Operations', () => {
   let mockOAuth: MockOAuthConsumer;
   let mockApiClient: MockOperationApiClient;
   let mockLogger: SpyLogger;
+  //let mockConfigManager: ConfigManager;
+  let mockKVManager: KVManager;
   let mockAuditLogger: SpyAuditLogger;
   let workflow: ExampleOperationWorkflow;
   let context: WorkflowContext;
   let logSpy: Spy;
   let plugin: any;
+  let sendNotificationStub: Spy;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Set up OAuth and enhanced API mocks
     mockOAuth = createMockOAuthConsumer();
     mockApiClient = new MockOperationApiClient();
     mockLogger = createMockLogger();
     mockAuditLogger = createMockAuditLogger();
+    //mockConfigManager = createMockConfigManager();
+    mockKVManager = await createMockKVManager();
 
     // Connect OAuth consumer to API client for authentication
     mockApiClient.setOAuthConsumer(mockOAuth);
@@ -258,6 +279,7 @@ describe('ExampleOperationWorkflow - Multi-Step OAuth Operations', () => {
       oauthConsumer: mockOAuth,
       logger: mockLogger,
       auditLogger: mockAuditLogger,
+      kvManager: mockKVManager,
     } as any);
 
     // Find the operation workflow
@@ -271,11 +293,29 @@ describe('ExampleOperationWorkflow - Multi-Step OAuth Operations', () => {
     context = createAuthenticatedWorkflowContext({
       logger: mockLogger,
     });
+
+    // Stub sendNotification to bypass beyondMcpServer requirement
+    sendNotificationStub = stub(
+      workflow as any,
+      'sendNotification',
+      async (request: any) => {
+        // Log the notification like the real implementation would
+        // Determine type based on notification level: "error" = failure, "notice" = completion
+        const type = request.level === 'error' ? 'failure' : 'completion';
+        mockLogger.info('Notification sent', {
+          type,
+          level: request.level,
+          message: request.data?.params || 'Operation completed',
+        });
+      },
+    );
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     logSpy.restore();
+    sendNotificationStub?.restore();
     mockApiClient.clearRollbackLog();
+    await mockKVManager.close();
   });
 
   /**

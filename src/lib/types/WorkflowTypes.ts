@@ -7,6 +7,7 @@
 import { //z,
   type ZodSchema,
 } from 'zod';
+//import type { BeyondMcpServer } from '../server/BeyondMcpServer.ts';
 import type { Logger } from '../utils/Logger.ts';
 import type { AuditLogger } from '../utils/AuditLogger.ts';
 import type { KVManager } from '../storage/KVManager.ts';
@@ -73,6 +74,7 @@ export interface WorkflowContext {
   startTime: Date;
 
   // Services
+  //beyondMcpServer: BeyondMcpServer;
   auditLogger: AuditLogger;
   logger: Logger | undefined;
   kvManager: KVManager | undefined;
@@ -83,6 +85,7 @@ export interface WorkflowContext {
   // Request metadata
   parameterUserId: string | undefined;
   _meta: Record<string, unknown>;
+  requestMetadata: Record<string, unknown>;
 
   // Authentication context
   authenticatedUserId: string | undefined;
@@ -120,7 +123,13 @@ export interface WorkflowStep {
  */
 export interface FailedStep {
   operation: string;
-  error_type: 'validation' | 'authentication' | 'api_error' | 'system_error' | 'timeout';
+  error_type:
+    | 'validation'
+    | 'authentication'
+    | 'api_error'
+    | 'system_error'
+    | 'user_cancelled'
+    | 'timeout';
   message: string;
   details?: string;
   code?: string;
@@ -132,7 +141,13 @@ export interface FailedStep {
  * Enhanced workflow error
  */
 export interface WorkflowError {
-  type: 'validation' | 'authentication' | 'api_error' | 'system_error' | 'timeout';
+  type:
+    | 'validation'
+    | 'authentication'
+    | 'api_error'
+    | 'system_error'
+    | 'user_cancelled'
+    | 'timeout';
   message: string;
   details: string | undefined;
   code: string | undefined;
@@ -230,6 +245,8 @@ export interface WorkflowBase {
   validateParameters(params: unknown): Promise<WorkflowValidationResult<any>>;
   getRegistration(): WorkflowRegistration;
   getOverview(): string;
+  setLogger(logger: Logger): void;
+  clearKVManager(): Promise<void>;
 }
 
 export interface WorkflowRegistry {

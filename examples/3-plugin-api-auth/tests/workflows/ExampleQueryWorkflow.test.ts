@@ -26,6 +26,7 @@ import { assert, assertEquals, assertExists } from 'https://deno.land/std@0.208.
 import { afterEach, beforeEach, describe, it } from 'https://deno.land/std@0.208.0/testing/bdd.ts';
 import { type Spy, spy } from 'https://deno.land/std@0.208.0/testing/mock.ts';
 //import { errorMessage } from '@beyondbetter/bb-mcp-server';
+import { ConfigManager, KVManager } from '@beyondbetter/bb-mcp-server';
 
 // Import the plugin to get workflows
 import createPlugin from '../../src/plugins/ExamplePlugin.ts';
@@ -36,6 +37,8 @@ import {
   createAuthenticatedWorkflowContext,
   createConnectedMocks,
   createMockAuditLogger,
+  createMockConfigManager,
+  createMockKVManager,
   createMockLogger,
   MockApiClient,
   MockOAuthConsumer,
@@ -54,6 +57,8 @@ type WorkflowContext = any;
 describe('ExampleQueryWorkflow - OAuth Integration', () => {
   let mockOAuth: MockOAuthConsumer;
   let mockApiClient: MockApiClient;
+  let mockConfigManager: ConfigManager;
+  let mockKVManager: KVManager;
   let mockLogger: SpyLogger;
   let mockAuditLogger: SpyAuditLogger;
   let workflow: ExampleQueryWorkflow;
@@ -61,11 +66,13 @@ describe('ExampleQueryWorkflow - OAuth Integration', () => {
   let logSpy: Spy;
   let plugin: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Set up OAuth and API mocks with proper wiring
     const mocks = createConnectedMocks();
     mockOAuth = mocks.oauthConsumer;
     mockApiClient = mocks.apiClient;
+    mockConfigManager = createMockConfigManager();
+    mockKVManager = await createMockKVManager();
     mockLogger = createMockLogger();
     mockAuditLogger = createMockAuditLogger();
 
@@ -78,6 +85,7 @@ describe('ExampleQueryWorkflow - OAuth Integration', () => {
       oauthConsumer: mockOAuth,
       logger: mockLogger,
       auditLogger: mockAuditLogger,
+      kvManager: mockKVManager,
     } as any);
 
     // Find the query workflow
@@ -90,8 +98,9 @@ describe('ExampleQueryWorkflow - OAuth Integration', () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     logSpy.restore();
+    await mockKVManager.close();
   });
 
   /**
@@ -583,6 +592,8 @@ describe('ExampleQueryWorkflow - OAuth Integration', () => {
       const workflow_direct = new ExampleQueryWorkflow({
         apiClient: mockApiClient as any,
         logger: mockLogger as any,
+        configManager: mockConfigManager,
+        kvManager: mockKVManager,
         oauthConsumer: mockOAuth as any,
       });
 

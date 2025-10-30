@@ -213,6 +213,44 @@ export class TransportEventStoreChunked extends TransportEventStore {
   }
 
   /**
+   * Safely encode a string to base64, supporting full Unicode (UTF-8)
+   * Unlike btoa(), this handles characters outside the Latin1 range (0-255)
+   */
+  private encodeBase64(str: string): string {
+    // Convert string to UTF-8 bytes
+    const utf8Bytes = new TextEncoder().encode(str);
+
+    // Convert bytes to binary string in chunks to avoid stack overflow
+    let binaryString = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < utf8Bytes.length; i += chunkSize) {
+      const chunk = utf8Bytes.subarray(i, i + chunkSize);
+      binaryString += String.fromCharCode(...chunk);
+    }
+
+    // Now safe to use btoa on the binary string (all values 0-255)
+    return btoa(binaryString);
+  }
+
+  /**
+   * Safely decode a base64 string, supporting full Unicode (UTF-8)
+   * Counterpart to encodeBase64()
+   */
+  private decodeBase64(base64: string): string {
+    // Decode base64 to binary string
+    const binaryString = atob(base64);
+
+    // Convert binary string to bytes
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    // Decode UTF-8 bytes to string
+    return new TextDecoder().decode(bytes);
+  }
+
+  /**
    * Break message into chunks and store them
    * Includes KV expiry as a fallback safety net (default: 90 days)
    */
@@ -273,6 +311,7 @@ export class TransportEventStoreChunked extends TransportEventStore {
           binaryString += String.fromCharCode(...chunk);
         }
 
+        // Safe to use btoa here since compressedData is already binary (values 0-255)
         const compressedBase64 = btoa(binaryString);
 
         // this.logger?.info('TransportEventStoreChunked: Base64 conversion completed', {
@@ -338,7 +377,7 @@ export class TransportEventStoreChunked extends TransportEventStore {
 
       chunks.push({
         chunkIndex: i,
-        data: btoa(chunkData), // Base64 encode for safe storage
+        data: this.encodeBase64(chunkData), // Base64 encode with UTF-8 support
         checksum: this.calculateChecksum(chunkData),
       });
     }
@@ -446,7 +485,7 @@ export class TransportEventStoreChunked extends TransportEventStore {
       // Reassemble data
       let reassembledData = '';
       for (const chunk of chunks) {
-        const chunkData = atob(chunk.data);
+        const chunkData = this.decodeBase64(chunk.data);
 
         // Verify checksum
         const expectedChecksum = this.calculateChecksum(chunkData);

@@ -9,7 +9,7 @@
  */
 
 // 🎯 Library imports - workflow infrastructure
-import { Logger, WorkflowBase } from '@beyondbetter/bb-mcp-server';
+import { WorkflowBase, type WorkflowDependencies } from '@beyondbetter/bb-mcp-server';
 import type { WorkflowContext, WorkflowResult } from '@beyondbetter/bb-mcp-server';
 import { z } from 'zod'; // Library provides Zod integration
 
@@ -17,9 +17,8 @@ import { z } from 'zod'; // Library provides Zod integration
 import { ExampleApiClient } from '../api/ExampleApiClient.ts';
 import { ExampleOAuthConsumer } from '../auth/ExampleOAuthConsumer.ts';
 
-export interface ExampleOperationWorkflowDependencies {
+export interface ExampleOperationWorkflowDependencies extends WorkflowDependencies {
   apiClient: ExampleApiClient;
-  logger: Logger;
   oauthConsumer: ExampleOAuthConsumer;
 }
 
@@ -172,14 +171,12 @@ export class ExampleOperationWorkflow extends WorkflowBase {
 
   private apiClient: ExampleApiClient;
   private oauthConsumer: ExampleOAuthConsumer;
-  private logger: Logger;
 
   constructor(dependencies: ExampleOperationWorkflowDependencies) {
-    super(); // 🎯 Initialize library base class
+    super(dependencies); // 🎯 Initialize library base class
 
     this.apiClient = dependencies.apiClient;
     this.oauthConsumer = dependencies.oauthConsumer;
-    this.logger = dependencies.logger;
   }
 
   /**
@@ -280,7 +277,10 @@ export class ExampleOperationWorkflow extends WorkflowBase {
 
         // 🎯 Send failure notifications if configured
         if (params.notifications?.notifyOnFailure) {
-          await this.sendNotification(params, operationResult, 'failure');
+          await this.sendNotification({
+            level: 'error',
+            data: { params, operationResult },
+          }, {});
         }
 
         return {
@@ -325,7 +325,10 @@ export class ExampleOperationWorkflow extends WorkflowBase {
 
       // 🎯 Send notifications if configured
       if (params.notifications?.notifyOnCompletion) {
-        await this.sendNotification(params, operationResult, 'completion');
+        await this.sendNotification({
+          level: 'notice',
+          data: { params, operationResult },
+        }, {});
       }
 
       // 🎯 Return structured workflow result (success case)
@@ -370,11 +373,10 @@ export class ExampleOperationWorkflow extends WorkflowBase {
 
       // 🎯 Send failure notifications if configured
       if (params.notifications?.notifyOnFailure) {
-        await this.sendNotification(
-          params,
-          { success: false, error },
-          'failure',
-        );
+        await this.sendNotification({
+          level: 'error',
+          data: { params, operationResult: { success: false, error } },
+        }, {});
       }
 
       // 🎯 Return structured error result
@@ -1003,23 +1005,6 @@ export class ExampleOperationWorkflow extends WorkflowBase {
       default:
         return 1;
     }
-  }
-
-  /**
-   * Send notification
-   */
-  private async sendNotification(
-    params: z.infer<typeof this.parameterSchema>,
-    result: any,
-    type: 'completion' | 'failure',
-  ): Promise<void> {
-    // In a real implementation, this would send actual notifications
-    this.logger.info('Notification sent', {
-      type,
-      operationType: params.operationType,
-      channels: params.notifications?.notificationChannels || ['email'],
-      recipients: params.notifications?.customRecipients || [],
-    });
   }
 }
 

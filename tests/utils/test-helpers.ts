@@ -11,6 +11,8 @@ import { WorkflowRegistry } from '../../src/lib/workflows/WorkflowRegistry.ts';
 import { TransportManager } from '../../src/lib/transport/TransportManager.ts';
 import { OAuthProvider } from '../../src/lib/auth/OAuthProvider.ts';
 import { BeyondMcpServer } from '../../src/lib/server/BeyondMcpServer.ts';
+import { KVManager } from '../../src/lib/storage/KVManager.ts';
+import type { KVManagerConfig } from '../../src/lib/storage/StorageTypes.ts';
 
 // Import types
 import type {
@@ -46,6 +48,22 @@ export function createMockConfigManager(): ConfigManager {
   const config = new ConfigManager();
   // Override methods with spy behavior if needed
   return config;
+}
+
+/**
+ * Create mock KV manager for testing
+ */
+export async function createMockKVManager(): Promise<KVManager> {
+  // Create a real KVManager instance for testing
+  const config: KVManagerConfig = {
+    kvPath: ':memory:', // Use in-memory database for tests
+  };
+
+  const kvManager = new KVManager(config, createMockLogger());
+  await kvManager.initialize();
+
+  // Override methods with spy behavior if needed
+  return kvManager;
 }
 
 /**

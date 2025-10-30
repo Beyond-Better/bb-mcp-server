@@ -25,10 +25,19 @@ describe('Workflow Integration Tests', () => {
     mockLogger = createMockLogger();
     logSpy = spy(mockLogger, 'info');
     context = createTestContext({ logger: mockLogger });
+
+    const workflows = WorkflowPlugin.workflows!;
+    for (const workflow of workflows) {
+      workflow.setLogger(mockLogger);
+    }
   });
 
   afterEach(() => {
     logSpy.restore();
+    // const workflows = WorkflowPlugin.workflows!;
+    // for (const workflow of workflows) {
+    //   await workflow.clearKVManager();
+    // }
   });
 
   describe('Plugin Discovery and Registration', () => {
@@ -215,8 +224,14 @@ describe('Workflow Integration Tests', () => {
       assert(resultData.final_content.includes('_metadata')); // Metadata was added
 
       // Test archive information
-      assertEquals(resultData.archive_info.original_file.name, 'integration-test.json');
-      assertEquals(resultData.archive_info.processed_file.name, 'integration-test.json.processed');
+      assertEquals(
+        resultData.archive_info.original_file.name,
+        'integration-test.json',
+      );
+      assertEquals(
+        resultData.archive_info.processed_file.name,
+        'integration-test.json.processed',
+      );
     });
 
     it('should execute content generation workflow end-to-end', async () => {
@@ -294,7 +309,9 @@ describe('Workflow Integration Tests', () => {
       const jsonTool = WorkflowPlugin.tools?.find((t) => t.name === 'validate_json');
       assertExists(jsonTool);
 
-      const toolResult = await jsonTool.handler({ json_string: '{"valid": true}' });
+      const toolResult = await jsonTool.handler({
+        json_string: '{"valid": true}',
+      });
       assertEquals(toolResult.content[0]!.text, '✅ JSON is valid');
 
       // Workflow: Complex, multi-step operation with the same JSON
@@ -311,7 +328,10 @@ describe('Workflow Integration Tests', () => {
         processingOptions: { format: 'pretty' },
       };
 
-      const workflowResult = await fileWorkflow.executeWithValidation(workflowParams, context);
+      const workflowResult = await fileWorkflow.executeWithValidation(
+        workflowParams,
+        context,
+      );
 
       // Tool gives simple validation result
       assert((toolResult.content[0] as any).text.includes('valid'));
@@ -337,7 +357,10 @@ describe('Workflow Integration Tests', () => {
         outputFormat: 'json',
       };
 
-      const result = await workflow.executeWithValidation(invalidParams, context);
+      const result = await workflow.executeWithValidation(
+        invalidParams,
+        context,
+      );
 
       assertEquals(result.success, false);
       assertExists(result.error);
@@ -399,7 +422,11 @@ describe('Workflow Integration Tests', () => {
       );
       assertExists(creationFailure);
       assertEquals(creationFailure.error_type, 'validation');
-      assert(creationFailure.message.includes('String must contain at least 1 character(s)'));
+      assert(
+        creationFailure.message.includes(
+          'String must contain at least 1 character(s)',
+        ),
+      );
       assertExists(creationFailure.timestamp);
     });
   });
@@ -550,10 +577,25 @@ describe('Workflow Integration Tests', () => {
 
       // Simulate real customer data processing
       const customerData = [
-        { name: 'Alice Johnson', email: 'ALICE@EXAMPLE.COM', orders: 5, region: 'North' },
-        { name: 'Bob Smith', email: 'bob@example.com', orders: 3, region: 'South' },
+        {
+          name: 'Alice Johnson',
+          email: 'ALICE@EXAMPLE.COM',
+          orders: 5,
+          region: 'North',
+        },
+        {
+          name: 'Bob Smith',
+          email: 'bob@example.com',
+          orders: 3,
+          region: 'South',
+        },
         { name: '', email: '', orders: 0, region: '' }, // Empty record
-        { name: 'Alice Johnson', email: 'ALICE@EXAMPLE.COM', orders: 5, region: 'North' }, // Duplicate
+        {
+          name: 'Alice Johnson',
+          email: 'ALICE@EXAMPLE.COM',
+          orders: 5,
+          region: 'North',
+        }, // Duplicate
       ];
 
       const params = {

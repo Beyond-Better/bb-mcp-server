@@ -23,6 +23,7 @@ import type {
   ElicitInputResult,
   //LoggingLevel,
   RegisteredTool,
+  SendNotificationProgressRequest,
   SendNotificationRequest,
 } from '../types/BeyondMcpTypes.ts';
 
@@ -43,14 +44,14 @@ export class BeyondMcpSDKHelpers {
    */
   async createMessage(
     request: CreateMessageRequest,
-    sessionId?: string,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
   ): Promise<CreateMessageResult> {
     this.logger.debug('MCPSDKHelpers: Creating message via MCP sampling API', {
       model: request.model,
       messageCount: request.messages.length,
       maxTokens: request.maxTokens,
       temperature: request.temperature,
-      sessionId,
+      sessionId: options.sessionId,
     });
 
     try {
@@ -67,7 +68,7 @@ export class BeyondMcpSDKHelpers {
         model: request.model,
         hasContent: !!result?.content,
         contentLength: result?.content ? JSON.stringify(result.content).length : 0,
-        sessionId,
+        sessionId: options.sessionId,
       });
 
       // Cast result to expected type with unknown intermediate
@@ -84,12 +85,15 @@ export class BeyondMcpSDKHelpers {
    * MCP Notification API integration
    * Sends a logging message notification to the client
    */
-  async sendNotification(request: SendNotificationRequest, sessionId?: string): Promise<void> {
+  async sendNotification(
+    request: SendNotificationRequest,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
+  ): Promise<void> {
     this.logger.debug('MCPSDKHelpers: Sending notification via MCP notification API', {
       level: request.level,
       logger: request.logger,
       hasData: !!request.data,
-      sessionId,
+      sessionId: options.sessionId,
     });
 
     try {
@@ -100,7 +104,7 @@ export class BeyondMcpSDKHelpers {
           logger: request.logger,
           data: request.data,
         },
-        sessionId,
+        options.sessionId,
       );
 
       this.logger.debug('MCPSDKHelpers: Notification sent successfully', {
@@ -116,13 +120,63 @@ export class BeyondMcpSDKHelpers {
   }
 
   /**
+   * Send progress notification to client (prevents timeout with resetTimeoutOnProgress)
+   * Call this periodically during long-running operations
+   */
+  async sendNotificationProgress(
+    request: SendNotificationProgressRequest,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
+  ): Promise<void> {
+    this.logger.info('MCPSDKHelpers: Sending progress via MCP request API', {
+      progress: request.progress,
+      progressToken: request.progressToken,
+      message: request.message,
+      details: request.details,
+      sessionId: options.sessionId,
+    });
+
+    // progressToken is REQUIRED by MCP spec for client to associate progress with request
+    if (!request.progressToken) {
+      this.logger.warn(
+        'MCPSDKHelpers: progressToken missing - notification may not be associated with request',
+      );
+    }
+
+    try {
+      await this.sdkMcpServer.server.notification({
+        method: 'notifications/progress',
+        params: {
+          progressToken: request.progressToken!, // Required by MCP spec
+          progress: request.progress,
+          total: 100,
+          ...(request.message && { message: request.message }),
+          ...(request.details && request.details),
+        },
+      } as any);
+
+      this.logger.debug('Progress notification sent', {
+        progress: request.progress,
+        message: request.message,
+      });
+    } catch (error) {
+      this.logger.error('MCPSDKHelpers: MCP progress failed:', toError(error));
+      throw new Error(
+        `MCP progress failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
    * MCP Elicitation API integration
    */
-  async elicitInput(request: ElicitInputRequest, sessionId?: string): Promise<ElicitInputResult> {
+  async elicitInput(
+    request: ElicitInputRequest,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
+  ): Promise<ElicitInputResult> {
     this.logger.debug('MCPSDKHelpers: Eliciting input via MCP elicitation API', {
       messageLength: request.message.length,
       hasSchema: !!request.requestedSchema,
-      sessionId,
+      sessionId: options.sessionId,
     });
 
     try {
@@ -131,6 +185,7 @@ export class BeyondMcpSDKHelpers {
         ...request,
         // deno-lint-ignore no-explicit-any
         requestedSchema: request.requestedSchema as any,
+        meta: { sessionId: options.sessionId },
       };
       // deno-lint-ignore no-explicit-any
       const result = await this.sdkMcpServer.server.elicitInput(mcpRequest as any);
@@ -138,7 +193,7 @@ export class BeyondMcpSDKHelpers {
       this.logger.debug('MCPSDKHelpers: Input elicited successfully', {
         action: result.action,
         hasContent: !!result.content,
-        sessionId,
+        sessionId: options.sessionId,
       });
 
       // Cast result to expected type - handle action mapping
@@ -149,7 +204,7 @@ export class BeyondMcpSDKHelpers {
 
       return mappedResult;
     } catch (error) {
-      this.logger.error('MCPSDKHelpers: MCP elicitation failed:', toError(error));
+      this.logger.error('MCPSDKHelpers: MCP user elicitation failed:', toError(error));
       throw new Error(
         `MCP elicitation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
