@@ -246,6 +246,7 @@ export interface WorkflowBase {
   getRegistration(): WorkflowRegistration;
   getOverview(): string;
   setLogger(logger: Logger): void;
+  clearKVManager(): Promise<void>;
 }
 
 export interface WorkflowRegistry {

@@ -154,6 +154,7 @@ function createTestContext(
     _meta: {
       testMode: true,
     },
+    requestMetadata: {},
     authenticatedUserId: 'auth-user',
     clientId: 'test-client',
     scopes: ['read', 'write'],

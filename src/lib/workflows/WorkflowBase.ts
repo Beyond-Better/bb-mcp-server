@@ -34,7 +34,11 @@ import {
   type SendNotificationRequest,
 } from '../types/BeyondMcpTypes.ts';
 import { BeyondMcpServer } from '../server/BeyondMcpServer.ts';
-import { getConfigManager, getKvManager, getLogger } from '../server/DependencyHelpers.ts';
+import {
+  getConfigManager,
+  //getKvManager,
+  getLogger,
+} from '../server/DependencyHelpers.ts';
 
 import type { PluginCategory, RateLimitConfig } from '../types/PluginTypes.ts';
 
@@ -70,14 +74,14 @@ export abstract class WorkflowBase {
 
   protected logger!: Logger;
   protected configManager!: ConfigManager;
-  protected kvManager!: KVManager;
+  protected _kvManager: KVManager | undefined;
   public readonly initialized: Promise<void>;
 
   constructor(dependencies?: WorkflowDependencies) {
     if (dependencies?.configManager && dependencies?.kvManager) {
       this.configManager = dependencies.configManager;
       this.logger = dependencies?.logger ?? getLogger(this.configManager);
-      this.kvManager = dependencies.kvManager;
+      this._kvManager = dependencies.kvManager;
       this.logger.info('WorkflowBase: Initialized');
       this.initialized = Promise.resolve();
     } else {
@@ -85,8 +89,8 @@ export abstract class WorkflowBase {
         try {
           this.configManager = dependencies?.configManager ?? await getConfigManager();
           this.logger = dependencies?.logger ?? getLogger(this.configManager);
-          this.kvManager = dependencies?.kvManager ??
-            await getKvManager(this.configManager, this.logger);
+          //this._kvManager = dependencies?.kvManager ??
+          //  await getKvManager(this.configManager, this.logger);
           this.logger.info('WorkflowBase: Initialized');
         } catch (error) {
           // Handle initialization errors appropriately
@@ -118,6 +122,15 @@ export abstract class WorkflowBase {
   // used by tests to set spyLogger
   public setLogger(logger: Logger) {
     this.logger = logger;
+  }
+  // used by tests to be able to clean up databases
+  public async clearKVManager() {
+    if (this._kvManager) await this._kvManager.close();
+  }
+
+  public get kvManager(): KVManager | undefined {
+    // this._kvManager = await getKvManager(this.configManager, this.logger);
+    return this._kvManager;
   }
 
   /**
@@ -307,7 +320,7 @@ export abstract class WorkflowBase {
 
   protected async createMessage(
     request: CreateMessageRequest,
-    sessionId?: string,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
   ): Promise<CreateMessageResult> {
     const beyondMcpServer = BeyondMcpServer.getInstance();
     if (!beyondMcpServer) {
@@ -318,12 +331,12 @@ export abstract class WorkflowBase {
     try {
       const result = await beyondMcpServer.createMessage(
         request,
-        sessionId,
+        options,
       );
 
       this.logDebug('Sampling request sent', {
         request,
-        sessionId,
+        sessionId: options.sessionId,
       });
       return result;
     } catch (error) {
@@ -344,7 +357,7 @@ export abstract class WorkflowBase {
 
   protected async elicitInput(
     request: ElicitInputRequest,
-    sessionId?: string,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
   ): Promise<ElicitInputResult> {
     const beyondMcpServer = BeyondMcpServer.getInstance();
     if (!beyondMcpServer) {
@@ -355,12 +368,12 @@ export abstract class WorkflowBase {
     try {
       const result = await beyondMcpServer.elicitInput(
         request,
-        sessionId,
+        options,
       );
 
       this.logDebug('Elicitation request sent', {
         request,
-        sessionId,
+        sessionId: options.sessionId,
       });
       return result;
     } catch (error) {
@@ -394,7 +407,7 @@ export abstract class WorkflowBase {
 
   protected async sendNotification(
     request: SendNotificationRequest,
-    sessionId?: string,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
   ): Promise<void> {
     const beyondMcpServer = BeyondMcpServer.getInstance();
     if (!beyondMcpServer) {
@@ -405,12 +418,12 @@ export abstract class WorkflowBase {
     try {
       await beyondMcpServer.sendNotification(
         request,
-        sessionId,
+        options,
       );
 
       this.logDebug('Notification sent', {
         request,
-        sessionId,
+        sessionId: options.sessionId,
       });
     } catch (error) {
       this.logWarn('Failed to send notification', {
@@ -430,7 +443,7 @@ export abstract class WorkflowBase {
    */
   protected async sendNotificationProgress(
     request: SendNotificationProgressRequest,
-    sessionId?: string,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
   ): Promise<void> {
     const beyondMcpServer = BeyondMcpServer.getInstance();
     if (!beyondMcpServer) {
@@ -453,18 +466,18 @@ export abstract class WorkflowBase {
     }
     this.logInfo('Sending Progress notification', {
       request,
-      sessionId,
+      sessionId: options.sessionId,
     });
 
     try {
       await beyondMcpServer.sendNotificationProgress(
         request,
-        sessionId,
+        options,
       );
 
       this.logDebug('Progress notification sent', {
         request,
-        sessionId,
+        sessionId: options.sessionId,
       });
     } catch (error) {
       this.logWarn('Failed to send progress notification', {
