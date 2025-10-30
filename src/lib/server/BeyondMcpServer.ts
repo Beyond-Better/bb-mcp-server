@@ -416,14 +416,20 @@ export class BeyondMcpServer {
     return await this.mcpSDKHelpers.createMessage(request, options);
   }
 
-  async elicitInput(request: ElicitInputRequest, options: { sessionId?: string; meta?: Record<string, unknown> }): Promise<ElicitInputResult> {
+  async elicitInput(
+    request: ElicitInputRequest,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
+  ): Promise<ElicitInputResult> {
     if (!this.mcpSDKHelpers) {
       throw new Error('BeyondMcpServer not initialized. Call initialize() first.');
     }
     return await this.mcpSDKHelpers.elicitInput(request, options);
   }
 
-  async sendNotification(request: SendNotificationRequest, options: { sessionId?: string; meta?: Record<string, unknown> }): Promise<void> {
+  async sendNotification(
+    request: SendNotificationRequest,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
+  ): Promise<void> {
     if (!this.mcpSDKHelpers) {
       throw new Error('BeyondMcpServer not initialized. Call initialize() first.');
     }

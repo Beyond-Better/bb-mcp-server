@@ -85,7 +85,10 @@ export class BeyondMcpSDKHelpers {
    * MCP Notification API integration
    * Sends a logging message notification to the client
    */
-  async sendNotification(request: SendNotificationRequest, options: { sessionId?: string; meta?: Record<string, unknown> }): Promise<void> {
+  async sendNotification(
+    request: SendNotificationRequest,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
+  ): Promise<void> {
     this.logger.debug('MCPSDKHelpers: Sending notification via MCP notification API', {
       level: request.level,
       logger: request.logger,
@@ -166,7 +169,10 @@ export class BeyondMcpSDKHelpers {
   /**
    * MCP Elicitation API integration
    */
-  async elicitInput(request: ElicitInputRequest, options: { sessionId?: string; meta?: Record<string, unknown> }): Promise<ElicitInputResult> {
+  async elicitInput(
+    request: ElicitInputRequest,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
+  ): Promise<ElicitInputResult> {
     this.logger.debug('MCPSDKHelpers: Eliciting input via MCP elicitation API', {
       messageLength: request.message.length,
       hasSchema: !!request.requestedSchema,
@@ -179,10 +185,10 @@ export class BeyondMcpSDKHelpers {
         ...request,
         // deno-lint-ignore no-explicit-any
         requestedSchema: request.requestedSchema as any,
-        meta: {sessionId: options.sessionId},
+        meta: { sessionId: options.sessionId },
       };
       // deno-lint-ignore no-explicit-any
-      const result = await this.sdkMcpServer.server.elicitInput(mcpRequest as any );
+      const result = await this.sdkMcpServer.server.elicitInput(mcpRequest as any);
 
       this.logger.debug('MCPSDKHelpers: Input elicited successfully', {
         action: result.action,
