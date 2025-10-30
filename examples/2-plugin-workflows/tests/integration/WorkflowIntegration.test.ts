@@ -34,6 +34,10 @@ describe('Workflow Integration Tests', () => {
 
   afterEach(() => {
     logSpy.restore();
+    // const workflows = WorkflowPlugin.workflows!;
+    // for (const workflow of workflows) {
+    //   await workflow.clearKVManager();
+    // }
   });
 
   describe('Plugin Discovery and Registration', () => {

@@ -43,6 +43,10 @@ describe('DataProcessingWorkflow', () => {
 
   afterEach(() => {
     logSpy.restore();
+    // const workflows = WorkflowPlugin.workflows!;
+    // for (const workflow of workflows) {
+    //   await workflow.clearKVManager();
+    // }
   });
 
   describe('Workflow Registration', () => {

@@ -408,36 +408,36 @@ export class BeyondMcpServer {
    */
   async createMessage(
     request: CreateMessageRequest,
-    sessionId?: string,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
   ): Promise<CreateMessageResult> {
     if (!this.mcpSDKHelpers) {
       throw new Error('BeyondMcpServer not initialized. Call initialize() first.');
     }
-    return await this.mcpSDKHelpers.createMessage(request, sessionId);
+    return await this.mcpSDKHelpers.createMessage(request, options);
   }
 
-  async elicitInput(request: ElicitInputRequest, sessionId?: string): Promise<ElicitInputResult> {
+  async elicitInput(request: ElicitInputRequest, options: { sessionId?: string; meta?: Record<string, unknown> }): Promise<ElicitInputResult> {
     if (!this.mcpSDKHelpers) {
       throw new Error('BeyondMcpServer not initialized. Call initialize() first.');
     }
-    return await this.mcpSDKHelpers.elicitInput(request, sessionId);
+    return await this.mcpSDKHelpers.elicitInput(request, options);
   }
 
-  async sendNotification(request: SendNotificationRequest, sessionId?: string): Promise<void> {
+  async sendNotification(request: SendNotificationRequest, options: { sessionId?: string; meta?: Record<string, unknown> }): Promise<void> {
     if (!this.mcpSDKHelpers) {
       throw new Error('BeyondMcpServer not initialized. Call initialize() first.');
     }
-    return await this.mcpSDKHelpers.sendNotification(request, sessionId);
+    return await this.mcpSDKHelpers.sendNotification(request, options);
   }
 
   async sendNotificationProgress(
     request: SendNotificationProgressRequest,
-    sessionId?: string,
+    options: { sessionId?: string; meta?: Record<string, unknown> },
   ): Promise<void> {
     if (!this.mcpSDKHelpers) {
       throw new Error('BeyondMcpServer not initialized. Call initialize() first.');
     }
-    return await this.mcpSDKHelpers.sendNotificationProgress(request, sessionId);
+    return await this.mcpSDKHelpers.sendNotificationProgress(request, options);
   }
 
   /**

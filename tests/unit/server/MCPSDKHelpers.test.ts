@@ -80,7 +80,7 @@ describe('MCPSDKHelpers', () => {
         temperature: 0.7,
       };
 
-      const result = await mcpSDKHelpers.createMessage(request);
+      const result = await mcpSDKHelpers.createMessage(request, {});
 
       assertExists(result);
       assertEquals(result.model, 'test-model');
@@ -108,7 +108,7 @@ describe('MCPSDKHelpers', () => {
       };
 
       try {
-        await mcpSDKHelpers.createMessage(request);
+        await mcpSDKHelpers.createMessage(request, {});
         assert(false, 'Should have thrown error');
       } catch (error) {
         assert(error instanceof Error);
@@ -135,7 +135,7 @@ describe('MCPSDKHelpers', () => {
         temperature: 0.3,
       };
 
-      await mcpSDKHelpers.createMessage(request);
+      await mcpSDKHelpers.createMessage(request, {});
 
       const debugCalls = logSpy.calls;
       const firstCall = debugCalls[0];
@@ -168,7 +168,7 @@ describe('MCPSDKHelpers', () => {
         },
       };
 
-      const result = await mcpSDKHelpers.elicitInput(request);
+      const result = await mcpSDKHelpers.elicitInput(request, {});
 
       assertExists(result);
       assertEquals(result.action, 'accept');
@@ -190,7 +190,7 @@ describe('MCPSDKHelpers', () => {
       };
 
       try {
-        await mcpSDKHelpers.elicitInput(request);
+        await mcpSDKHelpers.elicitInput(request, {});
         assert(false, 'Should have thrown error');
       } catch (error) {
         assert(error instanceof Error);
@@ -214,7 +214,7 @@ describe('MCPSDKHelpers', () => {
         },
       };
 
-      await mcpSDKHelpers.elicitInput(request);
+      await mcpSDKHelpers.elicitInput(request, {});
 
       const debugCalls = logSpy.calls;
       const firstCall = debugCalls[0];

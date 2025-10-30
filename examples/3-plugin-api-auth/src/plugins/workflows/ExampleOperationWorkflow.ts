@@ -280,7 +280,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
           await this.sendNotification({
             level: 'error',
             data: { params, operationResult },
-          });
+          }, {});
         }
 
         return {
@@ -328,7 +328,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
         await this.sendNotification({
           level: 'notice',
           data: { params, operationResult },
-        });
+        }, {});
       }
 
       // 🎯 Return structured workflow result (success case)
@@ -376,7 +376,7 @@ export class ExampleOperationWorkflow extends WorkflowBase {
         await this.sendNotification({
           level: 'error',
           data: { params, operationResult: { success: false, error } },
-        });
+        }, {});
       }
 
       // 🎯 Return structured error result
