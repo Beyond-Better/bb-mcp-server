@@ -24,13 +24,15 @@ export function reconstructOriginalUrl(request: Request): URL {
   // Parse the current URL to get path and query parameters
   const currentUrl = new URL(request.url);
 
+  //console.log('reconstructOriginalUrl', { forwardedProto, currentUrlProto: currentUrl.protocol});
   // Reconstruct with proper protocol and host
-  const protocol = `${forwardedProto}:` || currentUrl.protocol;
+  const protocol = forwardedProto ? `${forwardedProto}:` : currentUrl.protocol;
   const host = forwardedHost || currentUrl.host;
 
   const reconstructedUrl = new URL(
     `${protocol}//${host}${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`,
   );
+  //console.log('reconstructOriginalUrl', { reconstructedUrl});
 
   return reconstructedUrl;
 }
