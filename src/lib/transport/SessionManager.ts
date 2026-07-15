@@ -359,7 +359,7 @@ export class SessionManager {
   /**
    * Start automatic cleanup interval
    */
-  startCleanupInterval(): number {
+  startCleanupInterval(): ReturnType<typeof setInterval> {
     this.logger.info('SessionManager: Starting automatic cleanup interval', {
       interval: this.config.cleanupInterval,
     });
