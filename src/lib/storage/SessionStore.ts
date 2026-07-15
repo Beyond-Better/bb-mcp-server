@@ -36,7 +36,7 @@ export class SessionStore {
   private cleanupIntervalMs: number;
   private enableAutoCleanup: boolean;
   private logger: Logger | undefined;
-  private cleanupTimer: number | undefined;
+  private cleanupTimer: ReturnType<typeof setInterval> | undefined;
 
   constructor(
     kvManager: KVManager,

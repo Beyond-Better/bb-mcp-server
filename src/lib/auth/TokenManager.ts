@@ -28,6 +28,12 @@ export interface TokenConfig {
   refreshTokenExpiryMs: number;
   /** Authorization code expiry in milliseconds (default: 600000 = 10 minutes) */
   authorizationCodeExpiryMs: number;
+  /**
+   * Grace window (ms) during which an already-rotated refresh token can be presented again
+   * and will replay the tokens it was rotated to, instead of failing. Defends against
+   * concurrent/duplicate refreshes and lost token responses. Default: 60000 = 60 seconds.
+   */
+  refreshTokenRotationGraceMs?: number;
 }
 
 /**
@@ -68,6 +74,16 @@ export interface MCPRefreshToken {
   created_at: number;
   /** Token expiration timestamp */
   expires_at: number;
+  /**
+   * Idempotent-rotation grace field. When this refresh token has been rotated, this holds
+   * the new access token (including the new refresh_token) that was issued in its place.
+   * If a client presents this (already-rotated) refresh token again within the grace window
+   * (e.g. concurrent/duplicate refresh, or a lost token response), we replay these tokens
+   * instead of failing. Absent on a fresh, un-rotated refresh token.
+   */
+  rotated_to?: MCPAccessToken;
+  /** Timestamp at which this refresh token was rotated (superseded). */
+  superseded_at?: number;
 }
 
 /**
@@ -167,6 +183,7 @@ export class TokenManager {
       accessTokenExpiryMs: config.accessTokenExpiryMs ?? 3600 * 1000, // 1 hour
       refreshTokenExpiryMs: config.refreshTokenExpiryMs ?? 30 * 24 * 3600 * 1000, // 30 days
       authorizationCodeExpiryMs: config.authorizationCodeExpiryMs ?? 10 * 60 * 1000, // 10 minutes
+      refreshTokenRotationGraceMs: config.refreshTokenRotationGraceMs ?? 60 * 1000, // 60 seconds
     };
 
     this.logger?.info('TokenManager: Initialized', {
@@ -590,6 +607,39 @@ export class TokenManager {
       const refreshTokenData = result;
       const now = Date.now();
 
+      // 🔒 IDEMPOTENT ROTATION: If this refresh token was already rotated within the grace
+      // window, replay the tokens it was rotated to instead of failing. This makes refresh
+      // safe against concurrent/duplicate refresh requests (common with a shared multi-user
+      // client) and lost token responses, without weakening single-use rotation security.
+      if (refreshTokenData.rotated_to) {
+        const graceMs = this.config.refreshTokenRotationGraceMs ?? 60 * 1000;
+        const supersededAt = refreshTokenData.superseded_at ?? refreshTokenData.created_at;
+        if (now - supersededAt <= graceMs) {
+          this.logger?.warn(
+            `TokenManager: Replaying rotated refresh token within grace window [${exchangeId}]`,
+            {
+              exchangeId,
+              refreshTokenPrefix: refreshToken.substring(0, 12) + '...',
+              userId: refreshTokenData.user_id,
+              clientId: refreshTokenData.client_id,
+              graceRemainingMs: graceMs - (now - supersededAt),
+            },
+          );
+          return { success: true, accessToken: refreshTokenData.rotated_to };
+        }
+        // Grace window elapsed — treat as invalid (stale) refresh token.
+        this.logger?.error(
+          `TokenManager: Rotated refresh token presented after grace window [${exchangeId}]`,
+          undefined,
+          {
+            exchangeId,
+            refreshTokenPrefix: refreshToken.substring(0, 12) + '...',
+          },
+        );
+        await this.kvManager.delete([...this.MCP_REFRESH_TOKENS_PREFIX, refreshToken]);
+        return { success: false, error: 'Invalid or expired refresh token' };
+      }
+
       // Validate refresh token hasn't expired
       if (refreshTokenData.expires_at < now) {
         this.logger?.error(`TokenManager: Refresh token expired [${exchangeId}]`, undefined, {
@@ -616,15 +666,32 @@ export class TokenManager {
         return { success: false, error: 'Invalid client credentials' };
       }
 
-      // Generate new access token with new refresh token (token rotation)
+      // Generate new access token with new refresh token (token rotation).
+      // Preserve the original scope across the rotation (previously reset to the default).
       const newAccessToken = await this.generateAccessToken(
         refreshTokenData.client_id,
         refreshTokenData.user_id,
         true, // Include new refresh token
+        refreshTokenData.scope,
       );
 
-      // 🔒 SECURITY-CRITICAL: Revoke old refresh token (token rotation security)
-      await this.kvManager.delete([...this.MCP_REFRESH_TOKENS_PREFIX, refreshToken]);
+      // 🔒 SECURITY-CRITICAL: Token rotation. Instead of hard-deleting the old refresh token
+      // immediately, mark it as superseded and cache the newly-issued tokens on it for a short
+      // grace window. A concurrent/duplicate refresh (or a client retrying after a lost token
+      // response) that presents this same old token will then replay the new tokens (see the
+      // idempotent-rotation block above) rather than erroring with "Refresh token not found".
+      // The record carries a short TTL so the old token is still invalidated shortly after use.
+      const graceMs = this.config.refreshTokenRotationGraceMs ?? 60 * 1000;
+      const supersededRefreshToken: MCPRefreshToken = {
+        ...refreshTokenData,
+        rotated_to: newAccessToken,
+        superseded_at: now,
+      };
+      await this.kvManager.set(
+        [...this.MCP_REFRESH_TOKENS_PREFIX, refreshToken],
+        supersededRefreshToken,
+        { expireIn: graceMs },
+      );
 
       // this.logger?.info(`TokenManager: Successfully exchanged refresh token [${exchangeId}]`, {
       //   exchangeId,

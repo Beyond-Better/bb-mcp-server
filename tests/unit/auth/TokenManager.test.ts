@@ -197,12 +197,70 @@ Deno.test({
     assert(newToken.access_token !== initialToken.access_token);
     assert(newToken.refresh_token !== initialToken.refresh_token);
 
-    // Validate old refresh token is invalidated
-    const oldRefreshResult = await tokenManager.refreshAccessToken(
+    // Idempotent rotation: presenting the OLD refresh token again WITHIN the grace window
+    // replays the tokens it was rotated to (rather than failing). This protects against
+    // concurrent/duplicate refreshes and lost token responses from a shared multi-user client.
+    const replayResult = await tokenManager.refreshAccessToken(
       initialToken.refresh_token!,
       clientId,
     );
-    assertEquals(oldRefreshResult.success, false);
+    assertEquals(replayResult.success, true);
+    assertExists(replayResult.accessToken);
+    // Replay returns the SAME tokens issued by the first refresh (not a further rotation)
+    assertEquals(replayResult.accessToken!.access_token, newToken.access_token);
+    assertEquals(replayResult.accessToken!.refresh_token, newToken.refresh_token);
+
+    await kvManager.close();
+  },
+});
+
+Deno.test({
+  name: 'TokenManager - Refresh Token Rotation Grace Window Expiry (SECURITY CRITICAL)',
+  async fn() {
+    const kvManager = new KVManager({ kvPath: ':memory:' });
+    await kvManager.initialize();
+
+    // Short grace window so the rotated token is invalidated quickly after use
+    const shortGraceConfig = {
+      accessTokenExpiryMs: 3600 * 1000,
+      refreshTokenExpiryMs: 30 * 24 * 3600 * 1000,
+      authorizationCodeExpiryMs: 10 * 60 * 1000,
+      refreshTokenRotationGraceMs: 100, // 100ms grace window
+    };
+
+    const tokenManager = new TokenManager(shortGraceConfig, {
+      kvManager,
+      logger: mockLogger,
+    });
+
+    const clientId = 'grace_client';
+    const userId = 'grace_user';
+    const initialToken = await tokenManager.generateAccessToken(clientId, userId, true);
+    assertExists(initialToken.refresh_token);
+
+    // First refresh rotates the token (starts the grace window)
+    const firstRefresh = await tokenManager.refreshAccessToken(
+      initialToken.refresh_token!,
+      clientId,
+    );
+    assertEquals(firstRefresh.success, true);
+
+    // Within grace window: replay succeeds
+    const withinGrace = await tokenManager.refreshAccessToken(
+      initialToken.refresh_token!,
+      clientId,
+    );
+    assertEquals(withinGrace.success, true);
+
+    // Wait for the grace window to elapse
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // After grace window: the old (rotated) refresh token is invalidated
+    const afterGrace = await tokenManager.refreshAccessToken(
+      initialToken.refresh_token!,
+      clientId,
+    );
+    assertEquals(afterGrace.success, false);
 
     await kvManager.close();
   },

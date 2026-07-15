@@ -111,7 +111,7 @@ export class AuditLogger {
   private logger: Logger | undefined;
   private auditFile: Deno.FsFile | undefined;
   private buffer: string[] = [];
-  private flushTimer?: number;
+  private flushTimer?: ReturnType<typeof setInterval>;
   private initialized = false;
 
   constructor(config: AuditConfig, logger?: Logger) {

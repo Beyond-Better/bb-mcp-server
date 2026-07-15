@@ -59,11 +59,11 @@ export class HttpTransport implements Transport {
   private clientSessions = new Map<string, ClientSessionInfo>();
 
   // SSE Keepalive mechanism to prevent network timeout disconnections
-  private sseKeepaliveIntervals = new Map<string, number>();
+  private sseKeepaliveIntervals = new Map<string, ReturnType<typeof setInterval>>();
   private readonly KEEPALIVE_INTERVAL_MS = 25000; // 25 seconds - safe margin before 60s timeout
 
   // Event store cleanup mechanism
-  private cleanupIntervalId?: number | undefined;
+  private cleanupIntervalId?: ReturnType<typeof setInterval> | undefined;
   private readonly CLEANUP_INTERVAL_MS = 60 * 60 * 6000; // 6 hours
   private readonly EVENTS_TO_KEEP = 1000; // Keep last 1000 events per stream
 
