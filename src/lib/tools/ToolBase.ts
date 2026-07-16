@@ -44,10 +44,10 @@ export interface ToolContext {
 /**
  * Tool execution result with enhanced metadata
  */
-export interface ToolResult extends CallToolResult {
+export type ToolResult = CallToolResult & {
   executionTime?: number;
   metadata?: Record<string, unknown>;
-}
+};
 
 /**
  * Abstract base class for all tool implementations
