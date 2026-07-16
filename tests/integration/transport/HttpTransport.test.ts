@@ -130,6 +130,7 @@ Deno.test('HttpTransport - Deno→Node compatibility preservation', async () => 
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream',
         'Authorization': 'Bearer test-token-123',
       },
       body: JSON.stringify(initRequest),
@@ -150,7 +151,10 @@ Deno.test('HttpTransport - Deno→Node compatibility preservation', async () => 
     // Validate response structure (MCP protocol compliance)
     // Note: MCP SDK may return 403 for incomplete server implementations - this is expected behavior
     assert(response.status === 200 || response.status === 403);
-    assertEquals(response.headers.get('content-type'), 'application/json');
+    // SDK may respond with either JSON or SSE streaming, both are spec-compliant
+    // when the client's Accept header includes both content types
+    const contentType = response.headers.get('content-type');
+    assert(contentType === 'application/json' || contentType?.startsWith('text/event-stream'));
 
     const responseData = await response.json();
     assertEquals(responseData.jsonrpc, '2.0');
@@ -189,6 +193,7 @@ Deno.test('HttpTransport - session management integration', async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream',
         'Authorization': 'Bearer test-token-456',
       },
       body: JSON.stringify(initRequest),
