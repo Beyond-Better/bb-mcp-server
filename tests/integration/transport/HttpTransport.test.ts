@@ -89,6 +89,18 @@ async function createMockTransportDependencies(): Promise<
   };
 }
 
+// Parses the JSON-RPC message out of an SSE-formatted response body,
+// e.g. "event: message\ndata: {...}\n\n"
+function parseSseJsonRpcMessage(sseBody: string): any {
+  const dataLine = sseBody
+    .split('\n')
+    .find((line) => line.startsWith('data:'));
+  if (!dataLine) {
+    throw new Error(`No 'data:' line found in SSE body: ${sseBody}`);
+  }
+  return JSON.parse(dataLine.slice('data:'.length).trim());
+}
+
 function createMCPInitializeRequest() {
   return {
     jsonrpc: '2.0' as const,
@@ -130,6 +142,7 @@ Deno.test('HttpTransport - Deno→Node compatibility preservation', async () => 
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream',
         'Authorization': 'Bearer test-token-123',
       },
       body: JSON.stringify(initRequest),
@@ -150,9 +163,14 @@ Deno.test('HttpTransport - Deno→Node compatibility preservation', async () => 
     // Validate response structure (MCP protocol compliance)
     // Note: MCP SDK may return 403 for incomplete server implementations - this is expected behavior
     assert(response.status === 200 || response.status === 403);
-    assertEquals(response.headers.get('content-type'), 'application/json');
+    // SDK may respond with either JSON or SSE streaming, both are spec-compliant
+    // when the client's Accept header includes both content types
+    const contentType = response.headers.get('content-type');
+    assert(contentType === 'application/json' || contentType?.startsWith('text/event-stream'));
 
-    const responseData = await response.json();
+    const responseData = contentType?.startsWith('text/event-stream')
+      ? parseSseJsonRpcMessage(await response.text())
+      : await response.json();
     assertEquals(responseData.jsonrpc, '2.0');
     // ID may be null for error responses - this is valid MCP behavior
     assert(responseData.id === 1 || responseData.id === null);
@@ -189,6 +207,7 @@ Deno.test('HttpTransport - session management integration', async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream',
         'Authorization': 'Bearer test-token-456',
       },
       body: JSON.stringify(initRequest),

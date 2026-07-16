@@ -14,6 +14,7 @@ import { z } from 'zod';
 // Import components
 //import { ToolBase } from '../../src/lib/tools/ToolBase.ts';
 import { ToolRegistry } from '../../src/lib/tools/ToolRegistry.ts';
+import type { CallToolResult } from 'mcp/types.js';
 //import type { Logger } from '../../src/lib/utils/Logger.ts';
 import type { ErrorHandler } from '../../src/lib/utils/ErrorHandler.ts';
 
@@ -341,7 +342,7 @@ describe('ToolBase Performance Integration', () => {
     const duration = performance.now() - startTime;
 
     assertEquals(results.length, 10);
-    results.forEach((result, i) => {
+    results.forEach((result: CallToolResult, i: number) => {
       const textContent = getTextContent(result);
       assert(textContent.includes(`Message ${i}`));
     });

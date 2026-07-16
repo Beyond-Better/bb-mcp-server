@@ -9,7 +9,7 @@ import { assertSpyCalls, spy } from '@std/testing/mock';
 import { z } from 'zod';
 
 // Import components
-import { ToolBase, type ToolContext } from '../../../src/lib/tools/ToolBase.ts';
+import { ToolBase, type ToolContext, type ToolResult } from '../../../src/lib/tools/ToolBase.ts';
 //import { ToolRegistry } from '../../../src/lib/tools/ToolRegistry.ts';
 //import type { Logger } from '../../../src/lib/utils/Logger.ts';
 //import type { AuditLogger } from '../../../src/lib/utils/AuditLogger.ts';
@@ -1044,7 +1044,7 @@ describe('ToolBase Edge Cases and Performance', () => {
     const results = await Promise.all(executions);
 
     assertEquals(results.length, 10);
-    results.forEach((result, i) => {
+    results.forEach((result: ToolResult, i: number) => {
       const textContent = getTextContent(result);
       assert(textContent.includes(`Result ${i}`));
     });

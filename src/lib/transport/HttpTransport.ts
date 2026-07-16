@@ -444,7 +444,7 @@ export class HttpTransport implements Transport {
         // 🚨 PRESERVED MCP SDK INTEGRATION - DO NOT MODIFY
         transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => newSessionId,
-          onsessioninitialized: (initializedSessionId) => {
+          onsessioninitialized: (initializedSessionId: string) => {
             this.mcpTransports.set(initializedSessionId, transport);
             this.logger.info(`HttpTransport: New MCP session initialized: ${initializedSessionId}`);
 
@@ -809,10 +809,22 @@ export class HttpTransport implements Transport {
   private createNodeStyleRequest(request: Request, method: string, body?: any): any {
     const url = reconstructOriginalUrl(request);
 
+    const headers = Object.fromEntries(request.headers.entries());
+
+    // The Fetch API treats 'Host' as a forbidden header name, so it is never
+    // present on request.headers even though the request was sent to a specific
+    // host. The MCP SDK's DNS-rebinding protection (enableDnsRebindingProtection)
+    // validates req.headers.host against allowedHosts, so we must synthesize it
+    // here from the request URL or callers relying on fetch()-style requests
+    // (including our own tests) will be rejected with a bare 400.
+    if (!headers.host) {
+      headers.host = url.host;
+    }
+
     return {
       method,
       url: url.pathname + url.search,
-      headers: Object.fromEntries(request.headers.entries()),
+      headers,
       body: body,
     };
   }

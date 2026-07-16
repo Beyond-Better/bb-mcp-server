@@ -221,6 +221,7 @@ describe('MCP Server Complete Integration', () => {
         const echoResult = await echoTool.handler({ message: 'Integration test echo' }, {});
         const firstContent = echoResult.content[0];
         assertExists(firstContent);
+        assert(firstContent.type === 'text');
         assertEquals(firstContent.text, 'Integration test echo');
 
         // Test server status tool
@@ -230,7 +231,8 @@ describe('MCP Server Complete Integration', () => {
         const statusResult = await statusTool.handler({}, {});
         const statusContent = statusResult.content[0];
         assertExists(statusContent);
-        const statusData = JSON.parse(statusContent.text as string);
+        assert(statusContent.type === 'text');
+        const statusData = JSON.parse(statusContent.text);
         assertExists(statusData.server);
         assertExists(statusData.tools);
         assertExists(statusData.workflows);
@@ -431,6 +433,7 @@ describe('MCP Server Complete Integration', () => {
       const successResult = await errorTool.handler({ shouldError: false }, {});
       const successContent = successResult.content[0];
       assertExists(successContent);
+      assert(successContent.type === 'text');
       assertEquals(successContent.text, 'No error');
     });
 
@@ -644,7 +647,8 @@ describe('Example Consumer Simulation', () => {
 
         const toolContent = toolResult.content[0];
         assertExists(toolContent);
-        const responseData = JSON.parse(toolContent.text as string);
+        assert(toolContent.type === 'text');
+        const responseData = JSON.parse(toolContent.text);
 
         return {
           serverName: 'example-simulation-server', // Use config name directly

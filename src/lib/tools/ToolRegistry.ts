@@ -147,7 +147,7 @@ export class ToolRegistry {
             description: definition.description,
             inputSchema: definition.inputSchema as any, // Cast Zod schema for MCP SDK
           },
-          async (args: any, extra: any) => {
+          (async (args: any, extra: any) => {
             // PRESERVED: Exact validation and error handling pattern
             try {
               // Validate input with Zod
@@ -201,7 +201,7 @@ export class ToolRegistry {
                 isError: true,
               };
             }
-          },
+          }) as any,
         );
       }
 

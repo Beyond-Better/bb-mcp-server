@@ -346,7 +346,7 @@ export class TransportPersistenceStore {
     // Create new transport with the same session ID
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => sessionInfo.sessionId, // Use existing session ID
-      onsessioninitialized: (restoredSessionId) => {
+      onsessioninitialized: (restoredSessionId: string) => {
         // Session re-initialized callback (fires when client reconnects with first request)
         this.logger.info('TransportPersistenceStore: Restored MCP session re-initialized', {
           sessionId: restoredSessionId,
