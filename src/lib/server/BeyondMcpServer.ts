@@ -147,7 +147,6 @@ export class BeyondMcpServer {
           name: config.server.name,
           version: config.server.version,
           title: config.server.title || config.server.name,
-          description: config.server.description,
         },
         serverOptions,
       );

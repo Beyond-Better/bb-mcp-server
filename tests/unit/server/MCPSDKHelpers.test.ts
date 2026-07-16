@@ -87,6 +87,7 @@ describe('MCPSDKHelpers', () => {
       assertExists(result.content);
       const firstContent = result.content[0];
       assertExists(firstContent);
+      assert(firstContent.type === 'text');
       assertEquals(firstContent.text, 'Response to: Hello, AI!');
       assertExists(result.usage);
 
@@ -410,10 +411,10 @@ describe('MCPSDKHelpers', () => {
       assertEquals(response.content.length, 1);
       const responseContent = response.content[0];
       assertExists(responseContent);
-      assertEquals(responseContent.type, 'text');
+      assert(responseContent.type === 'text');
       assertEquals(response._meta, meta);
 
-      const parsedData = JSON.parse(responseContent.text as string);
+      const parsedData = JSON.parse(responseContent.text);
       assertEquals(parsedData.message, 'Success');
       assertEquals(parsedData.count, 42);
     });
@@ -425,6 +426,7 @@ describe('MCPSDKHelpers', () => {
 
       const responseContent = response.content[0];
       assertExists(responseContent);
+      assert(responseContent.type === 'text');
       assertEquals(responseContent.text, 'Simple string response');
     });
 
@@ -439,7 +441,8 @@ describe('MCPSDKHelpers', () => {
 
       const errorContent = response.content[0];
       assertExists(errorContent);
-      const errorData = JSON.parse(errorContent.text as string);
+      assert(errorContent.type === 'text');
+      const errorData = JSON.parse(errorContent.text);
       assertEquals(errorData.error, 'Something went wrong');
       assertEquals(errorData.status, 'error');
       assertExists(errorData.timestamp);
@@ -450,7 +453,8 @@ describe('MCPSDKHelpers', () => {
 
       const errorContent = response.content[0];
       assertExists(errorContent);
-      const errorData = JSON.parse(errorContent.text as string);
+      assert(errorContent.type === 'text');
+      const errorData = JSON.parse(errorContent.text);
       assertEquals(errorData.error, 'String error message');
     });
 
