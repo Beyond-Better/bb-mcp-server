@@ -312,6 +312,7 @@ describe('Workflow Integration Tests', () => {
       const toolResult = await jsonTool.handler({
         json_string: '{"valid": true}',
       });
+      assert(toolResult.content[0]!.type === 'text');
       assertEquals(toolResult.content[0]!.text, '✅ JSON is valid');
 
       // Workflow: Complex, multi-step operation with the same JSON
