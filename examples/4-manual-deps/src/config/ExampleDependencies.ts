@@ -262,7 +262,7 @@ export async function createManualDependencies(
       name: 'examplecorp-mcp-server',
       version: '1.0.0',
       title: 'ExampleCorp API Integration',
-      description: 'MCP server for ExampleCorp API integration with bb-mcp-server library',
+      // description: 'MCP server for ExampleCorp API integration with bb-mcp-server library',
     },
     serverOptions,
   );
